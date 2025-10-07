@@ -1,6 +1,6 @@
 import { EnergyGraph, EnergyNode, NodeLevel } from './canvas'
 
-export const energyGraph = new EnergyGraph()
+const energyGraph = new EnergyGraph()
 
 energyGraph.push(
   new EnergyNode(
@@ -217,3 +217,7 @@ energyGraph.push(
     }
   )
 )
+
+energyGraph.calculate()
+
+export default energyGraph

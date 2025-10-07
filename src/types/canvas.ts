@@ -33,6 +33,16 @@ export class EnergyNode {
     WellBeing: 1,
     Leisure: 1
   }
+  output: NodeWeights = {
+    Petroleum: 1,
+    Minerals: 1,
+    Fuels: 1,
+    Electricity: 1,
+    Manufacture: 1,
+    Transport: 1,
+    WellBeing: 1,
+    Leisure: 1
+  }
   private _position: Position = { x: 0, y: 0 }
   constructor(
     readonly nodeLevel: NodeLevel,
@@ -68,33 +78,26 @@ export class EnergyNode {
     return 200
   }
 
-  get output(): NodeWeights {
-    let output: NodeWeights = {
-      Petroleum: 0,
-      Minerals: 0,
-      Fuels: 0,
-      Electricity: 0,
-      Manufacture: 0,
-      Transport: 0,
-      WellBeing: 0,
-      Leisure: 0
-    }
-    for (const [key, val] of Object.entries(this.outputMap) as [NodeType, number][]) {
-      output[key] = this.outputPower * val
-    }
-
-    return output
-  }
-
   calculateOutput() {
     let power = 1
+    console.log(this.treDependencies)
+    console.log(this.input)
     for (const key of Object.keys(this.input) as NodeType[]) {
       if (this.treDependencies[key] === 0) continue
-      power =
-        (power * Math.min(this.input[key], this.treDependencies[key])) / this.treDependencies[key]
+      const factor =
+        Math.min(this.input[key], this.treDependencies[key]) / this.treDependencies[key]
+      console.log(`${key} factor: ${factor}`)
+      power *= factor
     }
 
+    console.log(`Total power: ${power}`)
     this.outputPower = power
+
+    for (const [key, val] of Object.entries(this.outputMap) as [NodeType, number][]) {
+      this.output[key] = this.outputPower * val
+    }
+
+    console.log(this.output)
   }
 
   checkOutputMap() {
@@ -121,6 +124,19 @@ export class EnergyGraph {
   push(node: EnergyNode) {
     node.position = this.computePos(node.nodeLevel)
     this.nodes.push(node)
+  }
+
+  calculate() {
+    console.log('calculating')
+    for (const calcNode of this.nodes) {
+      calcNode.calculateOutput()
+      for (const node of this.nodes) {
+        console.log(
+          `Input of [${node.nodeType}][${calcNode.nodeType}] when from ${node.input[calcNode.nodeType].toFixed(2)} to ${calcNode.output[node.nodeType].toFixed(2)}`
+        )
+        node.input[calcNode.nodeType] = calcNode.output[node.nodeType]
+      }
+    }
   }
 
   private computePos(nodeLevel: NodeLevel) {

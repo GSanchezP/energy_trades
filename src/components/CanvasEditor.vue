@@ -61,7 +61,7 @@ import { ref, computed } from 'vue';
 import { Connector, EnergyNode } from '../types/canvas';
 import InfoPanel from './InfoPanel.vue';
 import type Konva from 'konva';
-import { energyGraph } from '../types/nodes';
+import  energyGraph  from '../types/nodes';
 
 const stageWidth = window.innerWidth - 350;
 const stageHeight = window.innerHeight;
