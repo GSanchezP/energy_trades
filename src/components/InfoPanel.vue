@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { CanvasSquare } from '../types/canvas';
+import type { EnergyNode } from '../types/canvas';
 
 const props = defineProps<{
-  selectedSquares: CanvasSquare[];
+  selectedNodes: EnergyNode[];
 }>();
 
-const selectionCount = computed(() => props.selectedSquares.length);
+const selectionCount = computed(() => props.selectedNodes.length);
 
 const totalConnections = computed(() => {
-  return props.selectedSquares.reduce((sum, sq) => sum + sq.connectors.length, 0);
+  // return props.selectedNodes.reduce((sum, sq) => sum + sq.connectors.length, 0);
+  return 0
 });
 </script>
 
@@ -38,27 +39,27 @@ const totalConnections = computed(() => {
 
         <div class="squares-list">
           <h3>Square Details</h3>
-          <div v-for="square in selectedSquares" :key="square.id" class="square-item">
-            <div class="square-id">{{ square.id }}</div>
+          <div v-for="node in selectedNodes" :key="node.id" class="square-item">
+            <div class="square-id">{{ node.id }}</div>
             <div class="square-details">
               <div class="detail-row">
                 <span class="detail-label">Position:</span>
-                <span class="detail-value">({{ Math.round(square.x) }}, {{ Math.round(square.y) }})</span>
+                <span class="detail-value">({{ Math.round(node.x) }}, {{ Math.round(node.y) }})</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Size:</span>
-                <span class="detail-value">{{ square.width }}x{{ square.height }}</span>
+                <span class="detail-value">{{ node.width }}x{{ node.height }}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Connections:</span>
-                <span class="detail-value">{{ square.connectors.length }}</span>
+                <!-- <span class="detail-value">{{ node.connectors.length }}</span> -->
               </div>
-              <div v-if="square.connectors.length > 0" class="connections">
+              <!-- <div v-if="node.connectors.length > 0" class="connections">
                 <span class="detail-label">Connected to:</span>
                 <div class="connection-tags">
-                  <span v-for="conn in square.connectors" :key="conn" class="tag">{{ conn }}</span>
+                  <span v-for="conn in node.connectors" :key="conn" class="tag">{{ conn }}</span>
                 </div>
-              </div>
+              </div> -->
             </div>
           </div>
         </div>
