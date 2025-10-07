@@ -75,7 +75,7 @@ export class EnergyNode {
   }
 
   get height() {
-    return 200
+    return 100
   }
 
   calculateOutput() {
@@ -142,7 +142,70 @@ export class EnergyGraph {
   private computePos(nodeLevel: NodeLevel) {
     return {
       x: 200 + (nodeLevel - 1) * 400,
-      y: 200 + this.nodes.filter((en) => en.nodeLevel === nodeLevel).length * 350
+      y: 300 + this.nodes.filter((en) => en.nodeLevel === nodeLevel).length * 350
+    }
+  }
+
+  generateFlowConnectors(): Connector[] {
+    const connectors: Connector[] = []
+
+    for (const sourceNode of this.nodes) {
+      for (const [targetType, power] of Object.entries(sourceNode.output) as [NodeType, number][]) {
+        const targetNode = this.nodes.find((node) => node.nodeType === targetType)
+        if (targetNode && targetNode.id !== sourceNode.id) {
+          if (targetNode.nodeLevel > sourceNode.nodeLevel) {
+            const connector = this.createLowerConnector(sourceNode, targetNode, power)
+            connectors.push(connector)
+          }
+        }
+      }
+    }
+
+    return connectors
+  }
+
+  private createLowerConnector(source: EnergyNode, target: EnergyNode, power: number): Connector {
+    const sourceX = source.x + source.width / 2
+    const sourceY = source.y + source.height / 2
+    const targetX = target.x + target.width / 2
+    const targetY = target.y + target.height / 2
+
+    let points: number[]
+
+    // Flow goes to lower level - exit from top of source
+
+    // Calculate stroke width based on power (min 0, max 100)
+    const strokeWidth = power * 100
+
+    const lineW = 100 + strokeWidth / 2
+
+    points = [
+      sourceX,
+      sourceY, // Start at top center of source
+
+      sourceX + lineW,
+      sourceY, // Go to the left
+
+      sourceX + lineW,
+      950, // Go down the autobahn
+
+      targetX - lineW,
+      950, // Go horizontally to target
+
+      targetX - lineW,
+      targetY, // Go down to target center
+
+      targetX,
+      targetY // Go down to target center
+    ]
+
+    return {
+      id: `${source.id}-${target.id}`,
+      from: source.id,
+      to: target.id,
+      points,
+      power,
+      strokeWidth
     }
   }
 }
@@ -152,4 +215,6 @@ export interface Connector {
   from: string
   to: string
   points: number[]
+  power: number
+  strokeWidth: number
 }

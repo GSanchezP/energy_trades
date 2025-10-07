@@ -8,12 +8,15 @@
             :key="connector.id"
             :config="{
               points: connector.points,
-              stroke: '#64748b',
-              strokeWidth: 2,
+              stroke: selectedConnectorId === connector.id ? '#ef4444' : '#64748b',
+              strokeWidth: connector.strokeWidth,
               lineCap: 'round',
-              lineJoin: 'round'
+              lineJoin: 'round',
+              opacity:  selectedConnectorId === connector.id ? 1 : 0.2
             }"
+            @click="(e: any) => handleConnectorClick(connector.id, e)"
           />
+
           <v-rect
             v-for="square in nodes"
             :key="square.id"
@@ -52,52 +55,41 @@
         </v-layer>
       </v-stage>
     </div>
-    <InfoPanel :selectedNodes="selectedSquares" />
+    <InfoPanel :selectedNodes="selectedSquares" :selectedConnector="selectedConnector" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Connector, EnergyNode } from '../types/canvas';
+import { Connector } from '../types/canvas';
 import InfoPanel from './InfoPanel.vue';
-import type Konva from 'konva';
-import  energyGraph  from '../types/nodes';
+import energyGraph from '../types/nodes';
 
 const stageWidth = window.innerWidth - 350;
 const stageHeight = window.innerHeight;
 
-const nodes = ref<EnergyNode[]>(energyGraph.nodes);
+const nodes = energyGraph.nodes;
 
 const selectedSquareIds = ref<Set<string>>(new Set());
+const selectedConnectorId = ref<string | null>(null);
 
 const connectors = computed<Connector[]>(() => {
-  const result: Connector[] = [];
-  // nodes.value.forEach(square => {
-  //   square.connectors.forEach(targetId => {
-  //     const target = nodes.value.find(s => s.id === targetId);
-  //     if (target) {
-  //       result.push({
-  //         id: `${square.id}-${targetId}`,
-  //         from: square.id,
-  //         to: targetId,
-  //         points: [
-  //           square.x + square.width / 2,
-  //           square.y + square.height / 2,
-  //           target.x + target.width / 2,
-  //           target.y + target.height / 2
-  //         ]
-  //       });
-  //     }
-  //   });
-  // });
-  return result;
+  return energyGraph.generateFlowConnectors();
 });
 
 const selectedSquares = computed(() => {
-  return nodes.value.filter(sq => selectedSquareIds.value.has(sq.id));
+  return nodes.filter(sq => selectedSquareIds.value.has(sq.id));
+});
+
+const selectedConnector = computed((): Connector | null => {
+  if (!selectedConnectorId.value) return null;
+  return connectors.value.find(conn => conn.id === selectedConnectorId.value) || null;
 });
 
 const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
+  // Clear connector selection when clicking on nodes
+  selectedConnectorId.value = null;
+  
   if (event.evt.shiftKey) {
     if (selectedSquareIds.value.has(squareId)) {
       selectedSquareIds.value.delete(squareId);
@@ -108,6 +100,12 @@ const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
     selectedSquareIds.value.clear();
     selectedSquareIds.value.add(squareId);
   }
+};
+
+const handleConnectorClick = (connectorId: string, event: { evt: MouseEvent }) => {
+  event.evt.stopPropagation(); // Prevent node click
+  selectedConnectorId.value = connectorId;
+  selectedSquareIds.value.clear(); // Clear node selection
 };
 
 const getSquareFill = (squareId: string) => {

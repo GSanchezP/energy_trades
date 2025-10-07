@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { EnergyNode } from '../types/canvas';
+import type { EnergyNode, Connector } from '../types/canvas';
 
 const props = defineProps<{
   selectedNodes: EnergyNode[];
+  selectedConnector: Connector | null;
 }>();
 
 const selectionCount = computed(() => props.selectedNodes.length);
@@ -21,20 +22,61 @@ const totalConnections = computed(() => {
     </div>
 
     <div class="panel-content">
-      <div v-if="selectionCount === 0" class="empty-state">
-        <p>No squares selected</p>
-        <p class="hint">Click a square to select it<br>Hold Shift to select multiple</p>
+      <div v-if="selectionCount === 0 && !selectedConnector" class="empty-state">
+        <p>No squares or connectors selected</p>
+        <p class="hint">Click a square to select it<br>Hold Shift to select multiple<br>Click a connector to see flow details</p>
       </div>
 
       <div v-else class="selection-info">
-        <div class="info-card">
-          <div class="info-label">Selected Squares</div>
-          <div class="info-value">{{ selectionCount }}</div>
+        <!-- Connector Information -->
+        <div v-if="selectedConnector" class="connector-info">
+          <div class="info-card">
+            <div class="info-label">Energy Flow</div>
+            <div class="info-value">{{ selectedConnector.from }} → {{ selectedConnector.to }}</div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-label">Power Output</div>
+            <div class="info-value">{{ selectedConnector.power.toFixed(3) }}</div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-label">Line Thickness</div>
+            <div class="info-value">{{ selectedConnector.strokeWidth.toFixed(1) }}px</div>
+          </div>
+
+          <div class="flow-details">
+            <h3>Flow Details</h3>
+            <div class="detail-row">
+              <span class="detail-label">Source:</span>
+              <span class="detail-value">{{ selectedConnector.from }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Target:</span>
+              <span class="detail-value">{{ selectedConnector.to }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Power:</span>
+              <span class="detail-value">{{ selectedConnector.power.toFixed(4) }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Stroke Width:</span>
+              <span class="detail-value">{{ selectedConnector.strokeWidth.toFixed(1) }}px</span>
+            </div>
+          </div>
         </div>
 
-        <div class="info-card">
-          <div class="info-label">Total Connections</div>
-          <div class="info-value">{{ totalConnections }}</div>
+        <!-- Node Information -->
+        <div v-if="selectionCount > 0">
+          <div class="info-card">
+            <div class="info-label">Selected Squares</div>
+            <div class="info-value">{{ selectionCount }}</div>
+          </div>
+
+          <div class="info-card">
+            <div class="info-label">Total Connections</div>
+            <div class="info-value">{{ totalConnections }}</div>
+          </div>
         </div>
 
         <div class="squares-list">
@@ -207,5 +249,27 @@ const totalConnections = computed(() => {
   border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
+}
+
+.connector-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.flow-details {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.flow-details h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 </style>
