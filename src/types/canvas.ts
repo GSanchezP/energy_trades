@@ -1,3 +1,5 @@
+import { readonly } from 'vue'
+
 type NodeType =
   | 'Petroleum'
   | 'Minerals'
@@ -22,7 +24,7 @@ export interface Position {
 }
 
 export class EnergyNode {
-  private outputPower: number = 1
+  public outputPower: number = 1
   input: NodeWeights = {
     Petroleum: 1,
     Minerals: 1,
@@ -48,7 +50,8 @@ export class EnergyNode {
     readonly nodeLevel: NodeLevel,
     readonly nodeType: NodeType,
     private readonly treDependencies: NodeWeights, // Amount of energy to produce 1 watt
-    private readonly outputMap: NodeWeights // which percentage of the produced energy goes into the other nodes
+    private readonly outputMap: NodeWeights, // which percentage of the produced energy goes into the other nodes
+    readonly color: string
   ) {
     this.checkOutputMap()
     this.calculateTre()
@@ -89,6 +92,8 @@ export class EnergyNode {
       console.log(`${key} factor: ${factor}`)
       power *= factor
     }
+
+    power = 1 // Remove this line when working
 
     console.log(`Total power: ${power}`)
     this.outputPower = power
@@ -154,8 +159,15 @@ export class EnergyGraph {
         const targetNode = this.nodes.find((node) => node.nodeType === targetType)
         if (targetNode && targetNode.id !== sourceNode.id) {
           if (targetNode.nodeLevel > sourceNode.nodeLevel) {
-            const connector = this.createLowerConnector(sourceNode, targetNode, power)
-            connectors.push(connector)
+            console.log(
+              `Computing forward from ${sourceNode.nodeType} to ${targetNode.nodeType} with ${power}`
+            )
+            connectors.push(this.createForwardConnector(sourceNode, targetNode, power, 'forward'))
+          } else {
+            console.log(
+              `Computing backward from ${sourceNode.nodeType} to ${targetNode.nodeType} with ${power}`
+            )
+            connectors.push(this.createForwardConnector(sourceNode, targetNode, power, 'backward'))
           }
         }
       }
@@ -164,40 +176,79 @@ export class EnergyGraph {
     return connectors
   }
 
-  private createLowerConnector(source: EnergyNode, target: EnergyNode, power: number): Connector {
-    const sourceX = source.x + source.width / 2
-    const sourceY = source.y + source.height / 2
-    const targetX = target.x + target.width / 2
-    const targetY = target.y + target.height / 2
+  private createForwardConnector(
+    source: EnergyNode,
+    target: EnergyNode,
+    power: number,
+    type: 'backward' | 'forward'
+  ): Connector {
+    let sourceOffset = 0
+    for (const [key, value] of Object.entries(source.output)) {
+      if (key === target.nodeType) break
+      sourceOffset += value * 100 // * source.outputPower // TODO
+    }
+
+    let targetOffset = 0
+    for (const [key, value] of Object.entries(target.input)) {
+      if (key === source.nodeType) break
+      targetOffset += value * 100 // source.inputPower
+    }
+
+    // Calculate stroke width based on power (min 0, max 100)
+    const strokeWidth = power * 100
+
+    let xOffset = 10 + strokeWidth / 2
+
+    const sourceX = source.x + source.width
+    const sourceY = source.y + sourceOffset + strokeWidth / 2
+    const targetX = target.x
+    const targetY = target.y + targetOffset + strokeWidth / 2
 
     let points: number[]
 
     // Flow goes to lower level - exit from top of source
 
-    // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = power * 100
+    if (type === 'forward') {
+      points = [
+        sourceX,
+        sourceY, // Start at top center of source
 
-    const lineW = 100 + strokeWidth / 2
+        sourceX + xOffset + sourceOffset,
+        sourceY, // Go to the left
 
-    points = [
-      sourceX,
-      sourceY, // Start at top center of source
+        sourceX + xOffset + sourceOffset,
+        950 + sourceOffset, // Go down the autobahn
 
-      sourceX + lineW,
-      sourceY, // Go to the left
+        targetX - xOffset - targetOffset,
+        950 + sourceOffset, // Go horizontally to target
 
-      sourceX + lineW,
-      950, // Go down the autobahn
+        targetX - xOffset - targetOffset,
+        targetY, // Go down to target center
 
-      targetX - lineW,
-      950, // Go horizontally to target
+        targetX,
+        targetY // Go down to target center
+      ]
+    } else {
+      points = [
+        sourceX,
+        sourceY, // Start at top center of source
 
-      targetX - lineW,
-      targetY, // Go down to target center
+        sourceX + xOffset - sourceOffset,
+        sourceY, // Go to the left
 
-      targetX,
-      targetY // Go down to target center
-    ]
+        sourceX + xOffset - sourceOffset,
+        150 + sourceOffset, // Go down the autobahn
+
+        targetX - xOffset + sourceOffset,
+        150 + sourceOffset, // Go horizontally to target
+
+        targetX - xOffset + sourceOffset,
+        targetY, // Go down to target center
+
+        targetX,
+        targetY // Go down to target center
+      ]
+    }
 
     return {
       id: `${source.id}-${target.id}`,
@@ -205,7 +256,8 @@ export class EnergyGraph {
       to: target.id,
       points,
       power,
-      strokeWidth
+      strokeWidth,
+      color: source.color
     }
   }
 }
@@ -217,4 +269,5 @@ export interface Connector {
   points: number[]
   power: number
   strokeWidth: number
+  color: string
 }

@@ -20,12 +20,13 @@ energyGraph.push(
       Petroleum: 0,
       Minerals: 0,
       Fuels: 0.5,
-      Electricity: 0.5,
-      Manufacture: 0,
+      Electricity: 0,
+      Manufacture: 0.5,
       Transport: 0,
       WellBeing: 0,
       Leisure: 0
-    }
+    },
+    '#442d54ff'
   )
 )
 
@@ -48,11 +49,12 @@ energyGraph.push(
       Minerals: 0,
       Fuels: 0,
       Electricity: 0,
-      Manufacture: 1,
+      Manufacture: 0.5,
       Transport: 0,
       WellBeing: 0,
-      Leisure: 0
-    }
+      Leisure: 0.5
+    },
+    '#856350ff'
   )
 )
 
@@ -79,7 +81,8 @@ energyGraph.push(
       Transport: 0.08,
       WellBeing: 0.02,
       Leisure: 0.548
-    }
+    },
+    '#c76956ff'
   )
 )
 
@@ -106,7 +109,8 @@ energyGraph.push(
       Transport: 0,
       WellBeing: 0.2,
       Leisure: 0.66
-    }
+    },
+    '#0d92a3ff'
   )
 )
 
@@ -133,7 +137,8 @@ energyGraph.push(
       Transport: 0.03,
       WellBeing: 0.2,
       Leisure: 0.67
-    }
+    },
+    '#c2cd1dff'
   )
 )
 
@@ -160,7 +165,8 @@ energyGraph.push(
       Transport: 0,
       WellBeing: 0.4,
       Leisure: 0.559
-    }
+    },
+    '#6abf1fff'
   )
 )
 
@@ -187,7 +193,8 @@ energyGraph.push(
       Transport: 0.03,
       WellBeing: 0.6,
       Leisure: 0.281
-    }
+    },
+    '#1fbb65ff'
   )
 )
 
@@ -206,15 +213,16 @@ energyGraph.push(
       Leisure: 0
     },
     {
-      Petroleum: 0.002,
-      Minerals: 0.02,
-      Fuels: 0.01,
-      Electricity: 0.007,
-      Manufacture: 0.05,
-      Transport: 0.03,
-      WellBeing: 0.6,
-      Leisure: 0.281
-    }
+      Petroleum: 0,
+      Minerals: 0,
+      Fuels: 0,
+      Electricity: 0,
+      Manufacture: 0,
+      Transport: 0,
+      WellBeing: 0,
+      Leisure: 1
+    },
+    '#c953bdff'
   )
 )
 

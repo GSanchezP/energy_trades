@@ -8,11 +8,11 @@
             :key="connector.id"
             :config="{
               points: connector.points,
-              stroke: selectedConnectorId === connector.id ? '#ef4444' : '#64748b',
+              stroke: connector.color,
               strokeWidth: connector.strokeWidth,
               lineCap: 'round',
               lineJoin: 'round',
-              opacity:  selectedConnectorId === connector.id ? 1 : 0.2
+              opacity:  selectedConnectorId === connector.id ? 0.9 : 0.4
             }"
             @click="(e: any) => handleConnectorClick(connector.id, e)"
           />
@@ -25,12 +25,13 @@
               y: square.y,
               width: square.width,
               height: square.height,
-              fill: getSquareFill(square.id),
+              fill: square.color,
               stroke: '#1e293b',
               strokeWidth: 2,
               shadowBlur: 5,
               shadowColor: 'black',
               shadowOpacity: 0.2,
+              opacity: selectedSquareIds.has(square.id) ? 0.8 : 1
             }"
             @click="(e: any) => handleSquareClick(square.id, e)"
           />
@@ -108,9 +109,6 @@ const handleConnectorClick = (connectorId: string, event: { evt: MouseEvent }) =
   selectedSquareIds.value.clear(); // Clear node selection
 };
 
-const getSquareFill = (squareId: string) => {
-  return selectedSquareIds.value.has(squareId) ? '#10b981' : '#3b82f6';
-};
 </script>
 
 
