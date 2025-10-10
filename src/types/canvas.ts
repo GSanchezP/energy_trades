@@ -7,8 +7,43 @@ type NodeType =
   | 'Transport'
   | 'WellBeing'
   | 'Leisure'
+  | 'Heat'
 
 type NodeWeights = { [key in NodeType]: number }
+
+export function inputTre(input: { [key in NodeType]?: number }): NodeWeights {
+  return {
+    Petroleum: input.Petroleum ?? 0,
+    Minerals: input.Minerals ?? 0,
+    Fuels: input.Fuels ?? 0,
+    Electricity: input.Electricity ?? 0,
+    Manufacture: input.Manufacture ?? 0,
+    Transport: input.Transport ?? 0,
+    WellBeing: input.WellBeing ?? 0,
+    Leisure: input.Leisure ?? 0,
+    Heat: input.Heat ?? 0
+  }
+}
+
+export function outputMap(outputMap: { [key in NodeType]?: number }): NodeWeights {
+  let total = 0
+
+  for (const val of Object.values(outputMap)) {
+    total += val
+  }
+
+  return {
+    Petroleum: outputMap.Petroleum ?? 0,
+    Minerals: outputMap.Minerals ?? 0,
+    Fuels: outputMap.Fuels ?? 0,
+    Electricity: outputMap.Electricity ?? 0,
+    Manufacture: outputMap.Manufacture ?? 0,
+    Transport: outputMap.Transport ?? 0,
+    WellBeing: outputMap.WellBeing ?? 0,
+    Leisure: outputMap.Leisure ?? 0,
+    Heat: 1 - total
+  }
+}
 
 export enum NodeLevel {
   Dump = 0,
@@ -65,7 +100,8 @@ export class EnergyNode extends BasicNode {
     Manufacture: 1,
     Transport: 1,
     WellBeing: 1,
-    Leisure: 1
+    Leisure: 1,
+    Heat: 1
   }
   output: NodeWeights = {
     Petroleum: 1,
@@ -75,7 +111,8 @@ export class EnergyNode extends BasicNode {
     Manufacture: 1,
     Transport: 1,
     WellBeing: 1,
-    Leisure: 1
+    Leisure: 1,
+    Heat: 1
   }
   constructor(
     readonly nodeLevel: NodeLevel,
@@ -189,6 +226,10 @@ export class EnergyGraph {
 
     for (const sourceNode of this.energyNodes) {
       for (const [targetType, power] of Object.entries(sourceNode.output) as [NodeType, number][]) {
+        if (targetType === 'Heat') {
+          connectors.push(this.createDumpConnector(sourceNode, power))
+        }
+
         const targetNode = this.energyNodes.find((node) => node.nodeType === targetType)
         if (targetNode && targetNode.id !== sourceNode.id) {
           if (targetNode.nodeLevel > sourceNode.nodeLevel) {
@@ -207,6 +248,46 @@ export class EnergyGraph {
     }
 
     return connectors
+  }
+
+  createDumpConnector(source: EnergyNode, power: number): Connector {
+    let sourceOffset = 0
+    for (const value of Object.values(source.output)) {
+      sourceOffset += value * 100 // * source.outputPower // TODO
+    }
+
+    // Calculate stroke width based on power (min 0, max 100)
+    const strokeWidth = power * 100
+
+    let xOffset = 10 + strokeWidth / 2
+
+    const sourceX = source.x + source.width
+    const sourceY = source.y + sourceOffset + strokeWidth / 2
+
+    let points: number[]
+
+    // Flow goes to lower level - exit from top of source
+
+    points = [
+      sourceX,
+      sourceY, // Start at top center of source
+
+      sourceX + xOffset + sourceOffset,
+      sourceY, // Go to the left
+
+      sourceX + xOffset + sourceOffset,
+      900
+    ]
+
+    return {
+      id: `${source.id}-dump`,
+      from: source.id,
+      to: 'Dump',
+      points,
+      power,
+      strokeWidth,
+      color: '#e04c4cff'
+    }
   }
 
   private createForwardConnector(
