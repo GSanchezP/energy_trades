@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { EnergyNode, Connector } from '../types/canvas';
+import type { Connector, BasicNode } from '../types/canvas';
 
 const props = defineProps<{
-  selectedNodes: EnergyNode[];
+  selectedNodes: BasicNode[];
   selectedConnector: Connector | null;
 }>();
 

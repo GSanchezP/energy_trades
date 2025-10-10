@@ -82,7 +82,7 @@ energyGraph.push(
       WellBeing: 0.02,
       Leisure: 0.548
     },
-    '#c76956ff'
+    '#610a52ff'
   )
 )
 
@@ -105,10 +105,10 @@ energyGraph.push(
       Minerals: 0.05,
       Fuels: 0.03,
       Electricity: 0.01,
-      Manufacture: 0.04,
+      Manufacture: 0.3,
       Transport: 0,
       WellBeing: 0.2,
-      Leisure: 0.66
+      Leisure: 0.4
     },
     '#0d92a3ff'
   )
@@ -227,5 +227,6 @@ energyGraph.push(
 )
 
 energyGraph.calculate()
+energyGraph.addDumpNode()
 
 export default energyGraph

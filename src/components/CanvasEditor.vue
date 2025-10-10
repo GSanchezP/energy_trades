@@ -35,19 +35,39 @@
             }"
             @click="(e: any) => handleSquareClick(square.id, e)"
           />
+
+          <v-rect
+            v-for="square in nodes"
+            :key="square.id"
+            :config="{
+              x: square.x,
+              y: square.y,
+              width: square.width,
+              height: square.height,
+              fill: square.color,
+              stroke: '#1e293b',
+              strokeWidth: 2,
+              shadowBlur: 5,
+              shadowColor: 'black',
+              shadowOpacity: 0.2,
+              opacity: selectedSquareIds.has(square.id) ? 0.8 : 1
+            }"
+            @click="(e: any) => handleSquareClick(square.id, e)"
+          />
+
           <v-text
             v-for="square in nodes"
             :key="`text-${square.id}`"
             :config="{
               x: square.x + square.width / 2,
               y: square.y + square.height / 2,
-              text: square.nodeType,
+              text: square.id,
               fontSize: 18,
               fontFamily: 'Arial',
               fill: '#ffffff',
               align: 'center',
               verticalAlign: 'middle',
-              offsetX: square.nodeType.length * 5,
+              offsetX: square.id.length * 5,
               offsetY: 7,
               draggable: true
             }"
