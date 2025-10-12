@@ -1,5 +1,6 @@
 export type NodeType =
   | 'Petroleum'
+  | 'Coal'
   | 'Minerals'
   | 'Fuels'
   | 'Electricity'
@@ -22,6 +23,7 @@ export enum NodeLevel {
 export function inputTre(input: { [key in NodeType]?: number }): NodeWeights {
   return {
     Petroleum: input.Petroleum ?? 0,
+    Coal: input.Coal ?? 0,
     Minerals: input.Minerals ?? 0,
     Fuels: input.Fuels ?? 0,
     Electricity: input.Electricity ?? 0,
@@ -42,6 +44,7 @@ export function outputMap(outputMap: { [key in NodeType]?: number }): NodeWeight
 
   return {
     Petroleum: outputMap.Petroleum ?? 0,
+    Coal: outputMap.Coal ?? 0,
     Minerals: outputMap.Minerals ?? 0,
     Fuels: outputMap.Fuels ?? 0,
     Electricity: outputMap.Electricity ?? 0,
@@ -96,6 +99,7 @@ export class EnergyNode extends BasicNode {
   public outputPower: number = 1
   input: NodeWeights = {
     Petroleum: 1,
+    Coal: 1,
     Minerals: 1,
     Fuels: 1,
     Electricity: 1,
@@ -107,6 +111,7 @@ export class EnergyNode extends BasicNode {
   }
   output: NodeWeights = {
     Petroleum: 1,
+    Coal: 1,
     Minerals: 1,
     Fuels: 1,
     Electricity: 1,
@@ -137,7 +142,7 @@ export class EnergyNode extends BasicNode {
   }
 
   get height() {
-    return 100
+    return 160
   }
 
   calculateOutput() {

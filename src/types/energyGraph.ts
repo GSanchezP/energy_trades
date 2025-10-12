@@ -64,11 +64,11 @@ export class EnergyGraph {
     let sourceOffset = 0
     for (const [key, value] of Object.entries(source.output)) {
       if (key === 'Heat') break
-      sourceOffset += value * 100 // * source.outputPower // TODO
+      sourceOffset += value * source.height // * source.outputPower // TODO
     }
 
     // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = power * 100
+    const strokeWidth = power * source.height
 
     let xOffset = 10 + strokeWidth / 2
 
@@ -108,17 +108,17 @@ export class EnergyGraph {
     let sourceOffset = 0
     for (const [key, value] of Object.entries(source.output)) {
       if (key === target.nodeType) break
-      sourceOffset += value * 100 // * source.outputPower // TODO
+      sourceOffset += value * source.height // * source.outputPower // TODO
     }
 
     let targetOffset = 0
     for (const [key, value] of Object.entries(target.input)) {
       if (key === source.nodeType) break
-      targetOffset += value * 100 // source.inputPower
+      targetOffset += value * source.height // source.inputPower
     }
 
     // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = power * 100
+    const strokeWidth = power * source.height
 
     let xOffset = 10 + strokeWidth / 2
 
