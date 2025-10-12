@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Connector, BasicNode } from '../types/canvas';
+import type { Connector, BasicNode, EnergyNode, NodeType } from '../types/canvas';
 
 const props = defineProps<{
   selectedNodes: BasicNode[];
@@ -9,10 +9,27 @@ const props = defineProps<{
 
 const selectionCount = computed(() => props.selectedNodes.length);
 
-const totalConnections = computed(() => {
-  // return props.selectedNodes.reduce((sum, sq) => sum + sq.connectors.length, 0);
-  return 0
+// Remove unused computed property
+
+// Filter to only show EnergyNodes (not BasicNodes like dump)
+const energyNodes = computed(() => {
+  return props.selectedNodes.filter((node): node is EnergyNode => 
+    'nodeType' in node && 'input' in node && 'output' in node
+  );
 });
+
+// Get all unique node types for table headers
+const allNodeTypes: NodeType[] = [
+  'Petroleum', 'Minerals', 'Fuels', 'Electricity', 
+  'Manufacture', 'Transport', 'WellBeing', 'Leisure', 'Heat'
+];
+
+// Helper function to format numbers
+const formatNumber = (value: number): string => {
+  if (value === 0) return '0';
+  if (value < 0.001) return value.toExponential(2);
+  return value.toFixed(3);
+};
 </script>
 
 <template>
@@ -66,22 +83,76 @@ const totalConnections = computed(() => {
           </div>
         </div>
 
-        <!-- Node Information -->
-        <div v-if="selectionCount > 0">
-          <div class="info-card">
-            <div class="info-label">Selected Squares</div>
-            <div class="info-value">{{ selectionCount }}</div>
-          </div>
 
-          <div class="info-card">
-            <div class="info-label">Total Connections</div>
-            <div class="info-value">{{ totalConnections }}</div>
+        <!-- Energy Node Details Table -->
+        <div v-if="energyNodes.length > 0" class="energy-details">
+          <h3>Energy Node Details</h3>
+          
+          <div v-for="node in energyNodes" :key="node.id" class="node-section">
+            <div class="node-header">
+              <h4>{{ node.nodeType }}</h4>
+              <div class="node-meta">
+                <span class="node-level">{{ node.nodeLevel }}</span>
+                <span class="output-power">Output: {{ formatNumber(node.outputPower) }}</span>
+              </div>
+            </div>
+
+            <!-- Input Table -->
+            <div class="table-section">
+              <h5>Input Requirements</h5>
+              <div class="table-container">
+                <table class="energy-table">
+                  <thead>
+                    <tr>
+                      <th>Node Type</th>
+                      <th>Required</th>
+                      <th>Current</th>
+                      <th>Ratio</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="nodeType in allNodeTypes" :key="`input-${nodeType}`">
+                      <td class="node-type">{{ nodeType }}</td>
+                      <td class="numeric">{{ formatNumber(node.treDependencies[nodeType] || 0) }}</td>
+                      <td class="numeric">{{ formatNumber(node.input[nodeType] || 0) }}</td>
+                      <td class="numeric ratio" :class="{ 'low-ratio': (node.treDependencies[nodeType] || 0) > 0 && (node.input[nodeType] || 0) / (node.treDependencies[nodeType] || 0) < 0.5 }">
+                        {{ (node.treDependencies[nodeType] || 0) > 0 ? formatNumber((node.input[nodeType] || 0) / (node.treDependencies[nodeType] || 0)) : '-' }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Output Table -->
+            <div class="table-section">
+              <h5>Output Distribution</h5>
+              <div class="table-container">
+                <table class="energy-table">
+                  <thead>
+                    <tr>
+                      <th>Node Type</th>
+                      <th>Percentage</th>
+                      <th>Actual Output</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="nodeType in allNodeTypes" :key="`output-${nodeType}`">
+                      <td class="node-type">{{ nodeType }}</td>
+                      <td class="numeric">{{ formatNumber((node.outputMap[nodeType] || 0) * 100) }}%</td>
+                      <td class="numeric">{{ formatNumber(node.output[nodeType] || 0) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="squares-list">
-          <h3>Square Details</h3>
-          <div v-for="node in selectedNodes" :key="node.id" class="square-item">
+        <!-- Basic Node Details (for non-energy nodes) -->
+        <div v-if="selectedNodes.length > energyNodes.length" class="basic-nodes">
+          <h3>Other Selected Items</h3>
+          <div v-for="node in selectedNodes.filter(n => !energyNodes.includes(n as EnergyNode))" :key="node.id" class="square-item">
             <div class="square-id">{{ node.id }}</div>
             <div class="square-details">
               <div class="detail-row">
@@ -92,16 +163,6 @@ const totalConnections = computed(() => {
                 <span class="detail-label">Size:</span>
                 <span class="detail-value">{{ node.width }}x{{ node.height }}</span>
               </div>
-              <div class="detail-row">
-                <span class="detail-label">Connections:</span>
-                <!-- <span class="detail-value">{{ node.connectors.length }}</span> -->
-              </div>
-              <!-- <div v-if="node.connectors.length > 0" class="connections">
-                <span class="detail-label">Connected to:</span>
-                <div class="connection-tags">
-                  <span v-for="conn in node.connectors" :key="conn" class="tag">{{ conn }}</span>
-                </div>
-              </div> -->
             </div>
           </div>
         </div>
@@ -112,7 +173,7 @@ const totalConnections = computed(() => {
 
 <style scoped>
 .info-panel {
-  width: 350px;
+  width: 400px;
   background: white;
   border-left: 1px solid #e2e8f0;
   display: flex;
@@ -265,6 +326,151 @@ const totalConnections = computed(() => {
 }
 
 .flow-details h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Energy Details Styles */
+.energy-details {
+  margin-top: 20px;
+}
+
+.energy-details h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.node-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.node-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.node-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.node-level {
+  background: #3b82f6;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.output-power {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.table-section {
+  margin-bottom: 20px;
+}
+
+.table-section:last-child {
+  margin-bottom: 0;
+}
+
+.table-section h5 {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.table-container {
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.energy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  background: white;
+}
+
+.energy-table th {
+  background: #f1f5f9;
+  padding: 8px 6px;
+  text-align: left;
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.energy-table td {
+  padding: 6px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.energy-table tr:last-child td {
+  border-bottom: none;
+}
+
+.energy-table tr:hover {
+  background: #f8fafc;
+}
+
+.node-type {
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.numeric {
+  text-align: right;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+}
+
+.ratio {
+  font-weight: 600;
+}
+
+.ratio.low-ratio {
+  color: #dc2626;
+}
+
+.basic-nodes {
+  margin-top: 20px;
+}
+
+.basic-nodes h3 {
   font-size: 14px;
   font-weight: 600;
   color: #1e293b;

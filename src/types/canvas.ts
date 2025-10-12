@@ -1,4 +1,4 @@
-type NodeType =
+export type NodeType =
   | 'Petroleum'
   | 'Minerals'
   | 'Fuels'
@@ -101,7 +101,7 @@ export class EnergyNode extends BasicNode {
     Transport: 1,
     WellBeing: 1,
     Leisure: 1,
-    Heat: 1
+    Heat: 0
   }
   output: NodeWeights = {
     Petroleum: 1,
@@ -112,13 +112,13 @@ export class EnergyNode extends BasicNode {
     Transport: 1,
     WellBeing: 1,
     Leisure: 1,
-    Heat: 1
+    Heat: 0
   }
   constructor(
     readonly nodeLevel: NodeLevel,
     readonly nodeType: NodeType,
-    private readonly treDependencies: NodeWeights, // Amount of energy to produce 1 watt
-    private readonly outputMap: NodeWeights, // which percentage of the produced energy goes into the other nodes,
+    public readonly treDependencies: NodeWeights, // Amount of energy to produce 1 watt
+    public readonly outputMap: NodeWeights, // which percentage of the produced energy goes into the other nodes,
     readonly color: string
   ) {
     super(nodeLevel, color)
@@ -131,7 +131,7 @@ export class EnergyNode extends BasicNode {
   }
 
   get width() {
-    return 150
+    return 120
   }
 
   get height() {
@@ -194,8 +194,8 @@ export class EnergyGraph {
   }
 
   addDumpNode() {
-    const x1 = Math.min(...this.energyNodes.map((n) => n.x - 100))
-    const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 100))
+    const x1 = Math.min(...this.energyNodes.map((n) => n.x))
+    const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 120))
     const dumpNode = new BasicNode(NodeLevel.Dump, '#e04c4cff', { width: x2 - x1, height: 100 })
     dumpNode.position = { x: x1, y: 850 }
     this.dumpNode = dumpNode
@@ -216,7 +216,7 @@ export class EnergyGraph {
 
   private computePos(nodeLevel: NodeLevel) {
     return {
-      x: 200 + (nodeLevel - 1) * 400,
+      x: 100 + (nodeLevel - 1) * 400,
       y: 200 + this.energyNodes.filter((en) => en.nodeLevel === nodeLevel).length * 200
     }
   }
@@ -236,12 +236,12 @@ export class EnergyGraph {
             console.log(
               `Computing forward from ${sourceNode.nodeType} to ${targetNode.nodeType} with ${power}`
             )
-            connectors.push(this.createForwardConnector(sourceNode, targetNode, power, 'forward'))
+            connectors.push(this.createConnector(sourceNode, targetNode, power, 'forward'))
           } else {
             console.log(
               `Computing backward from ${sourceNode.nodeType} to ${targetNode.nodeType} with ${power}`
             )
-            connectors.push(this.createForwardConnector(sourceNode, targetNode, power, 'backward'))
+            connectors.push(this.createConnector(sourceNode, targetNode, power, 'backward'))
           }
         }
       }
@@ -252,7 +252,8 @@ export class EnergyGraph {
 
   createDumpConnector(source: EnergyNode, power: number): Connector {
     let sourceOffset = 0
-    for (const value of Object.values(source.output)) {
+    for (const [key, value] of Object.entries(source.output)) {
+      if (key === 'Heat') break
       sourceOffset += value * 100 // * source.outputPower // TODO
     }
 
@@ -290,7 +291,7 @@ export class EnergyGraph {
     }
   }
 
-  private createForwardConnector(
+  private createConnector(
     source: EnergyNode,
     target: EnergyNode,
     power: number,
@@ -350,16 +351,16 @@ export class EnergyGraph {
         sourceX,
         sourceY, // Start at top center of source
 
-        sourceX + xOffset - sourceOffset,
+        sourceX + xOffset + sourceOffset,
         sourceY, // Go to the left
 
-        sourceX + xOffset - sourceOffset,
+        sourceX + xOffset + sourceOffset,
         UPPER_AUTOBAHN + sourceOffset, // Go down the autobahn
 
-        targetX - xOffset + sourceOffset,
+        targetX - xOffset - sourceOffset,
         UPPER_AUTOBAHN + sourceOffset, // Go horizontally to target
 
-        targetX - xOffset + sourceOffset,
+        targetX - xOffset - sourceOffset,
         targetY, // Go down to target center
 
         targetX,

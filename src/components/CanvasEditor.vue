@@ -31,7 +31,7 @@
               shadowBlur: 5,
               shadowColor: 'black',
               shadowOpacity: 0.2,
-              opacity: selectedSquareIds.has(square.id) ? 0.8 : 1
+              opacity: selectedSquareIds.has(square.id) ? 0.6 : 1
             }"
             @click="(e: any) => handleSquareClick(square.id, e)"
           />
