@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { Connector, BasicNode, EnergyNode, NodeType } from '../types/canvas';
+import type { BasicNode, EnergyNode, NodeType } from '../types/energyNode';
+import type { Connector } from '../types/energyGraph';
 
 const props = defineProps<{
   selectedNodes: BasicNode[];

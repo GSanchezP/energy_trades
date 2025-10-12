@@ -82,7 +82,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { Connector } from '../types/canvas';
+import { Connector } from '../types/energyGraph';
 import InfoPanel from './InfoPanel.vue';
 import energyGraph from '../types/nodes';
 

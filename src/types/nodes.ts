@@ -1,4 +1,6 @@
-import { EnergyGraph, EnergyNode, inputTre, NodeLevel, outputMap } from './canvas'
+import { EnergyNode, NodeLevel, inputTre, outputMap } from './energyNode'
+
+import { EnergyGraph } from './energyGraph'
 
 const energyGraph = new EnergyGraph()
 
@@ -45,7 +47,6 @@ energyGraph.push(
     'Fuels',
     inputTre({
       Petroleum: 1.5,
-      Fuels: 0.02,
       Electricity: 0.03,
       Manufacture: 0.02,
       Transport: 0.006,
@@ -53,8 +54,7 @@ energyGraph.push(
     }),
     outputMap({
       Petroleum: 0.1,
-      Minerals: 0.01,
-      Fuels: 0.02,
+      Minerals: 0.2,
       Electricity: 0.6,
       Manufacture: 0.02,
       Transport: 0.08,
@@ -71,7 +71,6 @@ energyGraph.push(
     'Electricity',
     inputTre({
       Fuels: 3,
-      Electricity: 0.01,
       Manufacture: 0.025,
       Transport: 0.001,
       WellBeing: 0.007
@@ -80,7 +79,6 @@ energyGraph.push(
       Petroleum: 0.1,
       Minerals: 0.05,
       Fuels: 0.03,
-      Electricity: 0.01,
       Manufacture: 0.3,
       WellBeing: 0.2,
       Leisure: 0.2
@@ -98,7 +96,6 @@ energyGraph.push(
       Minerals: 1.6,
       Fuels: 0.02,
       Electricity: 0.04,
-      Manufacture: 0.01,
       Transport: 0.008,
       WellBeing: 0.05
     }),
@@ -107,7 +104,6 @@ energyGraph.push(
       Minerals: 0.03,
       Fuels: 0.02,
       Electricity: 0.025,
-      Manufacture: 0.01,
       Transport: 0.03,
       WellBeing: 0.2,
       Leisure: 0.3
@@ -146,8 +142,7 @@ energyGraph.push(
       Fuels: 0.15,
       Electricity: 0.2,
       Manufacture: 0.2,
-      Transport: 0.4,
-      WellBeing: 0.6
+      Transport: 0.4
     }),
     outputMap({
       Petroleum: 0.002,
@@ -156,8 +151,7 @@ energyGraph.push(
       Electricity: 0.007,
       Manufacture: 0.05,
       Transport: 0.03,
-      WellBeing: 0.6,
-      Leisure: 0.2
+      Leisure: 0.6
     }),
     '#1fbb65ff'
   )
