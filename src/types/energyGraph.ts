@@ -4,6 +4,17 @@ export class EnergyGraph {
   public energyNodes: EnergyNode[] = []
   public dumpNode?: BasicNode
 
+  private upperUsage: number[] = []
+  private lowerUsage: number[] = []
+
+  get upperUsageLevel(): number {
+    return this.upperUsage.reduce((a, b) => a + b, 0)
+  }
+
+  get lowerUsageLevel(): number {
+    return this.lowerUsage.reduce((a, b) => a + b, 0)
+  }
+
   get nodes(): BasicNode[] {
     return this.dumpNode ? [...this.energyNodes, this.dumpNode] : [...this.energyNodes]
   }
@@ -105,8 +116,8 @@ export class EnergyGraph {
   }
 
   private createConnector(source: EnergyNode, target: EnergyNode, power: number): Connector {
-    const LOW_AUTOBAHN = 600
-    const UPPER_AUTOBAHN = 100
+    const LOW_AUTOBAHN = 680
+    const UPPER_AUTOBAHN = 180
 
     let sourceOffset = 0
     for (const [key, value] of Object.entries(source.output)) {
@@ -136,11 +147,13 @@ export class EnergyGraph {
 
     let yAutobahn
     if (target.nodeLevel - source.nodeLevel === 1) {
-      yAutobahn = sourceY - sourceOffset
+      yAutobahn = sourceY
     } else if (source.nodeLevel < target.nodeLevel) {
-      yAutobahn = LOW_AUTOBAHN
+      yAutobahn = LOW_AUTOBAHN + this.lowerUsageLevel + strokeWidth / 2
+      this.lowerUsage.push(strokeWidth)
     } else {
-      yAutobahn = UPPER_AUTOBAHN
+      yAutobahn = UPPER_AUTOBAHN - this.upperUsageLevel - strokeWidth / 2
+      this.upperUsage.push(strokeWidth)
     }
 
     points = [
@@ -151,10 +164,10 @@ export class EnergyGraph {
       sourceY, // Go to the left
 
       sourceX + xOffset + sourceOffset,
-      yAutobahn + sourceOffset, // Go down the autobahn
+      yAutobahn, // Go down the autobahn
 
       targetX - xOffset - targetOffset,
-      yAutobahn + sourceOffset, // Go horizontally to target
+      yAutobahn, // Go horizontally to target
 
       targetX - xOffset - targetOffset,
       targetY, // Go down to target center
