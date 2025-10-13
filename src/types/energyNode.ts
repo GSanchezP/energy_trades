@@ -63,12 +63,17 @@ export interface Position {
 
 export class BasicNode {
   private _position: Position = { x: 0, y: 0 }
+  protected _size: { height: number; width: number }
+
+  protected BASE_HEIGHT = 160
 
   constructor(
     readonly nodeLevel: NodeLevel,
     readonly color: string,
     readonly size?: { height: number; width: number }
-  ) {}
+  ) {
+    this._size = size ?? { height: this.BASE_HEIGHT, width: 120 }
+  }
 
   get id() {
     return 'Heat'
@@ -87,11 +92,11 @@ export class BasicNode {
   }
 
   get width() {
-    return this.size!.width
+    return this._size.width
   }
 
   get height() {
-    return this.size!.height
+    return this._size.height
   }
 }
 
@@ -137,36 +142,32 @@ export class EnergyNode extends BasicNode {
     return this.nodeType
   }
 
-  get width() {
-    return 120
-  }
-
-  get height() {
-    return 160
-  }
-
   calculateOutput() {
-    let power = 1
+    let outputPowerFactor = 1
+
     console.log(this.treDependencies)
-    console.log(this.input)
-    for (const key of Object.keys(this.input) as NodeType[]) {
+    for (const [key, value] of Object.entries(this.input) as [NodeType, number][]) {
       if (this.treDependencies[key] === 0) continue
       const factor =
         Math.min(this.input[key], this.treDependencies[key]) / this.treDependencies[key]
       console.log(`${key} factor: ${factor}`)
-      power *= factor
+      outputPowerFactor *= factor
     }
 
-    power = 1 // Remove this line when working
-
-    console.log(`Total power: ${power}`)
-    this.outputPower = power
+    console.log(`Total power: ${outputPowerFactor}`)
+    this.outputPower = 1 // TODO: power
 
     for (const [key, val] of Object.entries(this.outputMap) as [NodeType, number][]) {
       this.output[key] = this.outputPower * val
     }
 
     console.log(this.output)
+  }
+
+  resizeByInput() {
+    if (this.nodeLevel === NodeLevel.Primary) return
+    const totalInput = Object.values(this.input).reduce((acc, curr) => acc + curr, 0)
+    this._size = { width: this.width, height: this.BASE_HEIGHT * totalInput }
   }
 
   checkOutputMap() {

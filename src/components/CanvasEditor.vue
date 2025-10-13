@@ -93,8 +93,7 @@ const stageRef = ref(null)
 
 const stageConfig = computed(() => ({
   width: stageWidth,
-  height: stageHeight,
-  draggable: true
+  height: stageHeight
 }))
 
 const handleWheel = (e: any) => {

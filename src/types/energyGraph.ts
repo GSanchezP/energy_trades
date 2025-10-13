@@ -34,6 +34,12 @@ export class EnergyGraph {
     }
   }
 
+  resizeNodesByInput() {
+    for (const node of this.energyNodes) {
+      node.resizeByInput()
+    }
+  }
+
   private computePos(nodeLevel: NodeLevel) {
     return {
       x: 100 + (nodeLevel - 1) * 400,

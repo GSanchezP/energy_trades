@@ -193,5 +193,6 @@ energyGraph.push(
 
 energyGraph.calculate()
 energyGraph.addDumpNode()
+energyGraph.resizeNodesByInput()
 
 export default energyGraph
