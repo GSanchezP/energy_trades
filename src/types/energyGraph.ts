@@ -1,4 +1,4 @@
-import { BasicNode, EnergyNode, NodeLevel, NodeType } from './energyNode'
+import { BASE_NODE_HEIGHT, BasicNode, EnergyNode, NodeLevel, NodeType } from './energyNode'
 
 export class EnergyGraph {
   public energyNodes: EnergyNode[] = []
@@ -9,7 +9,7 @@ export class EnergyGraph {
   }
 
   push(node: EnergyNode) {
-    node.position = this.computePos(node.nodeLevel)
+    node.setPosition = this.computePos(node.nodeLevel)
     this.energyNodes.push(node)
   }
 
@@ -17,19 +17,16 @@ export class EnergyGraph {
     const x1 = Math.min(...this.energyNodes.map((n) => n.x))
     const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 120))
     const dumpNode = new BasicNode(NodeLevel.Dump, '#e04c4cff', { width: x2 - x1, height: 100 })
-    dumpNode.position = { x: x1, y: 850 }
+    dumpNode.setPosition = { x: x1, y: 850 }
     this.dumpNode = dumpNode
   }
 
   calculate() {
-    console.log('calculating')
     for (const calcNode of this.energyNodes) {
       calcNode.calculateOutput()
       for (const node of this.energyNodes) {
-        console.log(
-          `Input of [${node.nodeType}][${calcNode.nodeType}] when from ${node.input[calcNode.nodeType].toFixed(2)} to ${calcNode.output[node.nodeType].toFixed(2)}`
-        )
         node.input[calcNode.nodeType] = calcNode.output[node.nodeType]
+        node.calculateInput()
       }
     }
   }
@@ -70,11 +67,11 @@ export class EnergyGraph {
     let sourceOffset = 0
     for (const [key, value] of Object.entries(source.output)) {
       if (key === 'Heat') break
-      sourceOffset += value * source.height // * source.outputPower // TODO
+      sourceOffset += value * source.height // TODO
     }
 
     // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = power * source.height
+    const strokeWidth = power * BASE_NODE_HEIGHT
 
     let xOffset = 10 + strokeWidth / 2
 
@@ -114,17 +111,17 @@ export class EnergyGraph {
     let sourceOffset = 0
     for (const [key, value] of Object.entries(source.output)) {
       if (key === target.nodeType) break
-      sourceOffset += value * source.height // * source.outputPower // TODO
+      sourceOffset += value * BASE_NODE_HEIGHT
     }
 
     let targetOffset = 0
     for (const [key, value] of Object.entries(target.input)) {
       if (key === source.nodeType) break
-      targetOffset += value * source.height // source.inputPower
+      targetOffset += value * BASE_NODE_HEIGHT
     }
 
     // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = power * source.height
+    const strokeWidth = power * BASE_NODE_HEIGHT
 
     let xOffset = 10 + strokeWidth / 2
 

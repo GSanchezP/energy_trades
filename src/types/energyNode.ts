@@ -12,6 +12,8 @@ export type NodeType =
 
 type NodeWeights = { [key in NodeType]: number }
 
+export const BASE_NODE_HEIGHT = 160
+
 export enum NodeLevel {
   Dump = 0,
   Primary = 1,
@@ -62,24 +64,30 @@ export interface Position {
 }
 
 export class BasicNode {
+  private _nodeLevel: NodeLevel = NodeLevel.Primary
   private _position: Position = { x: 0, y: 0 }
-  protected _size: { height: number; width: number }
+  private _size: { height: number; width: number }
+  private _color: string = '#ffffff'
 
-  protected BASE_HEIGHT = 160
-
-  constructor(
-    readonly nodeLevel: NodeLevel,
-    readonly color: string,
-    readonly size?: { height: number; width: number }
-  ) {
-    this._size = size ?? { height: this.BASE_HEIGHT, width: 120 }
+  constructor(nodeLevel: NodeLevel, color: string, size?: { height: number; width: number }) {
+    this._nodeLevel = nodeLevel
+    this._color = color
+    this._size = size ?? { height: BASE_NODE_HEIGHT, width: 120 }
   }
 
   get id() {
     return 'Heat'
   }
 
-  set position(pos: Position) {
+  get nodeLevel(): NodeLevel {
+    return this._nodeLevel
+  }
+
+  get color(): string {
+    return this._color
+  }
+
+  set setPosition(pos: Position) {
     this._position = pos
   }
 
@@ -89,6 +97,10 @@ export class BasicNode {
 
   get y() {
     return this._position.y
+  }
+
+  set setSize(size: { height: number; width: number }) {
+    this._size = size
   }
 
   get width() {
@@ -101,7 +113,8 @@ export class BasicNode {
 }
 
 export class EnergyNode extends BasicNode {
-  public outputPower: number = 1
+  inputPower: number = 1
+  outputPower: number = 1
   input: NodeWeights = {
     Petroleum: 1,
     Coal: 1,
@@ -126,48 +139,53 @@ export class EnergyNode extends BasicNode {
     Leisure: 1,
     Heat: 0
   }
+  private _nodeType: NodeType
+
   constructor(
-    readonly nodeLevel: NodeLevel,
-    readonly nodeType: NodeType,
+    nodeLevel: NodeLevel,
+    nodeType: NodeType,
     public readonly treDependencies: NodeWeights, // Amount of energy to produce 1 watt
     public readonly outputMap: NodeWeights, // which percentage of the produced energy goes into the other nodes,
-    readonly color: string
+    color: string
   ) {
     super(nodeLevel, color)
+    this._nodeType = nodeType
     this.checkOutputMap()
     this.calculateTre()
   }
 
   get id() {
-    return this.nodeType
+    return this._nodeType
+  }
+
+  get nodeType() {
+    return this._nodeType
   }
 
   calculateOutput() {
     let outputPowerFactor = 1
 
-    console.log(this.treDependencies)
     for (const [key, value] of Object.entries(this.input) as [NodeType, number][]) {
       if (this.treDependencies[key] === 0) continue
       const factor =
         Math.min(this.input[key], this.treDependencies[key]) / this.treDependencies[key]
-      console.log(`${key} factor: ${factor}`)
       outputPowerFactor *= factor
     }
 
-    console.log(`Total power: ${outputPowerFactor}`)
-    this.outputPower = 1 // TODO: power
+    this.outputPower = 1 // TODO: outputPowerFactor
 
     for (const [key, val] of Object.entries(this.outputMap) as [NodeType, number][]) {
       this.output[key] = this.outputPower * val
     }
+  }
 
-    console.log(this.output)
+  calculateInput() {
+    this.inputPower = Object.values(this.input).reduce((acc, curr) => acc + curr, 0)
   }
 
   resizeByInput() {
     if (this.nodeLevel === NodeLevel.Primary) return
-    const totalInput = Object.values(this.input).reduce((acc, curr) => acc + curr, 0)
-    this._size = { width: this.width, height: this.BASE_HEIGHT * totalInput }
+    this.setSize = { width: this.width, height: BASE_NODE_HEIGHT * this.inputPower }
   }
 
   checkOutputMap() {
@@ -183,7 +201,5 @@ export class EnergyNode extends BasicNode {
     const add = Object.values(this.treDependencies).reduce((acc, curr) => {
       return acc + curr
     })
-
-    console.log(`Node ${this.nodeType} has a TRE of ${(1 / add).toFixed(2)}`)
   }
 }

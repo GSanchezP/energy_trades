@@ -97,6 +97,8 @@ const stageConfig = computed(() => ({
 }))
 
 const handleWheel = (e: any) => {
+  e.evt.preventDefault()
+
   const stage = stageRef.value?.getNode()
   const oldScale = stage.scaleX()
   const pointer = stage.getPointerPosition()

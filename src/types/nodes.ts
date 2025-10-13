@@ -66,7 +66,7 @@ energyGraph.push(
     NodeLevel.Conversion,
     'Electricity',
     inputTre({
-      Fuels: 3,
+      Coal: 3,
       Manufacture: 0.025,
       Transport: 0.001,
       WellBeing: 0.007

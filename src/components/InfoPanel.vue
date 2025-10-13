@@ -1,48 +1,55 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import type { BasicNode, EnergyNode, NodeType } from '../types/energyNode';
-import type { Connector } from '../types/energyGraph';
+import { computed } from 'vue'
+import type { BasicNode, EnergyNode, NodeType } from '../types/energyNode'
+import type { Connector } from '../types/energyGraph'
 
 const props = defineProps<{
-  selectedNodes: BasicNode[];
-  selectedConnector: Connector | null;
-}>();
+  selectedNodes: BasicNode[]
+  selectedConnector: Connector | null
+}>()
 
-const selectionCount = computed(() => props.selectedNodes.length);
+const selectionCount = computed(() => props.selectedNodes.length)
 
 // Remove unused computed property
 
 // Filter to only show EnergyNodes (not BasicNodes like dump)
 const energyNodes = computed(() => {
-  return props.selectedNodes.filter((node): node is EnergyNode => 
-    'nodeType' in node && 'input' in node && 'output' in node
-  );
-});
+  return props.selectedNodes.filter(
+    (node): node is EnergyNode => 'nodeType' in node && 'input' in node && 'output' in node
+  )
+})
 
 // Get all unique node types for table headers
 const allNodeTypes: NodeType[] = [
-  'Petroleum', 'Minerals', 'Fuels', 'Electricity', 
-  'Manufacture', 'Transport', 'WellBeing', 'Leisure', 'Heat'
-];
+  'Petroleum',
+  'Coal',
+  'Minerals',
+  'Fuels',
+  'Electricity',
+  'Manufacture',
+  'Transport',
+  'WellBeing',
+  'Leisure',
+  'Heat'
+]
 
 // Helper function to format numbers
 const formatNumber = (value: number): string => {
-  if (value === 0) return '0';
-  if (value < 0.001) return value.toExponential(2);
-  return value.toFixed(3);
-};
+  if (value === 0) return '0'
+  if (value < 0.001) return value.toExponential(2)
+  return value.toFixed(3)
+}
 </script>
 
 <template>
   <div class="info-panel">
-    <div class="panel-header">
-      <h2>Information</h2>
-    </div>
-
     <div class="panel-content">
       <div v-if="selectionCount === 0 && !selectedConnector" class="empty-state">
         <p>No squares or connectors selected</p>
-        <p class="hint">Click a square to select it<br>Hold Shift to select multiple<br>Click a connector to see flow details</p>
+        <p class="hint">
+          Click a square to select it<br />Hold Shift to select multiple<br />Click a connector to
+          see flow details
+        </p>
       </div>
 
       <div v-else class="selection-info">
@@ -84,17 +91,17 @@ const formatNumber = (value: number): string => {
           </div>
         </div>
 
-
         <!-- Energy Node Details Table -->
         <div v-if="energyNodes.length > 0" class="energy-details">
           <h3>Energy Node Details</h3>
-          
+
           <div v-for="node in energyNodes" :key="node.id" class="node-section">
             <div class="node-header">
               <h4>{{ node.nodeType }}</h4>
               <div class="node-meta">
                 <span class="node-level">{{ node.nodeLevel }}</span>
                 <span class="output-power">Output: {{ formatNumber(node.outputPower) }}</span>
+                <span class="output-power">Input: {{ formatNumber(node.inputPower) }}</span>
               </div>
             </div>
 
@@ -114,10 +121,26 @@ const formatNumber = (value: number): string => {
                   <tbody>
                     <tr v-for="nodeType in allNodeTypes" :key="`input-${nodeType}`">
                       <td class="node-type">{{ nodeType }}</td>
-                      <td class="numeric">{{ formatNumber(node.treDependencies[nodeType] || 0) }}</td>
+                      <td class="numeric">
+                        {{ formatNumber(node.treDependencies[nodeType] || 0) }}
+                      </td>
                       <td class="numeric">{{ formatNumber(node.input[nodeType] || 0) }}</td>
-                      <td class="numeric ratio" :class="{ 'low-ratio': (node.treDependencies[nodeType] || 0) > 0 && (node.input[nodeType] || 0) / (node.treDependencies[nodeType] || 0) < 0.5 }">
-                        {{ (node.treDependencies[nodeType] || 0) > 0 ? formatNumber((node.input[nodeType] || 0) / (node.treDependencies[nodeType] || 0)) : '-' }}
+                      <td
+                        class="numeric ratio"
+                        :class="{
+                          'low-ratio':
+                            (node.treDependencies[nodeType] || 0) > 0 &&
+                            (node.input[nodeType] || 0) / (node.treDependencies[nodeType] || 0) <
+                              0.5
+                        }"
+                      >
+                        {{
+                          (node.treDependencies[nodeType] || 0) > 0
+                            ? formatNumber(
+                                (node.input[nodeType] || 0) / (node.treDependencies[nodeType] || 0)
+                              )
+                            : '-'
+                        }}
                       </td>
                     </tr>
                   </tbody>
@@ -140,7 +163,9 @@ const formatNumber = (value: number): string => {
                   <tbody>
                     <tr v-for="nodeType in allNodeTypes" :key="`output-${nodeType}`">
                       <td class="node-type">{{ nodeType }}</td>
-                      <td class="numeric">{{ formatNumber((node.outputMap[nodeType] || 0) * 100) }}%</td>
+                      <td class="numeric">
+                        {{ formatNumber((node.outputMap[nodeType] || 0) * 100) }}%
+                      </td>
                       <td class="numeric">{{ formatNumber(node.output[nodeType] || 0) }}</td>
                     </tr>
                   </tbody>
@@ -153,12 +178,18 @@ const formatNumber = (value: number): string => {
         <!-- Basic Node Details (for non-energy nodes) -->
         <div v-if="selectedNodes.length > energyNodes.length" class="basic-nodes">
           <h3>Other Selected Items</h3>
-          <div v-for="node in selectedNodes.filter(n => !energyNodes.includes(n as EnergyNode))" :key="node.id" class="square-item">
+          <div
+            v-for="node in selectedNodes.filter((n) => !energyNodes.includes(n as EnergyNode))"
+            :key="node.id"
+            class="square-item"
+          >
             <div class="square-id">{{ node.id }}</div>
             <div class="square-details">
               <div class="detail-row">
                 <span class="detail-label">Position:</span>
-                <span class="detail-value">({{ Math.round(node.x) }}, {{ Math.round(node.y) }})</span>
+                <span class="detail-value"
+                  >({{ Math.round(node.x) }}, {{ Math.round(node.y) }})</span
+                >
               </div>
               <div class="detail-row">
                 <span class="detail-label">Size:</span>
@@ -174,24 +205,12 @@ const formatNumber = (value: number): string => {
 
 <style scoped>
 .info-panel {
-  width: 400px;
+  width: 450px;
   background: white;
   border-left: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-.panel-header {
-  padding: 24px;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.panel-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #1e293b;
 }
 
 .panel-content {
@@ -230,7 +249,7 @@ const formatNumber = (value: number): string => {
 }
 
 .info-label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: #64748b;
   text-transform: uppercase;
@@ -262,7 +281,7 @@ const formatNumber = (value: number): string => {
 }
 
 .square-id {
-  font-size: 16px;
+  font-size: 24px;
   font-weight: 600;
   color: #3b82f6;
   margin-bottom: 12px;
@@ -309,7 +328,7 @@ const formatNumber = (value: number): string => {
   color: white;
   padding: 4px 10px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 500;
 }
 
@@ -341,7 +360,7 @@ const formatNumber = (value: number): string => {
 }
 
 .energy-details h3 {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 600;
   color: #1e293b;
   margin: 0 0 16px 0;
@@ -368,7 +387,7 @@ const formatNumber = (value: number): string => {
 
 .node-header h4 {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: #1e293b;
 }
@@ -376,7 +395,7 @@ const formatNumber = (value: number): string => {
 .node-meta {
   display: flex;
   gap: 12px;
-  font-size: 12px;
+  font-size: 18px;
 }
 
 .node-level {
@@ -401,7 +420,7 @@ const formatNumber = (value: number): string => {
 }
 
 .table-section h5 {
-  font-size: 12px;
+  font-size: 18px;
   font-weight: 600;
   color: #64748b;
   margin: 0 0 8px 0;
@@ -418,7 +437,7 @@ const formatNumber = (value: number): string => {
 .energy-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 16px;
   background: white;
 }
 
@@ -429,7 +448,7 @@ const formatNumber = (value: number): string => {
   font-weight: 600;
   color: #475569;
   border-bottom: 1px solid #e2e8f0;
-  font-size: 11px;
+  font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -456,7 +475,7 @@ const formatNumber = (value: number): string => {
 .numeric {
   text-align: right;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 11px;
+  font-size: 15px;
 }
 
 .ratio {
