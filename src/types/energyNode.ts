@@ -172,7 +172,7 @@ export class EnergyNode extends BasicNode {
       outputPowerFactor *= factor
     }
 
-    this.outputPower = 1 // TODO: outputPowerFactor
+    this.outputPower = 0.5 + 0.5 * outputPowerFactor // TODO: fix this formula
 
     for (const [key, val] of Object.entries(this.outputMap) as [NodeType, number][]) {
       this.output[key] = this.outputPower * val

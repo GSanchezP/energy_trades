@@ -107,11 +107,9 @@ energyGraph.push(
     NodeLevel.Industrial,
     'Manufacture',
     inputTre({
-      Petroleum: 1.5,
       Minerals: 1.6,
-      Fuels: 0.02,
       Electricity: 0.04,
-      Transport: 0.008,
+      Transport: 0.01,
       WellBeing: 0.05
     }),
     outputMap({
