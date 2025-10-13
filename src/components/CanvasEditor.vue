@@ -1,7 +1,7 @@
 <template>
   <div class="canvas-container">
     <div class="canvas-wrapper">
-      <v-stage :config="{ width: stageWidth, height: stageHeight }">
+      <v-stage ref="stageRef" :config="stageConfig" @wheel="handleWheel">
         <v-layer>
           <v-line
             v-for="connector in connectors"
@@ -12,7 +12,7 @@
               strokeWidth: connector.strokeWidth,
               lineCap: 'round',
               lineJoin: 'round',
-              opacity:  selectedConnectorId === connector.id ? 0.9 : 0.4
+              opacity: selectedConnectorId === connector.id ? 0.9 : 0.4
             }"
             @click="(e: any) => handleConnectorClick(connector.id, e)"
           />
@@ -81,57 +81,93 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { Connector } from '../types/energyGraph';
-import InfoPanel from './InfoPanel.vue';
-import energyGraph from '../types/nodes';
+import { ref, computed } from 'vue'
+import { Connector } from '../types/energyGraph'
+import InfoPanel from './InfoPanel.vue'
+import energyGraph from '../types/nodes'
 
-const stageWidth = window.innerWidth - 350;
-const stageHeight = window.innerHeight;
+const stageWidth = window.innerWidth - 350
+const stageHeight = window.innerHeight
 
-const nodes = energyGraph.nodes;
+const stageRef = ref(null)
 
-const selectedSquareIds = ref<Set<string>>(new Set());
-const selectedConnectorId = ref<string | null>(null);
+const stageConfig = computed(() => ({
+  width: stageWidth,
+  height: stageHeight,
+  draggable: true
+}))
+
+const handleWheel = (e: any) => {
+  const stage = stageRef.value?.getNode()
+  const oldScale = stage.scaleX()
+  const pointer = stage.getPointerPosition()
+
+  const mousePointTo = {
+    x: (pointer.x - stage.x()) / oldScale,
+    y: (pointer.y - stage.y()) / oldScale
+  }
+
+  // how to scale? Zoom in? Or zoom out?
+  let direction = e.evt.deltaY < 0 ? 1 : -1
+
+  // when we zoom on trackpad, e.evt.ctrlKey is true
+  // in that case lets revert direction
+  if (e.evt.ctrlKey) {
+    direction = -direction
+  }
+
+  const scaleBy = 1.06
+  const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy
+
+  stage.scale({ x: newScale, y: newScale })
+
+  const newPos = {
+    x: pointer.x - mousePointTo.x * newScale,
+    y: pointer.y - mousePointTo.y * newScale
+  }
+  stage.position(newPos)
+}
+
+const nodes = energyGraph.nodes
+
+const selectedSquareIds = ref<Set<string>>(new Set())
+const selectedConnectorId = ref<string | null>(null)
 
 const connectors = computed<Connector[]>(() => {
-  return energyGraph.generateFlowConnectors();
-});
+  return energyGraph.generateFlowConnectors()
+})
 
 const selectedSquares = computed(() => {
-  return nodes.filter(sq => selectedSquareIds.value.has(sq.id));
-});
+  return nodes.filter((sq) => selectedSquareIds.value.has(sq.id))
+})
 
 const selectedConnector = computed((): Connector | null => {
-  if (!selectedConnectorId.value) return null;
-  return connectors.value.find(conn => conn.id === selectedConnectorId.value) || null;
-});
+  if (!selectedConnectorId.value) return null
+  return connectors.value.find((conn) => conn.id === selectedConnectorId.value) || null
+})
 
 const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
   // Clear connector selection when clicking on nodes
-  selectedConnectorId.value = null;
-  
+  selectedConnectorId.value = null
+
   if (event.evt.shiftKey) {
     if (selectedSquareIds.value.has(squareId)) {
-      selectedSquareIds.value.delete(squareId);
+      selectedSquareIds.value.delete(squareId)
     } else {
-      selectedSquareIds.value.add(squareId);
+      selectedSquareIds.value.add(squareId)
     }
   } else {
-    selectedSquareIds.value.clear();
-    selectedSquareIds.value.add(squareId);
+    selectedSquareIds.value.clear()
+    selectedSquareIds.value.add(squareId)
   }
-};
+}
 
 const handleConnectorClick = (connectorId: string, event: { evt: MouseEvent }) => {
-  event.evt.stopPropagation(); // Prevent node click
-  selectedConnectorId.value = connectorId;
-  selectedSquareIds.value.clear(); // Clear node selection
-};
-
+  event.evt.stopPropagation() // Prevent node click
+  selectedConnectorId.value = connectorId
+  selectedSquareIds.value.clear() // Clear node selection
+}
 </script>
-
-
 
 <style scoped>
 .canvas-container {
