@@ -11,9 +11,7 @@ energyGraph.push(
     inputTre({
       Fuels: 0.1,
       Electricity: 0.1,
-      Manufacture: 0.1,
-      Transport: 0.006,
-      WellBeing: 0.002
+      Manufacture: 0.1
     }),
     outputMap({
       Fuels: 1
@@ -29,9 +27,7 @@ energyGraph.push(
     inputTre({
       Fuels: 0.1,
       Electricity: 0.1,
-      Manufacture: 0.1,
-      Transport: 0.006,
-      WellBeing: 0.002
+      Manufacture: 0.1
     }),
     outputMap({
       Electricity: 1
@@ -45,17 +41,14 @@ energyGraph.push(
     NodeLevel.Conversion,
     'Fuels',
     inputTre({
-      Petroleum: 1.5,
-      Electricity: 0.03,
-      Manufacture: 0.02,
-      Transport: 0.006,
-      WellBeing: 0.01
+      Petroleum: 1.2,
+      Electricity: 0.01
     }),
     outputMap({
-      Petroleum: 0.1,
-      Coal: 0.1,
-      Minerals: 0.1,
-      Transport: 0.2
+      Petroleum: 0.05,
+      Coal: 0.05,
+      Minerals: 0.2,
+      Transport: 0.7
     }),
     '#610a52ff'
   )
@@ -66,17 +59,14 @@ energyGraph.push(
     NodeLevel.Conversion,
     'Electricity',
     inputTre({
-      Coal: 3,
-      Manufacture: 0.025,
-      Transport: 0.001,
-      WellBeing: 0.007
+      Coal: 2.5
     }),
     outputMap({
       Petroleum: 0.05,
       Coal: 0.05,
-      Minerals: 0.05,
-      Fuels: 0.03,
-      Manufacture: 0.1,
+      Minerals: 0.3,
+      Fuels: 0.02,
+      Manufacture: 0.15,
       WellBeing: 0.1,
       Leisure: 0.2
     }),
@@ -89,14 +79,11 @@ energyGraph.push(
     NodeLevel.Conversion,
     'Minerals',
     inputTre({
-      Fuels: 0.01,
-      Electricity: 0.05,
-      Manufacture: 0.03,
-      Transport: 0.02,
-      WellBeing: 0.02
+      Fuels: 1,
+      Electricity: 2
     }),
     outputMap({
-      Manufacture: 0.5
+      Manufacture: 0.8
     }),
     '#856350ff'
   )
@@ -107,10 +94,9 @@ energyGraph.push(
     NodeLevel.Industrial,
     'Manufacture',
     inputTre({
-      Minerals: 1.6,
-      Electricity: 0.04,
-      Transport: 0.01,
-      WellBeing: 0.05
+      Minerals: 0.2,
+      Electricity: 1.6,
+      Transport: 0.1
     }),
     outputMap({
       Petroleum: 0.15,
@@ -140,7 +126,6 @@ energyGraph.push(
       Coal: 0.006,
       Minerals: 0.02,
       Fuels: 0.006,
-      Electricity: 0.001,
       Manufacture: 0.008,
       WellBeing: 0.2,
       Leisure: 0.4
@@ -189,6 +174,13 @@ energyGraph.push(
   )
 )
 
+energyGraph.setNodesOutputDependency()
+energyGraph.calculate()
+energyGraph.calculate()
+energyGraph.calculate()
+energyGraph.calculate()
+energyGraph.calculate()
+energyGraph.calculate()
 energyGraph.calculate()
 energyGraph.addDumpNode()
 energyGraph.resizeNodesByInput()

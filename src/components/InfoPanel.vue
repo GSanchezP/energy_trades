@@ -129,9 +129,10 @@ const formatNumber = (value: number): string => {
                         class="numeric ratio"
                         :class="{
                           'low-ratio':
+                            (!['Petroleum', 'Coal'].includes(nodeType)) &&
                             (node.treDependencies[nodeType] || 0) > 0 &&
                             (node.input[nodeType] || 0) / (node.treDependencies[nodeType] || 0) <
-                              0.5
+                              1
                         }"
                       >
                         {{
@@ -158,6 +159,7 @@ const formatNumber = (value: number): string => {
                       <th>Node Type</th>
                       <th>Percentage</th>
                       <th>Actual Output</th>
+                      <th>Depen dency</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -167,6 +169,7 @@ const formatNumber = (value: number): string => {
                         {{ formatNumber((node.outputMap[nodeType] || 0) * 100) }}%
                       </td>
                       <td class="numeric">{{ formatNumber(node.output[nodeType] || 0) }}</td>
+                      <td class="numeric">{{ formatNumber(node.outputDependency[nodeType] || 0) }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -205,7 +208,7 @@ const formatNumber = (value: number): string => {
 
 <style scoped>
 .info-panel {
-  width: 450px;
+  width: 500px;
   background: white;
   border-left: 1px solid #e2e8f0;
   display: flex;

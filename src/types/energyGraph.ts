@@ -1,4 +1,11 @@
-import { BASE_NODE_HEIGHT, BasicNode, EnergyNode, NodeLevel, NodeType } from './energyNode'
+import {
+  BASE_NODE_HEIGHT,
+  BasicNode,
+  EnergyNode,
+  NodeLevel,
+  NodeType,
+  NodeWeights
+} from './energyNode'
 
 export class EnergyGraph {
   public energyNodes: EnergyNode[] = []
@@ -17,6 +24,30 @@ export class EnergyGraph {
 
   get nodes(): BasicNode[] {
     return this.dumpNode ? [...this.energyNodes, this.dumpNode] : [...this.energyNodes]
+  }
+
+  setNodesOutputDependency() {
+    for (const node of this.energyNodes) {
+      const outputDependency = this.energyNodes.reduce(
+        (acc: NodeWeights, curr: EnergyNode) => {
+          acc[curr.nodeType] = curr.treDependencies[node.nodeType]
+          return acc
+        },
+        {
+          Petroleum: 0,
+          Coal: 0,
+          Minerals: 0,
+          Fuels: 0,
+          Electricity: 0,
+          Manufacture: 0,
+          Transport: 0,
+          WellBeing: 0,
+          Leisure: 0,
+          Heat: 0
+        }
+      )
+      node.setOutputDependency(outputDependency)
+    }
   }
 
   push(node: EnergyNode) {

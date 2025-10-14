@@ -10,7 +10,22 @@ export type NodeType =
   | 'Leisure'
   | 'Heat'
 
-type NodeWeights = { [key in NodeType]: number }
+export type NodeWeights = { [key in NodeType]: number }
+
+const iNodeWeights = () => {
+  return {
+    Petroleum: 1,
+    Coal: 1,
+    Minerals: 1,
+    Fuels: 1,
+    Electricity: 1,
+    Manufacture: 1,
+    Transport: 1,
+    WellBeing: 1,
+    Leisure: 1,
+    Heat: 0
+  }
+}
 
 export const BASE_NODE_HEIGHT = 160
 
@@ -115,30 +130,9 @@ export class BasicNode {
 export class EnergyNode extends BasicNode {
   inputPower: number = 1
   outputPower: number = 1
-  input: NodeWeights = {
-    Petroleum: 1,
-    Coal: 1,
-    Minerals: 1,
-    Fuels: 1,
-    Electricity: 1,
-    Manufacture: 1,
-    Transport: 1,
-    WellBeing: 1,
-    Leisure: 1,
-    Heat: 0
-  }
-  output: NodeWeights = {
-    Petroleum: 1,
-    Coal: 1,
-    Minerals: 1,
-    Fuels: 1,
-    Electricity: 1,
-    Manufacture: 1,
-    Transport: 1,
-    WellBeing: 1,
-    Leisure: 1,
-    Heat: 0
-  }
+  input: NodeWeights = iNodeWeights()
+  output: NodeWeights = iNodeWeights()
+  outputDependency: NodeWeights = iNodeWeights()
   private _nodeType: NodeType
 
   constructor(
@@ -163,24 +157,40 @@ export class EnergyNode extends BasicNode {
   }
 
   calculateOutput() {
-    let outputPowerFactor = 1
+    let minPowerFactor = 1
+
+    console.log(`Calculating output for ${this.nodeType}`)
 
     for (const [key, value] of Object.entries(this.input) as [NodeType, number][]) {
       if (this.treDependencies[key] === 0) continue
-      const factor =
-        Math.min(this.input[key], this.treDependencies[key]) / this.treDependencies[key]
-      outputPowerFactor *= factor
+      const factor = Math.min(value, this.treDependencies[key]) / this.treDependencies[key]
+      console.log(`Factor of ${key}: ${factor} (${value}, ${this.treDependencies[key]})`)
+      minPowerFactor = Math.min(minPowerFactor, factor)
     }
 
-    this.outputPower = 0.5 + 0.5 * outputPowerFactor // TODO: fix this formula
+    if (this.nodeLevel === 1) {
+      this.outputPower = 1
+    } else {
+      this.outputPower = Object.values(this.input).reduce(
+        (acc, curr) => acc + curr * minPowerFactor,
+        0
+      )
+    }
 
     for (const [key, val] of Object.entries(this.outputMap) as [NodeType, number][]) {
       this.output[key] = this.outputPower * val
     }
+
+    this.output.Heat = this.output.Heat + (this.inputPower - this.outputPower)
   }
 
   calculateInput() {
     this.inputPower = Object.values(this.input).reduce((acc, curr) => acc + curr, 0)
+    return this.inputPower
+  }
+
+  setOutputDependency(outputDependency: NodeWeights) {
+    this.outputDependency = outputDependency
   }
 
   resizeByInput() {
