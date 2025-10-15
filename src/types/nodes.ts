@@ -64,9 +64,9 @@ energyGraph.push(
     outputMap({
       Petroleum: 0.05,
       Coal: 0.05,
-      Minerals: 0.3,
+      Minerals: 0.2,
       Fuels: 0.02,
-      Manufacture: 0.15,
+      Manufacture: 0.35,
       WellBeing: 0.1,
       Leisure: 0.2
     }),
@@ -79,8 +79,8 @@ energyGraph.push(
     NodeLevel.Conversion,
     'Minerals',
     inputTre({
-      Fuels: 1,
-      Electricity: 2
+      Fuels: 0.75,
+      Electricity: 0.25
     }),
     outputMap({
       Manufacture: 0.8

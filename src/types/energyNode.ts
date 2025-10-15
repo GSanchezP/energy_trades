@@ -161,20 +161,19 @@ export class EnergyNode extends BasicNode {
 
     console.log(`Calculating output for ${this.nodeType}`)
 
+    // Compute limiting power factor
     for (const [key, value] of Object.entries(this.input) as [NodeType, number][]) {
       if (this.treDependencies[key] === 0) continue
       const factor = Math.min(value, this.treDependencies[key]) / this.treDependencies[key]
-      console.log(`Factor of ${key}: ${factor} (${value}, ${this.treDependencies[key]})`)
       minPowerFactor = Math.min(minPowerFactor, factor)
     }
+
+    console.log(`Min power factor: ${minPowerFactor}`)
 
     if (this.nodeLevel === 1) {
       this.outputPower = 1
     } else {
-      this.outputPower = Object.values(this.input).reduce(
-        (acc, curr) => acc + curr * minPowerFactor,
-        0
-      )
+      this.outputPower = minPowerFactor
     }
 
     for (const [key, val] of Object.entries(this.outputMap) as [NodeType, number][]) {
