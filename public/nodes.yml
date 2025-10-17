@@ -1,0 +1,111 @@
+nodes:
+  - id: 'Petroleum'
+    level: 'Primary'
+    color: '#442d54ff'
+    inputs:
+      Fuels: 0.1
+      Electricity: 0.1
+      Manufacture: 0.1
+    outputs:
+      Fuels: 1
+
+  - id: 'Coal'
+    level: 'Primary'
+    color: '#3d2913ff'
+    inputs:
+      Fuels: 0.1
+      Electricity: 0.1
+      Manufacture: 0.1
+    outputs:
+      Electricity: 1
+
+  - id: 'Fuels'
+    level: 'Conversion'
+    color: '#610a52ff'
+    inputs:
+      Petroleum: 1.2
+      Electricity: 0.01
+    outputs:
+      Petroleum: 0.05
+      Coal: 0.05
+      Minerals: 0.2
+      Transport: 0.7
+
+  - id: 'Electricity'
+    level: 'Conversion'
+    color: '#0d92a3ff'
+    inputs:
+      Coal: 2.5
+    outputs:
+      Petroleum: 0.05
+      Coal: 0.05
+      Minerals: 0.2
+      Fuels: 0.02
+      Manufacture: 0.38
+      WellBeing: 0.1
+      Leisure: 0.2
+
+  - id: 'Minerals'
+    level: 'Conversion'
+    color: '#856350ff'
+    inputs:
+      Fuels: 1
+      Electricity: 0.25
+    outputs:
+      Manufacture: 1
+
+  - id: 'Manufacture'
+    level: 'Industrial'
+    color: '#8f9717ff'
+    inputs:
+      Minerals: 0.2
+      Electricity: 1.6
+      Transport: 0.1
+    outputs:
+      Petroleum: 0.15
+      Coal: 0.15
+      Minerals: 0.03
+      Fuels: 0.02
+      Electricity: 0.025
+      Transport: 0.03
+      WellBeing: 0.2
+      Leisure: 0.3
+
+  - id: 'Transport'
+    level: 'Industrial'
+    color: '#58b00aff'
+    inputs:
+      Fuels: 3
+    outputs:
+      Manufacture: 0.4
+      WellBeing: 0.2
+      Leisure: 0.4
+
+  - id: 'WellBeing'
+    level: 'Societal'
+    color: '#1fbb65ff'
+    inputs:
+      Fuels: 0.15
+      Electricity: 0.2
+      Manufacture: 0.2
+      Transport: 0.4
+    outputs:
+      Petroleum: 0.02
+      Coal: 0.02
+      Minerals: 0.02
+      Fuels: 0.01
+      Electricity: 0.007
+      Manufacture: 0.2
+      Transport: 0.03
+      Leisure: 0.4
+
+  - id: 'Leisure'
+    level: 'Societal'
+    color: '#c953bdff'
+    inputs:
+      Fuels: 0.15
+      Electricity: 0.2
+      Manufacture: 0.2
+      Transport: 0.4
+      WellBeing: 0.6
+    outputs: {}

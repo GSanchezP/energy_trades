@@ -207,7 +207,8 @@ export class EnergyNode extends BasicNode {
   }
 
   calculateTre() {
-    const add = Object.values(this.treDependencies).reduce((acc, curr) => {
+    // Calculate total dependencies - currently unused but kept for future use
+    Object.values(this.treDependencies).reduce((acc, curr) => {
       return acc + curr
     })
   }

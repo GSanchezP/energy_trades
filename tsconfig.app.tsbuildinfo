@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/vite-env.d.ts","./src/vue-konva.d.ts","./src/types/energygraph.ts","./src/types/energynode.ts","./src/types/nodes.ts","./src/app.vue","./src/components/canvaseditor.vue","./src/components/infopanel.vue"],"version":"5.9.3"}

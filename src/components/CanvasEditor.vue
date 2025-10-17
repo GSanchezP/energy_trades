@@ -89,7 +89,7 @@ import energyGraph from '../types/nodes'
 const stageWidth = window.innerWidth - 350
 const stageHeight = window.innerHeight
 
-const stageRef = ref(null)
+const stageRef = ref<any>(null)
 
 const stageConfig = computed(() => ({
   width: stageWidth,
