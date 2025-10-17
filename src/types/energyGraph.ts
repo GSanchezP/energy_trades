@@ -109,7 +109,7 @@ export class EnergyGraph {
     let sourceOffset = 0
     for (const [key, value] of Object.entries(source.output)) {
       if (key === 'Heat') break
-      sourceOffset += value * source.height // TODO
+      sourceOffset += value * BASE_NODE_HEIGHT // TODO
     }
 
     // Calculate stroke width based on power (min 0, max 100)
