@@ -88,6 +88,8 @@ export class EnergyGraph {
 
   generateFlowConnectors(): Connector[] {
     const connectors: Connector[] = []
+    this.lowerUsage = []
+    this.upperUsage = []
 
     for (const sourceNode of this.energyNodes) {
       for (const [targetType, power] of Object.entries(sourceNode.output) as [NodeType, number][]) {

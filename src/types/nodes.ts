@@ -1,6 +1,8 @@
-import { EnergyNode, NodeLevel, inputTre, outputMap } from './energyNode'
-import { EnergyGraph } from './energyGraph'
 import * as yaml from 'js-yaml'
+
+import { EnergyNode, NodeLevel, inputTre, outputMap } from './energyNode'
+
+import { EnergyGraph } from './energyGraph'
 
 // Define the YAML structure types
 interface NodeConfig {
@@ -57,26 +59,26 @@ async function loadNodesFromYaml(): Promise<EnergyNode[]> {
   }
 }
 
-const energyGraph = new EnergyGraph()
+export async function getEnergyGraph(): Promise<EnergyGraph> {
+  const energyGraph = new EnergyGraph()
 
-// Load nodes from YAML configuration asynchronously
-loadNodesFromYaml()
-  .then((nodes) => {
-    nodes.forEach((node) => energyGraph.push(node))
+  // Load nodes from YAML configuration asynchronously
+  const nodes = await loadNodesFromYaml()
 
-    energyGraph.setNodesOutputDependency()
-    energyGraph.calculate()
-    energyGraph.calculate()
-    energyGraph.calculate()
-    energyGraph.calculate()
-    energyGraph.calculate()
-    energyGraph.calculate()
-    energyGraph.calculate()
-    energyGraph.addDumpNode()
-    energyGraph.resizeNodesByInput()
-  })
-  .catch((error) => {
-    console.error('Failed to load nodes from YAML:', error)
-  })
+  nodes.forEach((node) => energyGraph.push(node))
 
-export default energyGraph
+  energyGraph.setNodesOutputDependency()
+  energyGraph.calculate()
+  energyGraph.calculate()
+  energyGraph.calculate()
+  energyGraph.calculate()
+  energyGraph.calculate()
+  energyGraph.calculate()
+  energyGraph.calculate()
+  energyGraph.addDumpNode()
+  energyGraph.resizeNodesByInput()
+
+  return energyGraph
+}
+
+export default getEnergyGraph

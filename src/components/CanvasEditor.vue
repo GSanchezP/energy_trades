@@ -82,9 +82,16 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Connector } from '../types/energyGraph'
+import { Connector, EnergyGraph } from '../types/energyGraph'
 import InfoPanel from './InfoPanel.vue'
-import energyGraph from '../types/nodes'
+import getEnergyGraph from '../types/nodes'
+import { onMounted } from 'vue'
+
+const energyGraph = ref<EnergyGraph | undefined>(undefined)
+
+onMounted(async () => {
+  energyGraph.value = await getEnergyGraph()
+})
 
 const stageWidth = window.innerWidth - 350
 const stageHeight = window.innerHeight
@@ -129,17 +136,19 @@ const handleWheel = (e: any) => {
   stage.position(newPos)
 }
 
-const nodes = energyGraph.nodes
+const nodes = computed(() => {
+  return energyGraph.value?.nodes || []
+})
 
 const selectedSquareIds = ref<Set<string>>(new Set())
 const selectedConnectorId = ref<string | null>(null)
 
 const connectors = computed<Connector[]>(() => {
-  return energyGraph.generateFlowConnectors()
+  return energyGraph.value?.generateFlowConnectors() || []
 })
 
 const selectedSquares = computed(() => {
-  return nodes.filter((sq) => selectedSquareIds.value.has(sq.id))
+  return nodes.value.filter((sq) => selectedSquareIds.value.has(sq.id))
 })
 
 const selectedConnector = computed((): Connector | null => {
