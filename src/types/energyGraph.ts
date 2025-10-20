@@ -75,7 +75,7 @@ export class EnergyGraph {
 
   resizeNodesByInput() {
     for (const node of this.energyNodes) {
-      node.resizeByInput()
+      node.resizeByOutput()
     }
   }
 
@@ -94,7 +94,7 @@ export class EnergyGraph {
     for (const sourceNode of this.energyNodes) {
       for (const [targetType, power] of Object.entries(sourceNode.output) as [NodeType, number][]) {
         if (targetType === 'Heat') {
-          // connectors.push(this.createDumpConnector(sourceNode, power))
+          connectors.push(this.createDumpConnector(sourceNode, power))
         }
 
         const targetNode = this.energyNodes.find((node) => node.nodeType === targetType)

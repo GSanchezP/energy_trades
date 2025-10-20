@@ -53,6 +53,7 @@ export async function getEnergyGraph(): Promise<EnergyGraph> {
 
   energyGraph.setNodesOutputDependency()
   energyGraph.calculate()
+  energyGraph.calculate()
   energyGraph.addDumpNode()
   energyGraph.resizeNodesByInput()
 
