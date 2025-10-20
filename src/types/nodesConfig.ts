@@ -69,7 +69,7 @@ export const nodesConfig: NodesConfig = {
       level: 'Industrial',
       color: '#8f9717ff',
       inputs: {
-        Minerals: 0.2,
+        Minerals: 0.4,
         Electricity: 1.6,
         Transport: 0.1
       }

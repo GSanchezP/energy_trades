@@ -43,7 +43,7 @@ export async function getEnergyGraph(): Promise<EnergyGraph> {
   const energyGraph = new EnergyGraph()
 
   // Load nodes from YAML configuration asynchronously
-  const outputMap = outputMapSolver(nodesConfig)
+  const outputMap = await outputMapSolver(nodesConfig)
 
   console.log(outputMap)
 
