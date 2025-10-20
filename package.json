@@ -4,11 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test": "tsx ./src/test/test.ts",
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "glpk.js": "^4.0.2",
     "js-yaml": "^4.1.0",
     "konva": "^10.0.2",
     "vue": "^3.4.38",
@@ -16,6 +18,7 @@
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.8.1",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
     "@vitejs/plugin-vue": "^5.1.3",

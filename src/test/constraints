@@ -1,0 +1,19 @@
+xp = 1
+xc = 1
+
+xf = min(1, xpf/1.2, xef/0.01)
+xe = min(1, xce/2.5)
+xm = min(1, xfm/1, xme/0.25)
+xi = min(1, xmi/0.2, xei/1.6, xti/0.1)
+xt = min(1, xft)
+xw = min(1, xfw/0.15, xew/0.2, xiw/0.2, xtw/0.4)
+xl = min(1, xfl/0.15, xel/0.2, xil/0.2, xtl/0.4, xwl/0.6)
+
+xpf = xp
+xce = xc
+xfm + xft + xfw + xfl = xf
+xem + xef + xei + xew + xel = xe
+xmi = xm
+xiw + xil = xi
+xti + xtw + xtl = xt
+xwl = xw
