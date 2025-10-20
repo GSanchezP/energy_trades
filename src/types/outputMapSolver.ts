@@ -117,10 +117,10 @@ export async function outputMapSolver(config: NodesConfig) {
     const varName = 'x' + node.acr
 
     // TODO: This should be removed
-    if (node.level === 'Primary') {
-      constraints.push(fixSourceConstraint(varName))
-      continue
-    }
+    // if (node.level === 'Primary') {
+    //   constraints.push(fixSourceConstraint(varName))
+    //   continue
+    // }
 
     constraints.push(minOneConstraint(varName))
     for (const [inputNode, treValue] of Object.entries(node.inputs)) {

@@ -120,7 +120,7 @@ export class EnergyNode extends BasicNode {
     this.calculateTre()
     this._inputPower = Object.values(this.inputMap).reduce((acc, curr) => acc + curr)
     this._outputPower = Object.values(this.outputMap).reduce((acc, curr) => acc + curr)
-    this._losses = this._inputPower - this.outputPower
+    this._losses = Math.max(this._inputPower - this.outputPower, 0)
     this._eroi = this._outputPower / (this._inputPower + Number.MIN_VALUE)
 
     this.setSize = {

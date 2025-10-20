@@ -18,9 +18,9 @@ export const nodesConfig: NodesConfig = {
       level: 'Primary',
       color: '#442d54ff',
       inputs: {
-        Fuels: 0.1,
-        Electricity: 0.1,
-        Manufacture: 0.1
+        Fuels: 0.02,
+        Electricity: 0.02,
+        Manufacture: 0.02
       }
     },
     {
@@ -29,9 +29,9 @@ export const nodesConfig: NodesConfig = {
       level: 'Primary',
       color: '#3d2913ff',
       inputs: {
-        Fuels: 0.1,
-        Electricity: 0.1,
-        Manufacture: 0.1
+        Fuels: 0.02,
+        Electricity: 0.02,
+        Manufacture: 0.02
       }
     },
     {
