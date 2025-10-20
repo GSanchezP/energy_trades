@@ -81,22 +81,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, ComputedRef } from 'vue'
 import { Connector, EnergyGraph } from '../types/energyGraph'
 import InfoPanel from './InfoPanel.vue'
 import getEnergyGraph from '../types/nodes'
 import { onMounted } from 'vue'
+import { BasicNode } from '../types/energyNode'
 
 const energyGraph = ref<EnergyGraph | undefined>(undefined)
+const stageRef = ref<any>(null)
+
+const stageWidth = window.innerWidth - 350
+const stageHeight = window.innerHeight
+
+
+const selectedSquareIds = ref<Set<string>>(new Set())
+const selectedConnectorId = ref<string | null>(null)
 
 onMounted(async () => {
   energyGraph.value = await getEnergyGraph()
 })
 
-const stageWidth = window.innerWidth - 350
-const stageHeight = window.innerHeight
 
-const stageRef = ref<any>(null)
+const nodes = computed(() => {
+  return energyGraph.value?.nodes || []
+})
+
+
+const connectors = computed<Connector[]>(() => {
+  return energyGraph.value?.generateFlowConnectors() || []
+})
+
+const selectedSquares = computed(() => {
+  return nodes.value.filter((sq) => selectedSquareIds.value.has(sq.id))
+})
+
+const selectedConnector = computed((): Connector | null => {
+  if (!selectedConnectorId.value) return null
+  return connectors.value.find((conn) => conn.id === selectedConnectorId.value) || null
+})
+
+
 
 const stageConfig = computed(() => ({
   width: stageWidth,
@@ -136,25 +161,7 @@ const handleWheel = (e: any) => {
   stage.position(newPos)
 }
 
-const nodes = computed(() => {
-  return energyGraph.value?.nodes || []
-})
 
-const selectedSquareIds = ref<Set<string>>(new Set())
-const selectedConnectorId = ref<string | null>(null)
-
-const connectors = computed<Connector[]>(() => {
-  return energyGraph.value?.generateFlowConnectors() || []
-})
-
-const selectedSquares = computed(() => {
-  return nodes.value.filter((sq) => selectedSquareIds.value.has(sq.id))
-})
-
-const selectedConnector = computed((): Connector | null => {
-  if (!selectedConnectorId.value) return null
-  return connectors.value.find((conn) => conn.id === selectedConnectorId.value) || null
-})
 
 const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
   // Clear connector selection when clicking on nodes
