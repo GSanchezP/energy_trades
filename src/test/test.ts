@@ -87,16 +87,18 @@ for (const node of config.nodes) {
     }
   }
 
-  const constraintVars: string[] = []
+  if (node.id === 'Leisure') continue // Figure out this
+  const sumConstraints: string[] = []
   for (const sourceNode of config.nodes) {
     if (sourceNode.id === node.id) continue
+    if (['Petroleum', 'Coal'].includes(sourceNode.id)) continue
     for (const targetNode of Object.keys(sourceNode.inputs)) {
       if (targetNode === node.id) {
-        constraintVars.push(`x${node.acr}${sourceNode.acr}`)
+        sumConstraints.push(`x${node.acr}${sourceNode.acr}`)
       }
     }
   }
-  constraints2.push(netSumConstraint(varName, constraintVars))
+  constraints2.push(netSumConstraint(varName, sumConstraints))
 }
 
 const bounds = [
