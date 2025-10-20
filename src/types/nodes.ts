@@ -1,11 +1,12 @@
 import * as yaml from 'js-yaml'
 
 import path from 'path'
-import fs from 'fs'
+import * as fs from 'fs'
 
-import { EnergyNode, NodeLevel, inputTre, outputMap } from './energyNode'
+import { EnergyNode, NodeLevel, NodeType, inputTre, outputMap } from './energyNode'
 
 import { EnergyGraph } from './energyGraph'
+import { outputMapSolver } from './outputMapSolver'
 
 // Define the YAML structure types
 interface NodeConfig {
@@ -16,7 +17,7 @@ interface NodeConfig {
   inputs: Record<string, number>
 }
 
-interface NodesConfig {
+export interface NodesConfig {
   nodes: NodeConfig[]
 }
 
@@ -49,7 +50,10 @@ export function loadNodesFromYaml(): NodesConfig {
   }
 }
 
-export function generateNodes(config: NodesConfig): EnergyNode[] {
+export function generateNodes(
+  config: NodesConfig,
+  outputMaps: { [key: string]: { [key in NodeType]?: number } }
+): EnergyNode[] {
   return config.nodes.map((nodeConfig) => {
     const nodeLevel = getNodeLevel(nodeConfig.level)
 
@@ -57,7 +61,7 @@ export function generateNodes(config: NodesConfig): EnergyNode[] {
       nodeLevel,
       nodeConfig.id as any, // Type assertion since we know the IDs are valid NodeType
       inputTre(nodeConfig.inputs),
-      outputMap({} as any),
+      outputMap(outputMaps[nodeConfig.id]),
       nodeConfig.color
     )
   })
@@ -67,18 +71,16 @@ export async function getEnergyGraph(): Promise<EnergyGraph> {
   const energyGraph = new EnergyGraph()
 
   // Load nodes from YAML configuration asynchronously
-  const nodesConfig = await loadNodesFromYaml()
-  const nodes = generateNodes(nodesConfig)
+  const nodesConfig = loadNodesFromYaml()
+  const outputMap = outputMapSolver(nodesConfig)
+
+  console.log(outputMap)
+
+  const nodes = generateNodes(nodesConfig, outputMap)
 
   nodes.forEach((node) => energyGraph.push(node))
 
   energyGraph.setNodesOutputDependency()
-  energyGraph.calculate()
-  energyGraph.calculate()
-  energyGraph.calculate()
-  energyGraph.calculate()
-  energyGraph.calculate()
-  energyGraph.calculate()
   energyGraph.calculate()
   energyGraph.addDumpNode()
   energyGraph.resizeNodesByInput()

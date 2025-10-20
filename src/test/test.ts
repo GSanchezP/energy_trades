@@ -5,102 +5,6 @@ const glpk = GLPK()
 
 const config = loadNodesFromYaml()
 
-const bounds2: {
-  name: string
-  type: number
-  lb: number
-  ub: number
-}[] = []
-
-const constraints2: {
-  name: string
-  vars: {
-    name: string
-    coef: number
-  }[]
-  bnds: {
-    type: number
-    lb: number
-    ub: number
-  }
-}[] = []
-
-const nodeAcr = (nodeName: string) => {
-  return config.nodes.find((n) => n.id === nodeName)?.acr!
-}
-
-const bound = (name: string) => {
-  return { name: `${name}`, type: glpk.GLP_DB, lb: 0, ub: 1 }
-}
-
-const minOneConstraint = (varName: string) => {
-  return {
-    name: varName + '_le_1',
-    vars: [{ name: varName, coef: 1 }],
-    bnds: { type: glpk.GLP_UP, ub: 1, lb: -Infinity }
-  }
-}
-
-const minTreConstraint = (varName: string, flowVarName: string, value: number) => {
-  return {
-    name: varName + '_le_' + flowVarName,
-    vars: [
-      { name: varName, coef: 1 },
-      { name: flowVarName, coef: -1 / value }
-    ],
-    bnds: { type: glpk.GLP_UP, ub: 0, lb: -Infinity }
-  }
-}
-
-const fixSourceConstraint = (varName: string) => {
-  return {
-    name: varName + '_fixed',
-    vars: [{ name: varName, coef: 1 }],
-    bnds: { type: glpk.GLP_FX, lb: 1, ub: 1 }
-  }
-}
-
-const netSumConstraint = (varName: string, netVarsOutput: string[]) => {
-  const vars: { name: string; coef: number }[] = []
-  for (const netVarOuput of netVarsOutput) {
-    vars.push({ name: netVarOuput, coef: 1 })
-  }
-  vars.push({ name: varName, coef: -1 })
-  return {
-    name: varName + '_sum',
-    vars: vars,
-    bnds: { type: glpk.GLP_FX, lb: 0, ub: 0 }
-  }
-}
-
-for (const node of config.nodes) {
-  const varName = 'x' + node.acr
-  bounds2.push(bound(varName))
-  if (node.level === 'Primary') {
-    constraints2.push(fixSourceConstraint(varName))
-  } else {
-    constraints2.push(minOneConstraint(varName))
-    for (const [inputNode, treValue] of Object.entries(node.inputs)) {
-      const flowVarName = `x${nodeAcr(inputNode)}${node.acr}`
-      bounds2.push(bound(flowVarName))
-      constraints2.push(minTreConstraint(varName, flowVarName, treValue))
-    }
-  }
-
-  if (node.id === 'Leisure') continue // Figure out this
-  const sumConstraints: string[] = []
-  for (const sourceNode of config.nodes) {
-    if (sourceNode.id === node.id) continue
-    if (['Petroleum', 'Coal'].includes(sourceNode.id)) continue
-    for (const targetNode of Object.keys(sourceNode.inputs)) {
-      if (targetNode === node.id) {
-        sumConstraints.push(`x${node.acr}${sourceNode.acr}`)
-      }
-    }
-  }
-  constraints2.push(netSumConstraint(varName, sumConstraints))
-}
-
 const bounds = [
   // Level 1
   { name: 'xp', type: glpk.GLP_DB, lb: 0, ub: 1 },
@@ -443,20 +347,7 @@ const lp = {
   bounds
 }
 
-const lp2 = {
-  name: 'EnergyFlowOptimization2',
-  objective,
-  subjectTo: constraints2,
-  bounds: bounds2
-}
-
-console.log(JSON.stringify(bounds2.sort((a, b) => a.name.localeCompare(b.name))))
-
-console.log(JSON.stringify(constraints.sort((a, b) => a.name.localeCompare(b.name))))
-console.log(JSON.stringify(constraints2.sort((a, b) => a.name.localeCompare(b.name))))
-
 const result = glpk.solve(lp)
-const result2 = glpk.solve(lp2)
 
 for (const [name, value] of Object.entries(result.result.vars).sort((a, b) =>
   a[0].localeCompare(b[0])
@@ -465,9 +356,3 @@ for (const [name, value] of Object.entries(result.result.vars).sort((a, b) =>
 }
 
 console.log('------------')
-
-for (const [name, value] of Object.entries(result2.result.vars).sort((a, b) =>
-  a[0].localeCompare(b[0])
-)) {
-  console.log(`${name} = ${value}`)
-}
