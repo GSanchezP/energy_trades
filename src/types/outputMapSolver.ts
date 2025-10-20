@@ -1,6 +1,7 @@
 import GLPK from 'glpk.js'
 import { NodeType } from './energyNode'
 import { NodesConfig } from './nodesConfig'
+import { iNodeWeights, nonPartialNodeWeights } from './nodes'
 
 const glpk = await GLPK()
 
@@ -28,30 +29,25 @@ function solutionToOutputMap(
   config: NodesConfig,
   vars: { [key: string]: number }
 ): {
-  [key: string]: { [key in NodeType]?: number }
+  [key: string]: { [key in NodeType]: number }
 } {
   const nodeFromAcr = (nodeAcr: string) => {
     return config.nodes.find((n) => n.acr === nodeAcr)!
   }
   const outputMap: {
-    [key: string]: { [key in NodeType]?: number }
+    [key: string]: { [key in NodeType]: number }
   } = {}
 
   for (const node of config.nodes) {
-    outputMap[node.id] = {}
-    let totalEnergy = 0
+    outputMap[node.id] = iNodeWeights()
     for (const [key, value] of Object.entries(vars)) {
-      if (key[1] === node.acr && key[2] === undefined) {
-        totalEnergy = value
-        continue
-      } else if (key[1] === node.acr) {
+      if (key[1] === node.acr && key[2] !== undefined) {
         const target = nodeFromAcr(key[2])
-        if (totalEnergy === 0) {
-          throw new Error(`TotalEnergy from ${node.id} not set yet, while computing ${target.id}`)
-        }
-        outputMap[node.id][target.id as NodeType] = value / totalEnergy
+
+        outputMap[node.id][target.id as NodeType] = value
       }
     }
+    outputMap[node.id] = nonPartialNodeWeights(outputMap[node.id])
   }
 
   return outputMap
@@ -165,17 +161,17 @@ export async function outputMapSolver(config: NodesConfig) {
 
   const result = await glpk.solve(lp)
 
-  const outpuMap: {
+  const outputMap: {
     [key: string]: number
   } = {}
 
   for (const [key, value] of Object.entries(result.result.vars).sort((a, b) =>
     a[0].localeCompare(b[0])
   )) {
-    outpuMap[key] = value
+    outputMap[key] = value
   }
 
-  const output = solutionToOutputMap(config, outpuMap)
+  const output = solutionToOutputMap(config, outputMap)
 
   console.log(output)
 

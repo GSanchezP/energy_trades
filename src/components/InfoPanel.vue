@@ -124,21 +124,21 @@ const formatNumber = (value: number): string => {
                       <td class="numeric">
                         {{ formatNumber(node.treDependencies[nodeType] || 0) }}
                       </td>
-                      <td class="numeric">{{ formatNumber(node.input[nodeType] || 0) }}</td>
+                      <td class="numeric">{{ formatNumber(node.inputMap[nodeType] || 0) }}</td>
                       <td
                         class="numeric ratio"
                         :class="{
                           'low-ratio':
                             (!['Petroleum', 'Coal'].includes(nodeType)) &&
                             (node.treDependencies[nodeType] || 0) > 0 &&
-                            (node.input[nodeType] || 0) / (node.treDependencies[nodeType] || 0) <
+                            (node.inputMap[nodeType] || 0) / (node.treDependencies[nodeType] || 0) <
                               1
                         }"
                       >
                         {{
                           (node.treDependencies[nodeType] || 0) > 0
                             ? formatNumber(
-                                (node.input[nodeType] || 0) / (node.treDependencies[nodeType] || 0)
+                                (node.inputMap[nodeType] || 0) / (node.treDependencies[nodeType] || 0)
                               )
                             : '-'
                         }}
@@ -168,8 +168,7 @@ const formatNumber = (value: number): string => {
                       <td class="numeric">
                         {{ formatNumber((node.outputMap[nodeType] || 0) * 100) }}%
                       </td>
-                      <td class="numeric">{{ formatNumber(node.output[nodeType] || 0) }}</td>
-                      <td class="numeric">{{ formatNumber(node.outputDependency[nodeType] || 0) }}</td>
+                      <td class="numeric">{{ formatNumber(node.outputMap[nodeType] || 0) }}</td>
                     </tr>
                   </tbody>
                 </table>

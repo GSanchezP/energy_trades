@@ -1,11 +1,4 @@
-import {
-  BASE_NODE_HEIGHT,
-  BasicNode,
-  EnergyNode,
-  NodeLevel,
-  NodeType,
-  NodeWeights
-} from './energyNode'
+import { BASE_NODE_HEIGHT, BasicNode, EnergyNode, NodeLevel, NodeType } from './energyNode'
 
 export class EnergyGraph {
   public energyNodes: EnergyNode[] = []
@@ -26,30 +19,6 @@ export class EnergyGraph {
     return this.dumpNode ? [...this.energyNodes, this.dumpNode] : [...this.energyNodes]
   }
 
-  setNodesOutputDependency() {
-    for (const node of this.energyNodes) {
-      const outputDependency = this.energyNodes.reduce(
-        (acc: NodeWeights, curr: EnergyNode) => {
-          acc[curr.nodeType] = curr.treDependencies[node.nodeType]
-          return acc
-        },
-        {
-          Petroleum: 0,
-          Coal: 0,
-          Minerals: 0,
-          Fuels: 0,
-          Electricity: 0,
-          Manufacture: 0,
-          Transport: 0,
-          WellBeing: 0,
-          Leisure: 0,
-          Heat: 0
-        }
-      )
-      node.setOutputDependency(outputDependency)
-    }
-  }
-
   push(node: EnergyNode) {
     node.setPosition = this.computePos(node.nodeLevel)
     this.energyNodes.push(node)
@@ -61,22 +30,6 @@ export class EnergyGraph {
     const dumpNode = new BasicNode(NodeLevel.Dump, '#e04c4cff', { width: x2 - x1, height: 100 })
     dumpNode.setPosition = { x: x1, y: 850 }
     this.dumpNode = dumpNode
-  }
-
-  calculate() {
-    for (const calcNode of this.energyNodes) {
-      calcNode.calculateOutput()
-      for (const node of this.energyNodes) {
-        node.input[calcNode.nodeType] = calcNode.output[node.nodeType]
-        node.calculateInput()
-      }
-    }
-  }
-
-  resizeNodesByInput() {
-    for (const node of this.energyNodes) {
-      node.resizeByOutput()
-    }
   }
 
   private computePos(nodeLevel: NodeLevel) {
@@ -92,30 +45,26 @@ export class EnergyGraph {
     this.upperUsage = []
 
     for (const sourceNode of this.energyNodes) {
-      for (const [targetType, power] of Object.entries(sourceNode.output) as [NodeType, number][]) {
-        if (targetType === 'Heat') {
-          connectors.push(this.createDumpConnector(sourceNode, power))
-        }
-
+      for (const [targetType, power] of Object.entries(sourceNode.outputMap) as [
+        NodeType,
+        number
+      ][]) {
         const targetNode = this.energyNodes.find((node) => node.nodeType === targetType)
         if (targetNode && targetNode.id !== sourceNode.id) {
           connectors.push(this.createConnector(sourceNode, targetNode, power))
         }
       }
+      connectors.push(this.createDumpConnector(sourceNode))
     }
 
     return connectors
   }
 
-  createDumpConnector(source: EnergyNode, power: number): Connector {
-    let sourceOffset = 0
-    for (const [key, value] of Object.entries(source.output)) {
-      if (key === 'Heat') break
-      sourceOffset += value * BASE_NODE_HEIGHT // TODO
-    }
+  createDumpConnector(source: EnergyNode): Connector {
+    let sourceOffset = source.outputPower * BASE_NODE_HEIGHT
 
     // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = power * BASE_NODE_HEIGHT
+    const strokeWidth = source.losses * BASE_NODE_HEIGHT
 
     let xOffset = 10 + strokeWidth / 2
 
@@ -142,7 +91,7 @@ export class EnergyGraph {
       from: source.id,
       to: 'Dump',
       points,
-      power,
+      power: source.losses,
       strokeWidth,
       color: '#e04c4cff'
     }
@@ -153,13 +102,13 @@ export class EnergyGraph {
     const UPPER_AUTOBAHN = 180
 
     let sourceOffset = 0
-    for (const [key, value] of Object.entries(source.output)) {
+    for (const [key, value] of Object.entries(source.outputMap)) {
       if (key === target.nodeType) break
       sourceOffset += value * BASE_NODE_HEIGHT
     }
 
     let targetOffset = 0
-    for (const [key, value] of Object.entries(target.input)) {
+    for (const [key, value] of Object.entries(target.inputMap)) {
       if (key === source.nodeType) break
       targetOffset += value * BASE_NODE_HEIGHT
     }
