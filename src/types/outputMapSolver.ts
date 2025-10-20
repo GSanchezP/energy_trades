@@ -1,8 +1,8 @@
 import GLPK from 'glpk.js'
-import { NodesConfig } from './nodes'
 import { NodeType } from './energyNode'
+import { NodesConfig } from './nodesConfig'
 
-const glpk = GLPK()
+const glpk = await GLPK()
 
 type Bound = {
   name: string
@@ -24,17 +24,46 @@ type Constraint = {
   }
 }
 
-export function outputMapSolver(config: NodesConfig) {
+function solutionToOutputMap(
+  config: NodesConfig,
+  vars: { [key: string]: number }
+): {
+  [key: string]: { [key in NodeType]?: number }
+} {
+  const nodeFromAcr = (nodeAcr: string) => {
+    return config.nodes.find((n) => n.acr === nodeAcr)!
+  }
+  const outputMap: {
+    [key: string]: { [key in NodeType]?: number }
+  } = {}
+
+  for (const node of config.nodes) {
+    outputMap[node.id] = {}
+    let totalEnergy = 0
+    for (const [key, value] of Object.entries(vars)) {
+      if (key[1] === node.acr && key[2] === undefined) {
+        totalEnergy = value
+        continue
+      } else if (key[1] === node.acr) {
+        const target = nodeFromAcr(key[2])
+        if (totalEnergy === 0) {
+          throw new Error(`TotalEnergy from ${node.id} not set yet, while computing ${target.id}`)
+        }
+        outputMap[node.id][target.id as NodeType] = value / totalEnergy
+      }
+    }
+  }
+
+  return outputMap
+}
+
+export async function outputMapSolver(config: NodesConfig) {
   const bounds: Bound[] = []
 
   const constraints: Constraint[] = []
 
   const nodeAcr = (nodeName: string) => {
     return config.nodes.find((n) => n.id === nodeName)?.acr!
-  }
-
-  const nodeFromAcr = (nodeAcr: string) => {
-    return config.nodes.find((n) => n.acr === nodeAcr)!
   }
 
   const bound = (name: string) => {
@@ -45,7 +74,7 @@ export function outputMapSolver(config: NodesConfig) {
     return {
       name: varName + '_le_1',
       vars: [{ name: varName, coef: 1 }],
-      bnds: { type: glpk.GLP_DB, ub: 1, lb: 0 }
+      bnds: { type: glpk.GLP_UP, ub: 1, lb: 0 }
     }
   }
 
@@ -56,7 +85,7 @@ export function outputMapSolver(config: NodesConfig) {
         { name: varName, coef: 1 },
         { name: flowVarName, coef: -1 / value }
       ],
-      bnds: { type: glpk.GLP_DB, ub: 0, lb: 0 }
+      bnds: { type: glpk.GLP_UP, ub: 0, lb: 0 }
     }
   }
 
@@ -134,31 +163,21 @@ export function outputMapSolver(config: NodesConfig) {
     bounds: bounds
   }
 
-  const result = glpk.solve(lp)
+  const result = await glpk.solve(lp)
 
-  function solutionToOutputMap(vars: { [key: string]: number }): {
-    [key: string]: { [key in NodeType]?: number }
-  } {
-    const outputMap: {
-      [key: string]: { [key in NodeType]?: number }
-    } = {}
+  const outpuMap: {
+    [key: string]: number
+  } = {}
 
-    for (const node of config.nodes) {
-      outputMap[node.id] = {}
-      let totalEnergy = 0
-      for (const [key, value] of Object.entries(vars)) {
-        if (key[1] === node.acr && key[2] === undefined) {
-          totalEnergy = value
-          continue
-        } else if (key[1] === node.acr) {
-          const target = nodeFromAcr(key[2])
-          outputMap[node.id][target.id as NodeType] = value / totalEnergy
-        }
-      }
-    }
-
-    return outputMap
+  for (const [key, value] of Object.entries(result.result.vars).sort((a, b) =>
+    a[0].localeCompare(b[0])
+  )) {
+    outpuMap[key] = value
   }
 
-  return solutionToOutputMap(result.result.vars)
+  const output = solutionToOutputMap(config, outpuMap)
+
+  console.log(output)
+
+  return output
 }

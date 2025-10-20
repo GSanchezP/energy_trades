@@ -52,23 +52,25 @@ export function inputTre(input: { [key in NodeType]?: number }): NodeWeights {
   }
 }
 
-export function outputMap(outputMap: { [key in NodeType]?: number }): NodeWeights {
+export function outputMap(outputMap?: { [key in NodeType]?: number }): NodeWeights {
   let total = 0
 
-  for (const val of Object.values(outputMap)) {
-    total += val
+  if (outputMap) {
+    for (const val of Object.values(outputMap)) {
+      total += val
+    }
   }
 
   return {
-    Petroleum: outputMap.Petroleum ?? 0,
-    Coal: outputMap.Coal ?? 0,
-    Minerals: outputMap.Minerals ?? 0,
-    Fuels: outputMap.Fuels ?? 0,
-    Electricity: outputMap.Electricity ?? 0,
-    Manufacture: outputMap.Manufacture ?? 0,
-    Transport: outputMap.Transport ?? 0,
-    WellBeing: outputMap.WellBeing ?? 0,
-    Leisure: outputMap.Leisure ?? 0,
+    Petroleum: outputMap?.Petroleum ?? 0,
+    Coal: outputMap?.Coal ?? 0,
+    Minerals: outputMap?.Minerals ?? 0,
+    Fuels: outputMap?.Fuels ?? 0,
+    Electricity: outputMap?.Electricity ?? 0,
+    Manufacture: outputMap?.Manufacture ?? 0,
+    Transport: outputMap?.Transport ?? 0,
+    WellBeing: outputMap?.WellBeing ?? 0,
+    Leisure: outputMap?.Leisure ?? 0,
     Heat: 1 - total
   }
 }

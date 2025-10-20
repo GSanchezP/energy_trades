@@ -1,25 +1,8 @@
-import * as yaml from 'js-yaml'
-
-import path from 'path'
-import * as fs from 'fs'
-
 import { EnergyNode, NodeLevel, NodeType, inputTre, outputMap } from './energyNode'
 
 import { EnergyGraph } from './energyGraph'
 import { outputMapSolver } from './outputMapSolver'
-
-// Define the YAML structure types
-interface NodeConfig {
-  id: string
-  acr: string
-  level: string
-  color: string
-  inputs: Record<string, number>
-}
-
-export interface NodesConfig {
-  nodes: NodeConfig[]
-}
+import { nodesConfig, NodesConfig } from './nodesConfig'
 
 // Function to convert level string to NodeLevel enum
 function getNodeLevel(level: string): NodeLevel {
@@ -36,17 +19,6 @@ function getNodeLevel(level: string): NodeLevel {
       return NodeLevel.Dump
     default:
       throw new Error(`Unknown node level: ${level}`)
-  }
-}
-
-// Function to load and parse YAML configuration
-export function loadNodesFromYaml(): NodesConfig {
-  try {
-    const response = fs.readFileSync(path.resolve('public', 'nodes.yml'), 'utf-8')
-    return yaml.load(response) as NodesConfig
-  } catch (error) {
-    console.error('Error loading nodes from YAML:', error)
-    throw error
   }
 }
 
@@ -71,7 +43,6 @@ export async function getEnergyGraph(): Promise<EnergyGraph> {
   const energyGraph = new EnergyGraph()
 
   // Load nodes from YAML configuration asynchronously
-  const nodesConfig = loadNodesFromYaml()
   const outputMap = outputMapSolver(nodesConfig)
 
   console.log(outputMap)
