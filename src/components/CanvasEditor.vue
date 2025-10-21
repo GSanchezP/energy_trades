@@ -1,7 +1,7 @@
 <template>
   <div class="canvas-container">
     <div class="canvas-wrapper">
-      <v-stage ref="stageRef" :config="stageConfig" @wheel="handleWheel" @click="handleStageClick">
+      <v-stage ref="stageRef" :config="stageConfig" @wheel="handleWheel" @click="handleStageClick" @mousedown="handleMouseDown" @mousemove="handleMouseMove" @mouseup="handleMouseUp">
         <v-layer>
           <v-line
             v-for="connector in connectors"
@@ -87,6 +87,8 @@ import InfoPanel from './InfoPanel.vue'
 import getEnergyGraph from '../types/nodes'
 import { onMounted } from 'vue'
 
+const FPS_INTERVAL_IN_MS = 16
+
 const energyGraph = ref<EnergyGraph | undefined>(undefined)
 const stageRef = ref<any>(null)
 
@@ -97,6 +99,11 @@ const stageHeight = window.innerHeight
 const selectedSquareIds = ref<Set<string>>(new Set())
 const selectedConnectorId = ref<string | null>(null)
 const clickedOnElement = ref<boolean>(false)
+
+// Pan state
+const isPanning = ref<boolean>(false)
+const lastPointerPosition = ref<{ x: number; y: number } | null>(null)
+const panTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
 onMounted(async () => {
   energyGraph.value = await getEnergyGraph()
@@ -194,6 +201,60 @@ const handleStageClick = (event: { evt: MouseEvent }) => {
   }
   // Reset the flag for next click
   clickedOnElement.value = false
+}
+
+const handleMouseDown = (event: { evt: MouseEvent }) => {
+  // Check if middle mouse button (wheel) is pressed
+  if (event.evt.button === 1) {
+    isPanning.value = true
+    const stage = stageRef.value?.getNode()
+    if (stage) {
+      const pointer = stage.getPointerPosition()
+      lastPointerPosition.value = { x: pointer.x, y: pointer.y }
+    }
+    event.evt.preventDefault()
+  }
+}
+
+const handleMouseMove = (event: { evt: MouseEvent }) => {
+  if (!isPanning.value || !lastPointerPosition.value) return
+  
+  // Clear existing timeout
+  if (panTimeout.value) {
+    clearTimeout(panTimeout.value)
+  }
+  
+  // Throttle panning updates to every 16ms (~60fps)
+  panTimeout.value = setTimeout(() => {
+    const stage = stageRef.value?.getNode()
+    if (!stage || !isPanning.value || !lastPointerPosition.value) return
+    
+    const pointer = stage.getPointerPosition()
+    const dx = pointer.x - lastPointerPosition.value.x
+    const dy = pointer.y - lastPointerPosition.value.y
+    
+    const currentPos = stage.position()
+    stage.position({
+      x: currentPos.x + dx,
+      y: currentPos.y + dy
+    })
+    
+    lastPointerPosition.value = { x: pointer.x, y: pointer.y }
+    panTimeout.value = null
+  }, FPS_INTERVAL_IN_MS)
+}
+
+const handleMouseUp = (event: { evt: MouseEvent }) => {
+  if (event.evt.button === 1) {
+    isPanning.value = false
+    lastPointerPosition.value = null
+    
+    // Clear any pending timeout
+    if (panTimeout.value) {
+      clearTimeout(panTimeout.value)
+      panTimeout.value = null
+    }
+  }
 }
 </script>
 
