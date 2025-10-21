@@ -58,7 +58,7 @@ export const nodesConfig: NodesConfig = {
       }
     },
     {
-      id: 'Minerals',
+      id: 'Mining',
       acr: 'm',
       level: 'Conversion',
       color: '#856350ff',
@@ -79,13 +79,25 @@ export const nodesConfig: NodesConfig = {
       }
     },
     {
+      id: 'Food',
+      acr: 'o',
+      level: 'Industrial',
+      color: '#b0b00aff',
+      inputs: {
+        WellBeing: 0.15,
+        Fuels: 0.65,
+        Manufacture: 0.25,
+        Mining: 0.15
+      }
+    },
+    {
       id: 'Manufacture',
       acr: 'i',
       level: 'Industrial',
-      color: '#8f9717ff',
+      color: '#976c17ff',
       inputs: {
         WellBeing: 0.05,
-        Minerals: 1,
+        Mining: 1,
         Electricity: 1.6,
         Transport: 0.1
       }
@@ -99,7 +111,8 @@ export const nodesConfig: NodesConfig = {
         Fuels: 0.25,
         Electricity: 0.2,
         Manufacture: 0.2,
-        Transport: 0.4
+        Transport: 0.4,
+        Food: 0.4
       }
     },
     {
@@ -112,7 +125,8 @@ export const nodesConfig: NodesConfig = {
         Electricity: 0.2,
         Manufacture: 0.2,
         Transport: 0.4,
-        WellBeing: 0.6
+        WellBeing: 0.6,
+        Food: 0.4
       }
     }
   ]

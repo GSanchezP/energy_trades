@@ -1,10 +1,11 @@
 export type NodeType =
   | 'Petroleum'
   | 'Coal'
-  | 'Minerals'
+  | 'Mining'
   | 'Fuels'
   | 'Electricity'
   | 'Manufacture'
+  | 'Food'
   | 'Transport'
   | 'WellBeing'
   | 'Leisure'
@@ -35,10 +36,11 @@ export function outputMap(outputMap?: { [key in NodeType]?: number }): NodeWeigh
   return {
     Petroleum: outputMap?.Petroleum ?? 0,
     Coal: outputMap?.Coal ?? 0,
-    Minerals: outputMap?.Minerals ?? 0,
+    Mining: outputMap?.Mining ?? 0,
     Fuels: outputMap?.Fuels ?? 0,
     Electricity: outputMap?.Electricity ?? 0,
     Manufacture: outputMap?.Manufacture ?? 0,
+    Food: outputMap?.Food ?? 0,
     Transport: outputMap?.Transport ?? 0,
     WellBeing: outputMap?.WellBeing ?? 0,
     Leisure: outputMap?.Leisure ?? 0,

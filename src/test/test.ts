@@ -42,7 +42,7 @@ const bounds = [
   { name: 'xew', type: glpk.GLP_DB, lb: 0, ub: 1 },
   { name: 'xel', type: glpk.GLP_DB, lb: 0, ub: 1 },
 
-  // Flows from minerals
+  // Flows from Mining
   { name: 'xmi', type: glpk.GLP_DB, lb: 0, ub: 1 },
   { name: 'xme', type: glpk.GLP_DB, lb: 0, ub: 1 },
 

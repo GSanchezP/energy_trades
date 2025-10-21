@@ -23,10 +23,11 @@ const energyNodes = computed(() => {
 const allNodeTypes: NodeType[] = [
   'Petroleum',
   'Coal',
-  'Minerals',
+  'Mining',
   'Fuels',
   'Electricity',
   'Manufacture',
+  'Food',
   'Transport',
   'WellBeing',
   'Leisure',

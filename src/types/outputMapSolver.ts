@@ -161,6 +161,10 @@ export async function outputMapSolver(config: NodesConfig) {
 
   const result = await glpk.solve(lp)
 
+  // Convert result to readable format
+  const readableResult = formatSolverResult(result)
+  console.log(readableResult)
+
   const outputMap: {
     [key: string]: number
   } = {}
@@ -173,7 +177,155 @@ export async function outputMapSolver(config: NodesConfig) {
 
   const output = solutionToOutputMap(config, outputMap)
 
-  console.log(output)
-
   return output
+}
+
+function formatSolverResult(result: any): string {
+  const lines: string[] = []
+
+  // Header
+  lines.push('='.repeat(60))
+  lines.push('🔧 LINEAR PROGRAMMING SOLVER RESULTS')
+  lines.push('='.repeat(60))
+
+  // Problem Statistics
+  lines.push('\n📊 PROBLEM STATISTICS:')
+  lines.push(
+    `   • Number of Variables: ${result.result?.vars ? Object.keys(result.result.vars).length : 'Unknown'}`
+  )
+  lines.push(`   • Number of Constraints: ${Object.keys(result.result.dual).length || 'Unknown'}`)
+
+  // Solver Status
+  lines.push('\n🎯 SOLVER STATUS:')
+  const status = result.result.status
+  let statusText = 'Unknown'
+  let statusEmoji = '❓'
+
+  switch (status) {
+    case 1:
+      statusText = 'Optimal solution found'
+      statusEmoji = '✅'
+      break
+    case 2:
+      statusText = 'Feasible solution found'
+      statusEmoji = '⚠️'
+      break
+    case 3:
+      statusText = 'Infeasible problem'
+      statusEmoji = '❌'
+      break
+    case 4:
+      statusText = 'No feasible solution exists'
+      statusEmoji = '❌'
+      break
+    case 5:
+      statusText = 'Unbounded problem'
+      statusEmoji = '⚠️'
+      break
+    case 6:
+      statusText = 'Undefined solution'
+      statusEmoji = '❓'
+      break
+    case 7:
+      statusText = 'Iteration limit exceeded'
+      statusEmoji = '⏰'
+      break
+    case 8:
+      statusText = 'Time limit exceeded'
+      statusEmoji = '⏰'
+      break
+    case 9:
+      statusText = 'No primal feasible solution'
+      statusEmoji = '❌'
+      break
+    case 10:
+      statusText = 'Numerical instability'
+      statusEmoji = '⚠️'
+      break
+    case 11:
+      statusText = 'Primal infeasible'
+      statusEmoji = '❌'
+      break
+    case 12:
+      statusText = 'Primal unbounded'
+      statusEmoji = '⚠️'
+      break
+    case 13:
+      statusText = 'Primal undefined'
+      statusEmoji = '❓'
+      break
+    case 14:
+      statusText = 'Dual infeasible'
+      statusEmoji = '❌'
+      break
+    case 15:
+      statusText = 'Dual unbounded'
+      statusEmoji = '⚠️'
+      break
+    case 16:
+      statusText = 'Dual undefined'
+      statusEmoji = '❓'
+      break
+  }
+
+  lines.push(`   ${statusEmoji} Status Code: ${status} - ${statusText}`)
+
+  // Objective Value (Z value)
+  lines.push('\n🎯 OBJECTIVE VALUE (Z):')
+  const zValue = result.result?.z
+  if (zValue !== undefined) {
+    lines.push(`   • Z Value: ${zValue.toFixed(6)}`)
+    lines.push(`   • Meaning: Maximum achievable Leisure output`)
+    lines.push(
+      `   • Interpretation: ${zValue > 0 ? '✅ Feasible solution' : '❌ No feasible solution'}`
+    )
+    if (zValue > 0) {
+      lines.push(`   • Efficiency: ${(zValue * 100).toFixed(2)}% of maximum possible leisure`)
+    }
+  } else {
+    lines.push('   • Z Value: Not available')
+  }
+
+  // Timing Information
+  lines.push('\n⏱️ PERFORMANCE:')
+  if (result.time) {
+    lines.push(`   • Solve Time: ${result.time.toFixed(3)} seconds`)
+  } else {
+    lines.push('   • Solve Time: Not available')
+  }
+
+  if (result.iterations) {
+    lines.push(`   • Iterations: ${result.iterations}`)
+  }
+
+  // Variable Summary
+  lines.push('\n📈 VARIABLE SUMMARY:')
+  if (result.result?.vars) {
+    const vars = result.result.vars
+    const varCount = Object.keys(vars).length
+    const nonZeroVars = Object.entries(vars).filter(
+      ([_, value]) => Math.abs(value as number) > 1e-6
+    )
+
+    lines.push(`   • Total Variables: ${varCount}`)
+    lines.push(`   • Non-zero Variables: ${nonZeroVars.length}`)
+    lines.push(`   • Zero Variables: ${varCount - nonZeroVars.length}`)
+
+    if (nonZeroVars.length > 0) {
+      lines.push('\n🔍 KEY VARIABLES (Non-zero values):')
+      nonZeroVars.slice(0, 10).forEach(([name, value]) => {
+        lines.push(`   • ${name}: ${(value as number).toFixed(6)}`)
+      })
+      if (nonZeroVars.length > 10) {
+        lines.push(`   • ... and ${nonZeroVars.length - 10} more variables`)
+      }
+    }
+  }
+
+  // Footer
+  lines.push('\n' + '='.repeat(60))
+  lines.push('📝 END OF SOLVER REPORT')
+  lines.push('='.repeat(60))
+
+  return lines.join('\n')
 }
