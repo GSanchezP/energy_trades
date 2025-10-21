@@ -52,6 +52,7 @@ const getNodeLevelName = (level: NodeLevel): string => {
     case NodeLevel.Conversion: return 'Conversion'
     case NodeLevel.Industrial: return 'Industrial'
     case NodeLevel.Societal: return 'Societal'
+    case NodeLevel.Target: return 'Target'
     default: return 'Unknown'
   }
 }
@@ -60,25 +61,11 @@ const getNodeLevelName = (level: NodeLevel): string => {
 const getEfficiencyClass = (eroi: number): string => {
   if (eroi >= 10) return 'excellent'
   if (eroi >= 5) return 'good'
-  if (eroi >= 2) return 'moderate'
-  if (eroi >= 1) return 'poor'
+  if (eroi >= 0.5) return 'moderate'
+  if (eroi >= 0.3) return 'poor'
   return 'critical'
 }
 
-// Helper function to calculate input satisfaction percentage
-const getInputSatisfaction = (node: EnergyNode): number => {
-  let totalRequired = 0
-  let totalSatisfied = 0
-  
-  allNodeTypes.forEach(nodeType => {
-    const required = node.treDependencies[nodeType] || 0
-    const satisfied = node.inputMap[nodeType] || 0
-    totalRequired += required
-    totalSatisfied += Math.min(satisfied, required)
-  })
-  
-  return totalRequired > 0 ? totalSatisfied / totalRequired : 1
-}
 
 // Get non-energy nodes (BasicNodes like dump)
 const basicNodes = computed(() => {
@@ -146,17 +133,6 @@ const basicNodes = computed(() => {
                   <div class="metric-description">Energy Return on Investment</div>
                 </div>
                 
-                <div class="metric-card">
-                  <div class="metric-label">Efficiency</div>
-                  <div class="metric-value">{{ formatPercentage(node.outputPower / (node.inputPower + Number.MIN_VALUE)) }}</div>
-                  <div class="metric-description">Output/Input Ratio</div>
-                </div>
-                
-                <div class="metric-card">
-                  <div class="metric-label">Input Satisfaction</div>
-                  <div class="metric-value">{{ formatPercentage(getInputSatisfaction(node)) }}</div>
-                  <div class="metric-description">Requirements Met</div>
-                </div>
               </div>
             </div>
 
@@ -187,10 +163,9 @@ const basicNodes = computed(() => {
                   <thead>
                     <tr>
                       <th>Resource Type</th>
-                      <th>Required</th>
+                      <th>EROI Required</th>
                       <th>Available</th>
-                      <th>Satisfaction</th>
-                      <th>Status</th>
+                      <th>Fulfillment</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -202,32 +177,16 @@ const basicNodes = computed(() => {
                         <div v-if="(node.treDependencies[nodeType] || 0) > 0" class="satisfaction-bar">
                           <div 
                             class="satisfaction-fill" 
-                            :style="{ width: `${Math.min(100, ((node.inputMap[nodeType] || 0) / (node.treDependencies[nodeType] || 0)) * 100)}%` }"
+                            :style="{ width: `${(node.limitingFactor(nodeType) * 100).toFixed(0)}%` }"
                             :class="{
-                              'satisfied': (node.inputMap[nodeType] || 0) >= (node.treDependencies[nodeType] || 0),
-                              'partial': (node.inputMap[nodeType] || 0) > 0 && (node.inputMap[nodeType] || 0) < (node.treDependencies[nodeType] || 0),
-                              'unsatisfied': (node.inputMap[nodeType] || 0) === 0
+                              'satisfied': (node.limitingFactor(nodeType) >= 0.98),
+                              'partial': node.limitingFactor(nodeType) < 0.98,
                             }"
                           ></div>
                           <span class="satisfaction-text">
-                            {{ formatNumber((node.inputMap[nodeType] || 0) / (node.treDependencies[nodeType] || 0)) }}
+                            {{ (node.limitingFactor(nodeType) * 100).toFixed(0) }}%
                           </span>
                         </div>
-                        <span v-else class="no-requirement">-</span>
-                      </td>
-                      <td class="status">
-                        <span 
-                          v-if="(node.treDependencies[nodeType] || 0) > 0"
-                          class="status-badge"
-                          :class="{
-                            'satisfied': (node.inputMap[nodeType] || 0) >= (node.treDependencies[nodeType] || 0),
-                            'partial': (node.inputMap[nodeType] || 0) > 0 && (node.inputMap[nodeType] || 0) < (node.treDependencies[nodeType] || 0),
-                            'unsatisfied': (node.inputMap[nodeType] || 0) === 0
-                          }"
-                        >
-                          {{ (node.inputMap[nodeType] || 0) >= (node.treDependencies[nodeType] || 0) ? '✓' : 
-                             (node.inputMap[nodeType] || 0) > 0 ? '⚠' : '✗' }}
-                        </span>
                         <span v-else class="no-requirement">-</span>
                       </td>
                     </tr>
@@ -498,10 +457,11 @@ const basicNodes = computed(() => {
 }
 
 .level-0 { background: #6b7280; }
-.level-1 { background: #059669; }
-.level-2 { background: #dc2626; }
-.level-3 { background: #7c3aed; }
-.level-4 { background: #ea580c; }
+.level-1 { background: #694908; }
+.level-2 { background: #a226dc; }
+.level-3 { background: #6d9029; }
+.level-4 { background: #1ba90e; }
+.level-5 { background: #c953bdff; }
 
 .key-metrics {
   display: flex;

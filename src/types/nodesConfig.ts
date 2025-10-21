@@ -18,6 +18,7 @@ export const nodesConfig: NodesConfig = {
       level: 'Primary',
       color: '#442d54ff',
       inputs: {
+        WellBeing: 0.05,
         Fuels: 0.02,
         Electricity: 0.02,
         Manufacture: 0.02
@@ -29,6 +30,7 @@ export const nodesConfig: NodesConfig = {
       level: 'Primary',
       color: '#3d2913ff',
       inputs: {
+        WellBeing: 0.05,
         Fuels: 0.02,
         Electricity: 0.02,
         Manufacture: 0.02
@@ -40,6 +42,7 @@ export const nodesConfig: NodesConfig = {
       level: 'Conversion',
       color: '#610a52ff',
       inputs: {
+        WellBeing: 0.05,
         Petroleum: 1.2,
         Electricity: 0.01
       }
@@ -50,6 +53,7 @@ export const nodesConfig: NodesConfig = {
       level: 'Conversion',
       color: '#0d92a3ff',
       inputs: {
+        WellBeing: 0.05,
         Coal: 2.5
       }
     },
@@ -59,6 +63,7 @@ export const nodesConfig: NodesConfig = {
       level: 'Conversion',
       color: '#856350ff',
       inputs: {
+        WellBeing: 0.05,
         Fuels: 1,
         Electricity: 0.25
       }
@@ -69,6 +74,7 @@ export const nodesConfig: NodesConfig = {
       level: 'Industrial',
       color: '#58b00aff',
       inputs: {
+        WellBeing: 0.05,
         Fuels: 3
       }
     },
@@ -78,6 +84,7 @@ export const nodesConfig: NodesConfig = {
       level: 'Industrial',
       color: '#8f9717ff',
       inputs: {
+        WellBeing: 0.05,
         Minerals: 0.4,
         Electricity: 1.6,
         Transport: 0.1
@@ -89,7 +96,7 @@ export const nodesConfig: NodesConfig = {
       level: 'Societal',
       color: '#1fbb65ff',
       inputs: {
-        Fuels: 0.15,
+        Fuels: 0.25,
         Electricity: 0.2,
         Manufacture: 0.2,
         Transport: 0.4

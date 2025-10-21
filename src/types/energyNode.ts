@@ -103,27 +103,34 @@ export class BasicNode {
 export class EnergyNode extends BasicNode {
   private _nodeType: NodeType
 
+  private _treDependencies: NodeWeights // Amount of energy to produce 1 watt
+  private _inputMap: NodeWeights
+  private _outputMap: NodeWeights // which percentage of the produced energy goes into the other nodes,
   private _inputPower: number
   private _outputPower: number
   private _losses: number
   private _eroi: number
+  private _limitingFactor: number
 
   constructor(
     nodeLevel: NodeLevel,
     nodeType: NodeType,
-    public readonly treDependencies: NodeWeights, // Amount of energy to produce 1 watt
-    public readonly inputMap: NodeWeights,
-    public readonly outputMap: NodeWeights, // which percentage of the produced energy goes into the other nodes,
+    treDependencies: NodeWeights, // Amount of energy to produce 1 watt
+    inputMap: NodeWeights,
+    outputMap: NodeWeights, // which percentage of the produced energy goes into the other nodes,
     color: string
   ) {
     super(nodeLevel, color)
     this._nodeType = nodeType
-    this.calculateTre()
+    this._treDependencies = treDependencies
+    this._inputMap = inputMap
+    this._outputMap = outputMap
     this._inputPower = Object.values(this.inputMap).reduce((acc, curr) => acc + curr)
     this._outputPower = Object.values(this.outputMap).reduce((acc, curr) => acc + curr)
     this._losses = Math.max(this._inputPower - this.outputPower, 0)
     this._eroi = this._outputPower / (this._inputPower + Number.MIN_VALUE)
 
+    this._limitingFactor = this.calculateLimitingFactor()
     this.setSize = {
       width: this.width,
       height: BASE_NODE_HEIGHT * Math.max(this._inputPower, this._outputPower)
@@ -154,19 +161,43 @@ export class EnergyNode extends BasicNode {
     return this._eroi
   }
 
-  checkOutputMap() {
+  get treDependencies() {
+    return this._treDependencies
+  }
+
+  get inputMap() {
+    return this._inputMap
+  }
+
+  get outputMap() {
+    return this._outputMap
+  }
+
+  limitingFactor(nodeType: NodeType) {
+    return (
+      (this.inputMap[nodeType] || 0) / (this.treDependencies[nodeType] || 0) / this._limitingFactor
+    )
+  }
+
+  private calculateLimitingFactor() {
+    let limitingFactor = 1
+    for (const [nodeType, value] of Object.entries(this.inputMap)) {
+      if (this._treDependencies[nodeType as NodeType] > 0) {
+        limitingFactor = Math.min(
+          limitingFactor,
+          value / this._treDependencies[nodeType as NodeType]
+        )
+      }
+    }
+    return limitingFactor
+  }
+
+  private checkOutputMap() {
     const add = Object.values(this.outputMap).reduce((acc, curr) => {
       return acc + curr
     })
-    if (add < 0.99) {
+    if (add < 0.99 || add > 1.01) {
       throw new Error(`Output Map for ${this.nodeType} does not add 1 (${add})`)
     }
-  }
-
-  calculateTre() {
-    // Calculate total dependencies - currently unused but kept for future use
-    Object.values(this.treDependencies).reduce((acc, curr) => {
-      return acc + curr
-    })
   }
 }
