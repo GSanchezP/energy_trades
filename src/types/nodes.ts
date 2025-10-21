@@ -15,6 +15,8 @@ function getNodeLevel(level: string): NodeLevel {
       return NodeLevel.Industrial
     case 'Societal':
       return NodeLevel.Societal
+    case 'Target':
+      return NodeLevel.Target
     case 'Dump':
       return NodeLevel.Dump
     default:

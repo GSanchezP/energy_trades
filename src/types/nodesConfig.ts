@@ -64,6 +64,15 @@ export const nodesConfig: NodesConfig = {
       }
     },
     {
+      id: 'Transport',
+      acr: 't',
+      level: 'Industrial',
+      color: '#58b00aff',
+      inputs: {
+        Fuels: 3
+      }
+    },
+    {
       id: 'Manufacture',
       acr: 'i',
       level: 'Industrial',
@@ -72,15 +81,6 @@ export const nodesConfig: NodesConfig = {
         Minerals: 0.4,
         Electricity: 1.6,
         Transport: 0.1
-      }
-    },
-    {
-      id: 'Transport',
-      acr: 't',
-      level: 'Industrial',
-      color: '#58b00aff',
-      inputs: {
-        Fuels: 3
       }
     },
     {
@@ -98,7 +98,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'Leisure',
       acr: 'l',
-      level: 'Societal',
+      level: 'Target',
       color: '#c953bdff',
       inputs: {
         Fuels: 0.15,

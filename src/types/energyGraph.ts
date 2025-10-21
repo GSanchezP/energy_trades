@@ -34,7 +34,7 @@ export class EnergyGraph {
 
   private computePos(nodeLevel: NodeLevel) {
     return {
-      x: 100 + (nodeLevel - 1) * 400,
+      x: 100 + (nodeLevel - 1) * 300,
       y: 200 + this.energyNodes.filter((en) => en.nodeLevel === nodeLevel).length * 200
     }
   }
