@@ -32,7 +32,7 @@ function solutionToOutputMap(
   [key: string]: { [key in NodeType]: number }
 } {
   const nodeFromAcr = (nodeAcr: string) => {
-    return config.nodes.find((n) => n.acr === nodeAcr)!
+    return config.nodes.find((n) => n.id === nodeAcr)!
   }
   const outputMap: {
     [key: string]: { [key in NodeType]: number }
@@ -40,8 +40,9 @@ function solutionToOutputMap(
 
   for (const node of config.nodes) {
     outputMap[node.id] = iNodeWeights()
-    for (const [key, value] of Object.entries(vars)) {
-      if (key[1] === node.acr && key[2] !== undefined) {
+    for (const [keyName, value] of Object.entries(vars)) {
+      const key = keyName.split('-')
+      if (key[1] === node.id && key[2] !== undefined) {
         const target = nodeFromAcr(key[2])
 
         outputMap[node.id][target.id as NodeType] = value
@@ -59,7 +60,7 @@ export async function outputMapSolver(config: NodesConfig) {
   const constraints: Constraint[] = []
 
   const nodeAcr = (nodeName: string) => {
-    return config.nodes.find((n) => n.id === nodeName)?.acr!
+    return config.nodes.find((n) => n.id === nodeName)?.id!
   }
 
   const bound = (name: string) => {
@@ -108,13 +109,13 @@ export async function outputMapSolver(config: NodesConfig) {
 
   // Var Bounds
   for (const node of config.nodes) {
-    const varName = 'x' + node.acr
+    const varName = 'x-' + node.id
     bounds.push(bound(varName))
   }
 
   // TRE Constraints
   for (const node of config.nodes) {
-    const varName = 'x' + node.acr
+    const varName = 'x-' + node.id
 
     // TODO: This should be removed
     // if (node.level === 'Extraction') {
@@ -124,7 +125,7 @@ export async function outputMapSolver(config: NodesConfig) {
 
     constraints.push(minOneConstraint(varName))
     for (const [inputNode, treValue] of Object.entries(node.inputs)) {
-      const flowVarName = `x${nodeAcr(inputNode)}${node.acr}`
+      const flowVarName = `x-${inputNode}-${node.id}`
       bounds.push(bound(flowVarName))
       constraints.push(minTreConstraint(varName, flowVarName, treValue))
     }
@@ -132,14 +133,14 @@ export async function outputMapSolver(config: NodesConfig) {
 
   // Net sum constraints
   for (const node of config.nodes) {
-    const varName = 'x' + node.acr
+    const varName = 'x-' + node.id
     if (node.id === 'Leisure') continue // TODO: Figure out this
     const sumConstraints: string[] = []
     for (const sourceNode of config.nodes) {
       if (sourceNode.id === node.id) continue
       for (const targetNode of Object.keys(sourceNode.inputs)) {
         if (targetNode === node.id) {
-          sumConstraints.push(`x${node.acr}${sourceNode.acr}`)
+          sumConstraints.push(`x-${node.id}-${sourceNode.id}`)
         }
       }
     }
@@ -149,7 +150,7 @@ export async function outputMapSolver(config: NodesConfig) {
   const objective = {
     direction: glpk.GLP_MAX,
     name: 'maximize_leisure',
-    vars: [{ name: 'xl', coef: 1 }]
+    vars: [{ name: 'x-Leisure', coef: 1 }]
   }
 
   const lp = {
@@ -160,6 +161,9 @@ export async function outputMapSolver(config: NodesConfig) {
   }
 
   const result = await glpk.solve(lp)
+
+  console.log(bounds)
+  console.log(constraints)
 
   // Convert result to readable format
   const readableResult = formatSolverResult(result)

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { BasicNode, EnergyNode, NodeType } from '../types/energyNode'
-import { NodeLevel } from '../types/energyNode'
-import type { Connector, EnergyGraph } from '../types/energyGraph'
+import type { BasicNode, EnergyNode } from '../types/energyNode'
+import { NodeLevel, NodeTypes } from '../types/energyNode'
+import type { Connector } from '../types/energyGraph'
 
 const props = defineProps<{
   selectedNodes: any[]
@@ -19,20 +19,6 @@ const energyNodes = computed(() => {
   )
 })
 
-// Get all unique node types for table headers
-const allNodeTypes: NodeType[] = [
-  'Petroleum',
-  'Coal',
-  'Mining',
-  'Fuels',
-  'Electricity',
-  'Manufacture',
-  'Food',
-  'Transport',
-  'WellBeing',
-  'Leisure',
-  'Heat'
-]
 
 // Helper function to format numbers
 const formatNumber = (value: number): string => {
@@ -80,12 +66,12 @@ const basicNodes = computed(() => {
 const eroiData = computed(() => {
   if (!props.energyGraph) return []
   
-  return props.energyGraph.energyNodes.map(node => ({
+  return props.energyGraph.energyNodes.map((node: { nodeType: any; eroi: any; nodeLevel: any; color: any; }) => ({
     nodeType: node.nodeType,
     eroi: node.eroi,
     nodeLevel: node.nodeLevel,
     color: node.color
-  })).sort((a, b) => b.eroi - a.eroi)
+  })).sort((a: { eroi: number; }, b: { eroi: number; }) => b.eroi - a.eroi)
 })
 
 const graphEroi = computed(() => {
@@ -220,7 +206,7 @@ const graphEroi = computed(() => {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="nodeType in allNodeTypes" :key="`input-${nodeType}`">
+                    <tr v-for="nodeType in NodeTypes" :key="`input-${nodeType}`">
                       <td class="node-type">{{ nodeType }}</td>
                       <td class="numeric">{{ formatNumber(node.treDependencies[nodeType] || 0) }}</td>
                       <td class="numeric">{{ formatNumber(node.inputMap[nodeType] || 0) }}</td>
@@ -260,7 +246,7 @@ const graphEroi = computed(() => {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="nodeType in allNodeTypes" :key="`output-${nodeType}`">
+                    <tr v-for="nodeType in NodeTypes" :key="`output-${nodeType}`">
                       <td class="node-type">{{ nodeType }}</td>
                       <td class="numeric">{{ formatPercentage(node.outputMap[nodeType] || 0) }}</td>
                       <td class="numeric">{{ formatNumber(node.outputMap[nodeType] || 0) }}</td>

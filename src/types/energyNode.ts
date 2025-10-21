@@ -1,17 +1,20 @@
-export type NodeType =
-  | 'Petroleum'
-  | 'Coal'
-  | 'Mining'
-  | 'Fuels'
-  | 'Electricity'
-  | 'Manufacture'
-  | 'Food'
-  | 'Transport'
-  | 'WellBeing'
-  | 'Leisure'
-  | 'Heat'
+export const NodeTypes = [
+  'Petroleum',
+  'Coal',
+  'Mining',
+  'Fuels',
+  'Electricity',
+  'Manufacture',
+  'Food',
+  'Transport',
+  'WellBeing',
+  'Leisure',
+  'Heat'
+] as const
 
-export type NodeWeights = { [key in NodeType]: number }
+export type NodeType = (typeof NodeTypes)[number]
+
+export type NodeWeights = Record<NodeType, number>
 
 export const BASE_NODE_HEIGHT = 160
 
@@ -22,30 +25,6 @@ export enum NodeLevel {
   Primary = 3,
   Industrial = 4,
   Tertiary = 5
-}
-
-export function outputMap(outputMap?: { [key in NodeType]?: number }): NodeWeights {
-  let total = 0
-
-  if (outputMap) {
-    for (const val of Object.values(outputMap)) {
-      total += val
-    }
-  }
-
-  return {
-    Petroleum: outputMap?.Petroleum ?? 0,
-    Coal: outputMap?.Coal ?? 0,
-    Mining: outputMap?.Mining ?? 0,
-    Fuels: outputMap?.Fuels ?? 0,
-    Electricity: outputMap?.Electricity ?? 0,
-    Manufacture: outputMap?.Manufacture ?? 0,
-    Food: outputMap?.Food ?? 0,
-    Transport: outputMap?.Transport ?? 0,
-    WellBeing: outputMap?.WellBeing ?? 0,
-    Leisure: outputMap?.Leisure ?? 0,
-    Heat: 1 - total
-  }
 }
 
 export interface Position {

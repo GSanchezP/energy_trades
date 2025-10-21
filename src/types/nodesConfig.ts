@@ -1,9 +1,11 @@
+import { NodeType } from './energyNode'
+
 export interface NodeConfig {
   id: string
   acr: string
   level: string
   color: string
-  inputs: Record<string, number>
+  inputs: Partial<Record<NodeType, number>>
 }
 
 export interface NodesConfig {
