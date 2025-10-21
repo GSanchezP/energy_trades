@@ -54,7 +54,7 @@ const getNodeLevelName = (level: NodeLevel): string => {
     case NodeLevel.Conversion: return 'Conversion'
     case NodeLevel.Primary: return 'Primary'
     case NodeLevel.Industrial: return 'Industrial'
-    case NodeLevel.Target: return 'Target'
+    case NodeLevel.Tertiary: return 'Tertiary'
     default: return 'Unknown'
   }
 }

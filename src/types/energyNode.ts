@@ -21,7 +21,7 @@ export enum NodeLevel {
   Conversion = 2,
   Primary = 3,
   Industrial = 4,
-  Target = 5
+  Tertiary = 5
 }
 
 export function outputMap(outputMap?: { [key in NodeType]?: number }): NodeWeights {

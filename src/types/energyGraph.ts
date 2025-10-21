@@ -22,7 +22,7 @@ export class EnergyGraph {
   get graphEroi(): number {
     return (
       this.energyNodes
-        .filter((node) => node.nodeLevel === NodeLevel.Target)
+        .filter((node) => node.nodeLevel === NodeLevel.Tertiary)
         .reduce((a, b) => a + b.inputPower, 0) /
       this.energyNodes
         .filter((node) => node.nodeLevel === NodeLevel.Extraction)

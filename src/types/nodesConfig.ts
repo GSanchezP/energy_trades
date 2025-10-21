@@ -60,22 +60,12 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'Mining',
       acr: 'm',
-      level: 'Conversion',
+      level: 'Primary',
       color: '#856350ff',
       inputs: {
         WellBeing: 0.05,
         Fuels: 1,
         Electricity: 0.25
-      }
-    },
-    {
-      id: 'Transport',
-      acr: 't',
-      level: 'Primary',
-      color: '#58b00aff',
-      inputs: {
-        WellBeing: 0.05,
-        Fuels: 3
       }
     },
     {
@@ -91,9 +81,20 @@ export const nodesConfig: NodesConfig = {
       }
     },
     {
+      id: 'Transport',
+      acr: 't',
+      level: 'Industrial',
+      color: '#58b00aff',
+      inputs: {
+        WellBeing: 0.05,
+        Fuels: 3,
+        Manufacture: 0.15
+      }
+    },
+    {
       id: 'Manufacture',
       acr: 'i',
-      level: 'Primary',
+      level: 'Industrial',
       color: '#976c17ff',
       inputs: {
         WellBeing: 0.05,
@@ -105,7 +106,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'WellBeing',
       acr: 'w',
-      level: 'Industrial',
+      level: 'Tertiary',
       color: '#1fbb65ff',
       inputs: {
         Fuels: 0.25,
@@ -118,7 +119,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'Leisure',
       acr: 'l',
-      level: 'Target',
+      level: 'Tertiary',
       color: '#c953bdff',
       inputs: {
         Fuels: 0.15,
