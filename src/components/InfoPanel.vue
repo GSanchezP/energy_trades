@@ -50,10 +50,10 @@ const formatPercentage = (value: number): string => {
 const getNodeLevelName = (level: NodeLevel): string => {
   switch (level) {
     case NodeLevel.Dump: return 'Dump'
-    case NodeLevel.Primary: return 'Primary'
+    case NodeLevel.Extraction: return 'Extraction'
     case NodeLevel.Conversion: return 'Conversion'
+    case NodeLevel.Primary: return 'Primary'
     case NodeLevel.Industrial: return 'Industrial'
-    case NodeLevel.Societal: return 'Societal'
     case NodeLevel.Target: return 'Target'
     default: return 'Unknown'
   }
@@ -102,7 +102,7 @@ const graphEroi = computed(() => {
         
         <!-- Overall Graph EROI -->
         <div v-if="energyGraph" class="overall-eroi">
-          <div class="metric-card primary">
+          <div class="metric-card Extraction">
             <div class="metric-label">Overall Graph EROI</div>
             <div class="metric-value">{{ formatNumber(graphEroi) }}</div>
             <div class="metric-description">System-wide Energy Return on Investment</div>
@@ -148,7 +148,7 @@ const graphEroi = computed(() => {
           </div>
           
           <div class="metrics-grid">
-            <div class="metric-card primary">
+            <div class="metric-card Extraction">
               <div class="metric-label">Flow Direction</div>
               <div class="metric-value">{{ selectedConnector.from }} → {{ selectedConnector.to }}</div>
             </div>
@@ -423,7 +423,7 @@ const graphEroi = computed(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.metric-card.primary {
+.metric-card.Extraction {
   background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
   border-color: #1d4ed8;
@@ -438,7 +438,7 @@ const graphEroi = computed(() => {
   margin-bottom: 8px;
 }
 
-.metric-card.primary .metric-label {
+.metric-card.Extraction .metric-label {
   color: rgba(255, 255, 255, 0.8);
 }
 
@@ -449,7 +449,7 @@ const graphEroi = computed(() => {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
-.metric-card.primary .metric-value {
+.metric-card.Extraction .metric-value {
   color: white;
 }
 

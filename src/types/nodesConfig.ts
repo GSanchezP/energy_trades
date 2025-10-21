@@ -15,7 +15,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'Petroleum',
       acr: 'p',
-      level: 'Primary',
+      level: 'Extraction',
       color: '#442d54ff',
       inputs: {
         WellBeing: 0.05,
@@ -27,7 +27,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'Coal',
       acr: 'c',
-      level: 'Primary',
+      level: 'Extraction',
       color: '#3d2913ff',
       inputs: {
         WellBeing: 0.05,
@@ -71,7 +71,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'Transport',
       acr: 't',
-      level: 'Industrial',
+      level: 'Primary',
       color: '#58b00aff',
       inputs: {
         WellBeing: 0.05,
@@ -81,7 +81,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'Food',
       acr: 'o',
-      level: 'Industrial',
+      level: 'Primary',
       color: '#b0b00aff',
       inputs: {
         WellBeing: 0.15,
@@ -93,7 +93,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'Manufacture',
       acr: 'i',
-      level: 'Industrial',
+      level: 'Primary',
       color: '#976c17ff',
       inputs: {
         WellBeing: 0.05,
@@ -105,7 +105,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'WellBeing',
       acr: 'w',
-      level: 'Societal',
+      level: 'Industrial',
       color: '#1fbb65ff',
       inputs: {
         Fuels: 0.25,

@@ -25,7 +25,7 @@ export class EnergyGraph {
         .filter((node) => node.nodeLevel === NodeLevel.Target)
         .reduce((a, b) => a + b.inputPower, 0) /
       this.energyNodes
-        .filter((node) => node.nodeLevel === NodeLevel.Primary)
+        .filter((node) => node.nodeLevel === NodeLevel.Extraction)
         .reduce((a, b) => a + b.inputPower, 0)
     )
   }

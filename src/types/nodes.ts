@@ -7,14 +7,14 @@ import { nodesConfig, NodesConfig } from './nodesConfig'
 // Function to convert level string to NodeLevel enum
 function getNodeLevel(level: string): NodeLevel {
   switch (level) {
-    case 'Primary':
-      return NodeLevel.Primary
+    case 'Extraction':
+      return NodeLevel.Extraction
     case 'Conversion':
       return NodeLevel.Conversion
+    case 'Primary':
+      return NodeLevel.Primary
     case 'Industrial':
       return NodeLevel.Industrial
-    case 'Societal':
-      return NodeLevel.Societal
     case 'Target':
       return NodeLevel.Target
     case 'Dump':

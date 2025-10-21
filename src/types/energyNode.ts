@@ -17,10 +17,10 @@ export const BASE_NODE_HEIGHT = 160
 
 export enum NodeLevel {
   Dump = 0,
-  Primary = 1,
+  Extraction = 1,
   Conversion = 2,
-  Industrial = 3,
-  Societal = 4,
+  Primary = 3,
+  Industrial = 4,
   Target = 5
 }
 
@@ -54,7 +54,7 @@ export interface Position {
 }
 
 export class BasicNode {
-  private _nodeLevel: NodeLevel = NodeLevel.Primary
+  private _nodeLevel: NodeLevel = NodeLevel.Extraction
   private _position: Position = { x: 0, y: 0 }
   private _size: { height: number; width: number }
   private _color: string = '#ffffff'

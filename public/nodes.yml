@@ -1,7 +1,7 @@
 nodes:
   - id: 'Petroleum'
     acr: 'p'
-    level: 'Primary'
+    level: 'Extraction'
     color: '#442d54ff'
     inputs:
       Fuels: 0.1
@@ -10,7 +10,7 @@ nodes:
 
   - id: 'Coal'
     acr: 'c'
-    level: 'Primary'
+    level: 'Extraction'
     color: '#3d2913ff'
     inputs:
       Fuels: 0.1
@@ -42,7 +42,7 @@ nodes:
 
   - id: 'Manufacture'
     acr: 'i'
-    level: 'Industrial'
+    level: 'Primary'
     color: '#8f9717ff'
     inputs:
       Mining: 0.2
@@ -51,14 +51,14 @@ nodes:
 
   - id: 'Transport'
     acr: 't'
-    level: 'Industrial'
+    level: 'Primary'
     color: '#58b00aff'
     inputs:
       Fuels: 3
 
   - id: 'WellBeing'
     acr: 'w'
-    level: 'Societal'
+    level: 'Industrial'
     color: '#1fbb65ff'
     inputs:
       Fuels: 0.15
@@ -68,7 +68,7 @@ nodes:
 
   - id: 'Leisure'
     acr: 'l'
-    level: 'Societal'
+    level: 'Industrial'
     color: '#c953bdff'
     inputs:
       Fuels: 0.15

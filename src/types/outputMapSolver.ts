@@ -117,7 +117,7 @@ export async function outputMapSolver(config: NodesConfig) {
     const varName = 'x' + node.acr
 
     // TODO: This should be removed
-    // if (node.level === 'Primary') {
+    // if (node.level === 'Extraction') {
     //   constraints.push(fixSourceConstraint(varName))
     //   continue
     // }
