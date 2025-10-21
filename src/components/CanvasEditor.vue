@@ -76,7 +76,7 @@
         </v-layer>
       </v-stage>
     </div>
-    <InfoPanel :selectedNodes="selectedSquares" :selectedConnector="selectedConnector" />
+    <InfoPanel :selectedNodes="selectedSquares" :selectedConnector="selectedConnector" :energyGraph="energyGraph" />
   </div>
 </template>
 

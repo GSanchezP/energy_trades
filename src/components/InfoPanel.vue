@@ -2,11 +2,12 @@
 import { computed } from 'vue'
 import type { BasicNode, EnergyNode, NodeType } from '../types/energyNode'
 import { NodeLevel } from '../types/energyNode'
-import type { Connector } from '../types/energyGraph'
+import type { Connector, EnergyGraph } from '../types/energyGraph'
 
 const props = defineProps<{
-  selectedNodes: BasicNode[]
+  selectedNodes: any[]
   selectedConnector: Connector | null
+  energyGraph?: any
 }>()
 
 const selectionCount = computed(() => props.selectedNodes.length)
@@ -73,6 +74,22 @@ const basicNodes = computed(() => {
     (node): node is BasicNode => !('nodeType' in node && 'inputMap' in node && 'outputMap' in node)
   )
 })
+
+// EROI data for the graph
+const eroiData = computed(() => {
+  if (!props.energyGraph) return []
+  
+  return props.energyGraph.energyNodes.map(node => ({
+    nodeType: node.nodeType,
+    eroi: node.eroi,
+    nodeLevel: node.nodeLevel,
+    color: node.color
+  })).sort((a, b) => b.eroi - a.eroi)
+})
+
+const graphEroi = computed(() => {
+  return props.energyGraph?.graphEroi || 0
+})
 </script>
 
 <template>
@@ -80,10 +97,43 @@ const basicNodes = computed(() => {
     <div class="panel-content">
       <div v-if="selectionCount === 0 && !selectedConnector" class="empty-state">
         <div class="empty-icon">📊</div>
-        <h3>No Selection</h3>
-        <p>Click a node to view its characteristics</p>
+        <h3>Energy System Overview</h3>
+        
+        <!-- Overall Graph EROI -->
+        <div v-if="energyGraph" class="overall-eroi">
+          <div class="metric-card primary">
+            <div class="metric-label">Overall Graph EROI</div>
+            <div class="metric-value">{{ formatNumber(graphEroi) }}</div>
+            <div class="metric-description">System-wide Energy Return on Investment</div>
+          </div>
+        </div>
+        
+        <!-- EROI Chart -->
+        <div v-if="eroiData.length > 0" class="eroi-chart">
+          <h4>Node EROI Comparison</h4>
+          <div class="chart-container">
+            <div 
+              v-for="item in eroiData" 
+              :key="item.nodeType"
+              class="chart-bar"
+            >
+              <div class="bar-label">{{ item.nodeType }}</div>
+              <div class="bar-container">
+                <div 
+                  class="bar-fill" 
+                  :style="{ 
+                    width: `${Math.min(100, (item.eroi / Math.max(...eroiData.map(d => d.eroi))) * 100)}%`,
+                    backgroundColor: item.color
+                  }"
+                ></div>
+                <div class="bar-value">{{ formatNumber(item.eroi) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         <div class="hint">
-          <p>• Click a node to select it</p>
+          <p>• Click a node to view detailed characteristics</p>
           <p>• Hold Shift to select multiple nodes</p>
           <p>• Click a connector to see flow details</p>
         </div>
@@ -760,5 +810,69 @@ const basicNodes = computed(() => {
   .power-arrow {
     transform: rotate(90deg);
   }
+}
+
+/* EROI Chart Styles */
+.overall-eroi {
+  margin: 20px 0;
+}
+
+.eroi-chart {
+  margin: 20px 0;
+}
+
+.eroi-chart h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chart-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-label {
+  min-width: 100px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.bar-container {
+  flex: 1;
+  position: relative;
+  height: 24px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.bar-value {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 </style>

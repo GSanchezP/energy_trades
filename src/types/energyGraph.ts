@@ -19,6 +19,17 @@ export class EnergyGraph {
     return this.dumpNode ? [...this.energyNodes, this.dumpNode] : [...this.energyNodes]
   }
 
+  get graphEroi(): number {
+    return (
+      this.energyNodes
+        .filter((node) => node.nodeLevel === NodeLevel.Target)
+        .reduce((a, b) => a + b.inputPower, 0) /
+      this.energyNodes
+        .filter((node) => node.nodeLevel === NodeLevel.Primary)
+        .reduce((a, b) => a + b.inputPower, 0)
+    )
+  }
+
   push(node: EnergyNode) {
     node.setPosition = this.computePos(node.nodeLevel)
     this.energyNodes.push(node)

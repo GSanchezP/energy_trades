@@ -85,7 +85,7 @@ export const nodesConfig: NodesConfig = {
       color: '#8f9717ff',
       inputs: {
         WellBeing: 0.05,
-        Minerals: 0.4,
+        Minerals: 1,
         Electricity: 1.6,
         Transport: 0.1
       }
