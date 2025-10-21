@@ -1,7 +1,7 @@
 <template>
   <div class="canvas-container">
     <div class="canvas-wrapper">
-      <v-stage ref="stageRef" :config="stageConfig" @wheel="handleWheel">
+      <v-stage ref="stageRef" :config="stageConfig" @wheel="handleWheel" @click="handleStageClick">
         <v-layer>
           <v-line
             v-for="connector in connectors"
@@ -81,12 +81,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, ComputedRef } from 'vue'
+import { ref, computed } from 'vue'
 import { Connector, EnergyGraph } from '../types/energyGraph'
 import InfoPanel from './InfoPanel.vue'
 import getEnergyGraph from '../types/nodes'
 import { onMounted } from 'vue'
-import { BasicNode } from '../types/energyNode'
 
 const energyGraph = ref<EnergyGraph | undefined>(undefined)
 const stageRef = ref<any>(null)
@@ -97,6 +96,7 @@ const stageHeight = window.innerHeight
 
 const selectedSquareIds = ref<Set<string>>(new Set())
 const selectedConnectorId = ref<string | null>(null)
+const clickedOnElement = ref<boolean>(false)
 
 onMounted(async () => {
   energyGraph.value = await getEnergyGraph()
@@ -164,6 +164,7 @@ const handleWheel = (e: any) => {
 
 
 const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
+  clickedOnElement.value = true
   // Clear connector selection when clicking on nodes
   selectedConnectorId.value = null
 
@@ -180,9 +181,19 @@ const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
 }
 
 const handleConnectorClick = (connectorId: string, event: { evt: MouseEvent }) => {
-  event.evt.stopPropagation() // Prevent node click
+  clickedOnElement.value = true
   selectedConnectorId.value = connectorId
   selectedSquareIds.value.clear() // Clear node selection
+}
+
+const handleStageClick = (event: { evt: MouseEvent }) => {
+  // Only clear if we didn't click on a square or connector
+  if (!clickedOnElement.value) {
+    selectedSquareIds.value.clear()
+    selectedConnectorId.value = null
+  }
+  // Reset the flag for next click
+  clickedOnElement.value = false
 }
 </script>
 
