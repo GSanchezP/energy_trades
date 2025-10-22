@@ -85,7 +85,7 @@ function inputMapFromOutputMap(outputMap: { [key: string]: Partial<NodeWeights> 
   return inputMap
 }
 
-export async function getEnergyGraph(): Promise<EnergyGraph> {
+export async function generateEnergyGraph(): Promise<EnergyGraph> {
   const energyGraph = new EnergyGraph()
 
   // Load nodes from YAML configuration asynchronously
@@ -99,4 +99,4 @@ export async function getEnergyGraph(): Promise<EnergyGraph> {
   return energyGraph
 }
 
-export default getEnergyGraph
+export default generateEnergyGraph

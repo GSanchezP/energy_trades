@@ -1,7 +1,7 @@
 import GLPK from 'glpk.js'
 import { NodeType } from './energyNode'
 import { NodesConfig } from './nodesConfig'
-import { iNodeWeights, nonPartialNodeWeights } from './nodes'
+import { iNodeWeights, nonPartialNodeWeights } from './energyGraphGenerator'
 
 const glpk = await GLPK()
 

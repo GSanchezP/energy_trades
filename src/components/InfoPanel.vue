@@ -110,7 +110,7 @@ const graphEroi = computed(() => {
                 <div 
                   class="bar-fill" 
                   :style="{ 
-                    width: `${Math.min(100, (item.eroi / Math.max(...eroiData.map(d => d.eroi))) * 100)}%`,
+                    width: `${Math.min(100, (item.eroi / Math.max(...eroiData.map((d: { eroi: any; }) => d.eroi))) * 100)}%`,
                     backgroundColor: item.color
                   }"
                 ></div>

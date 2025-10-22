@@ -1,5 +1,5 @@
 import GLPK from 'glpk.js'
-import { loadNodesFromYaml } from '../types/nodes'
+import { loadNodesFromYaml } from '../types/energyGraphGenerator'
 
 const glpk = GLPK()
 

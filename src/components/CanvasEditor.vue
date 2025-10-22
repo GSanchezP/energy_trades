@@ -84,10 +84,10 @@
 import { ref, computed } from 'vue'
 import { Connector, EnergyGraph } from '../types/energyGraph'
 import InfoPanel from './InfoPanel.vue'
-import getEnergyGraph from '../types/nodes'
+import generateEnergyGraph from '../types/energyGraphGenerator'
 import { onMounted } from 'vue'
 
-const FPS_INTERVAL_IN_MS = 16
+const FPS_INTERVAL_IN_MS = 32
 
 const energyGraph = ref<EnergyGraph | undefined>(undefined)
 const stageRef = ref<any>(null)
@@ -106,7 +106,7 @@ const lastPointerPosition = ref<{ x: number; y: number } | null>(null)
 const panTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
 onMounted(async () => {
-  energyGraph.value = await getEnergyGraph()
+  energyGraph.value = await generateEnergyGraph()
 })
 
 
@@ -169,7 +169,6 @@ const handleWheel = (e: any) => {
 }
 
 
-
 const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
   clickedOnElement.value = true
   // Clear connector selection when clicking on nodes
@@ -221,7 +220,7 @@ const handleMouseMove = (event: { evt: MouseEvent }) => {
   
   // Clear existing timeout
   if (panTimeout.value) {
-    clearTimeout(panTimeout.value)
+    return // TODO: clearTimeout(panTimeout.value)
   }
   
   // Throttle panning updates to every 16ms (~60fps)
