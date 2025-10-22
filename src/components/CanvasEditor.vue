@@ -170,6 +170,7 @@ const handleWheel = (e: any) => {
 
 
 const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
+  console.log(`Clicked on ${squareId}`)
   clickedOnElement.value = true
   // Clear connector selection when clicking on nodes
   selectedConnectorId.value = null

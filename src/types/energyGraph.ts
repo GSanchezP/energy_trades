@@ -40,7 +40,7 @@ export class EnergyGraph {
   addDumpNode() {
     const x1 = Math.min(...this.energyNodes.map((n) => n.x))
     const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 120))
-    const dumpNode = new NodeDrawer('dump', '#e04c4cff', { width: x2 - x1, height: 100 })
+    const dumpNode = new NodeDrawer('heat', 'dump', '#e04c4cff', { width: x2 - x1, height: 100 })
     dumpNode.setPosition = { x: x1, y: 850 }
     this.dumpNode = dumpNode
   }

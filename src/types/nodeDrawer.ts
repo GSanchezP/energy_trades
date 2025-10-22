@@ -1,4 +1,4 @@
-import { NodeLevel } from './nodesConfig'
+import { NodeLevel, NodeType } from './nodesConfig'
 
 export interface Position {
   x: number
@@ -9,19 +9,26 @@ export const BASE_NODE_HEIGHT = 160
 export const BASE_NODE_WIDTH = 120
 
 export class NodeDrawer {
-  private _nodeLevel: NodeLevel = 'dump'
+  private _id: NodeType
+  private _nodeLevel: NodeLevel
   private _position: Position = { x: 0, y: 0 }
   private _size: { height: number; width: number }
   private _color: string = '#ffffff'
 
-  constructor(nodeLevel: NodeLevel, color: string, size?: { height?: number; width?: number }) {
+  constructor(
+    id: NodeType,
+    nodeLevel: NodeLevel,
+    color: string,
+    size?: { height?: number; width?: number }
+  ) {
+    this._id = id
     this._nodeLevel = nodeLevel
     this._color = color
     this._size = { height: size?.height ?? BASE_NODE_HEIGHT, width: size?.width ?? BASE_NODE_WIDTH }
   }
 
   get id() {
-    return 'Heat'
+    return this._id
   }
 
   get nodeLevel(): NodeLevel {

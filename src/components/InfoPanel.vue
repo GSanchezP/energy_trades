@@ -16,7 +16,7 @@ const selectionCount = computed(() => props.selectedNodes.length)
 // Filter to only show EnergyNodes (not BasicNodes like dump)
 const energyNodes = computed(() => {
   return props.selectedNodes.filter(
-    (node): node is EnergyNode => 'nodeType' in node && 'inputMap' in node && 'outputMap' in node
+    (node): node is EnergyNode => 'inputMap' in node && 'outputMap' in node
   )
 })
 

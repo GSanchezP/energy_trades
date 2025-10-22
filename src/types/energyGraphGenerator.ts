@@ -12,7 +12,7 @@ export function generateNodes(
   return config.nodes.map((nodeConfig) => {
     return new EnergyNode(
       nodeConfig.level,
-      nodeConfig.id as any, // Type assertion since we know the IDs are valid NodeType
+      nodeConfig.id,
       nonPartialNodeWeights(nodeConfig.inputs),
       inputMaps[nodeConfig.id],
       outputMaps[nodeConfig.id],

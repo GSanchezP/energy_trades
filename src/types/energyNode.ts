@@ -2,8 +2,6 @@ import { BASE_NODE_HEIGHT, NodeDrawer } from './nodeDrawer'
 import { NodeType, NodeWeights, NodeLevel } from './nodesConfig'
 
 export class EnergyNode extends NodeDrawer {
-  private _nodeType: NodeType
-
   private _treDependencies: NodeWeights // Amount of energy to produce 1 watt
   private _inputMap: NodeWeights
   private _outputMap: NodeWeights // which percentage of the produced energy goes into the other nodes,
@@ -23,8 +21,9 @@ export class EnergyNode extends NodeDrawer {
   ) {
     const inputPower = Object.values(inputMap).reduce((acc, curr) => acc + curr)
     const outputPower = Object.values(outputMap).reduce((acc, curr) => acc + curr)
-    super(nodeLevel, color, { height: BASE_NODE_HEIGHT * Math.max(inputPower, outputPower) })
-    this._nodeType = nodeType
+    super(nodeType, nodeLevel, color, {
+      height: BASE_NODE_HEIGHT * Math.max(inputPower, outputPower)
+    })
     this._treDependencies = treDependencies
     this._inputMap = inputMap
     this._outputMap = outputMap
@@ -34,10 +33,6 @@ export class EnergyNode extends NodeDrawer {
     this._eroi = this._outputPower / (this._inputPower + Number.MIN_VALUE)
 
     this._limitingFactor = this.calculateLimitingFactor()
-  }
-
-  get id() {
-    return this._nodeType
   }
 
   get inputPower() {
