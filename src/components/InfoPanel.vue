@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import type { EnergyNode } from '../types/energyNode'
 import type { Connector } from '../types/energyGraph'
 import { NodeDrawer } from '../types/nodeDrawer';
-import { NodeLevel, NodeTypes } from '../types/nodesConfig';
+import {  NodeTypes } from '../types/nodesConfig';
 
 const props = defineProps<{
   selectedNodes: any[]
@@ -33,18 +33,6 @@ const formatPercentage = (value: number): string => {
   return `${(value * 100).toFixed(1)}%`
 }
 
-// Helper function to get node level name
-const getNodeLevelName = (level: NodeLevel): string => {
-  switch (level) {
-    case NodeLevel.Dump: return 'Dump'
-    case NodeLevel.Extraction: return 'Extraction'
-    case NodeLevel.Conversion: return 'Conversion'
-    case NodeLevel.Primary: return 'Primary'
-    case NodeLevel.Industrial: return 'Industrial'
-    case NodeLevel.Tertiary: return 'Tertiary'
-    default: return 'Unknown'
-  }
-}
 
 // Helper function to get efficiency color class
 const getEfficiencyClass = (eroi: number): string => {
@@ -105,7 +93,7 @@ const graphEroi = computed(() => {
               :key="item.nodeType"
               class="chart-bar"
             >
-              <div class="bar-label">{{ item.nodeType }}</div>
+              <div class="bar-label">{{ item.nodeType }}</div> 
               <div class="bar-container">
                 <div 
                   class="bar-fill" 
@@ -158,9 +146,9 @@ const graphEroi = computed(() => {
             <!-- Node Header with Key Metrics -->
             <div class="node-header">
               <div class="node-title">
-                <h2>{{ node.nodeType }}</h2>
+                <h2>{{ node.id }}</h2>
                 <div class="node-level-badge" :class="`level-${node.nodeLevel}`">
-                  {{ getNodeLevelName(node.nodeLevel) }}
+                  {{ node.nodeLevel }}
                 </div>
               </div>
               

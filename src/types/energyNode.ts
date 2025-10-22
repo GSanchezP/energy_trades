@@ -40,10 +40,6 @@ export class EnergyNode extends NodeDrawer {
     return this._nodeType
   }
 
-  get nodeType() {
-    return this._nodeType
-  }
-
   get inputPower() {
     return this._inputPower
   }

@@ -16,19 +16,24 @@ export type NodeType = (typeof NodeTypes)[number]
 
 export type NodeWeights = Record<NodeType, number>
 
-export enum NodeLevel {
-  Dump = 0,
-  Extraction = 1,
-  Conversion = 2,
-  Primary = 3,
-  Industrial = 4,
-  Tertiary = 5
+export const NodeLevels = [
+  'dump',
+  'extraction',
+  'conversion',
+  'primary',
+  'industrial',
+  'tertiary'
+] as const
+export type NodeLevel = (typeof NodeLevels)[number]
+
+export function nodeLevelIndex(nodeLevel: NodeLevel) {
+  return NodeLevels.indexOf(nodeLevel)
 }
 
 export interface NodeConfig {
   id: NodeType
   label: string
-  level: string
+  level: NodeLevel
   color: string
   inputs: Partial<Record<NodeType, number>>
 }
@@ -41,8 +46,8 @@ export const nodesConfig: NodesConfig = {
   nodes: [
     {
       id: 'petroleum',
-      label: 'p',
-      level: 'Extraction',
+      label: 'Petroleum',
+      level: 'extraction',
       color: '#442d54ff',
       inputs: {
         wellBeing: 0.05,
@@ -53,8 +58,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'coal',
-      label: 'c',
-      level: 'Extraction',
+      label: 'Coal',
+      level: 'extraction',
       color: '#3d2913ff',
       inputs: {
         wellBeing: 0.05,
@@ -65,8 +70,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'fuels',
-      label: 'f',
-      level: 'Conversion',
+      label: 'Fuel',
+      level: 'conversion',
       color: '#610a52ff',
       inputs: {
         wellBeing: 0.05,
@@ -76,8 +81,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'electricity',
-      label: 'e',
-      level: 'Conversion',
+      label: 'Electricity',
+      level: 'conversion',
       color: '#0d92a3ff',
       inputs: {
         wellBeing: 0.05,
@@ -86,8 +91,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'mining',
-      label: 'm',
-      level: 'Primary',
+      label: 'Mining',
+      level: 'primary',
       color: '#856350ff',
       inputs: {
         wellBeing: 0.05,
@@ -97,8 +102,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'food',
-      label: 'o',
-      level: 'Primary',
+      label: 'Food',
+      level: 'primary',
       color: '#b0b00aff',
       inputs: {
         wellBeing: 0.15,
@@ -109,8 +114,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'transport',
-      label: 't',
-      level: 'Industrial',
+      label: 'Transport',
+      level: 'industrial',
       color: '#58b00aff',
       inputs: {
         wellBeing: 0.05,
@@ -120,8 +125,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'manufacture',
-      label: 'i',
-      level: 'Industrial',
+      label: 'Manufacture',
+      level: 'industrial',
       color: '#976c17ff',
       inputs: {
         wellBeing: 0.05,
@@ -132,8 +137,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'wellBeing',
-      label: 'w',
-      level: 'Tertiary',
+      label: 'Well Being',
+      level: 'tertiary',
       color: '#1fbb65ff',
       inputs: {
         fuels: 0.25,
@@ -145,8 +150,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'leisure',
-      label: 'l',
-      level: 'Tertiary',
+      label: 'Leisure',
+      level: 'tertiary',
       color: '#c953bdff',
       inputs: {
         fuels: 0.15,

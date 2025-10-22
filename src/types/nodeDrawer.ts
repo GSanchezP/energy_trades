@@ -9,7 +9,7 @@ export const BASE_NODE_HEIGHT = 160
 export const BASE_NODE_WIDTH = 120
 
 export class NodeDrawer {
-  private _nodeLevel: NodeLevel = NodeLevel.Extraction
+  private _nodeLevel: NodeLevel = 'dump'
   private _position: Position = { x: 0, y: 0 }
   private _size: { height: number; width: number }
   private _color: string = '#ffffff'

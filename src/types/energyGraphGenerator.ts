@@ -2,34 +2,7 @@ import { EnergyNode } from './energyNode'
 
 import { EnergyGraph } from './energyGraph'
 import { outputMapSolver } from './outputMapSolver'
-import {
-  NodeLevel,
-  nodesConfig,
-  NodesConfig,
-  NodeType,
-  NodeTypes,
-  NodeWeights
-} from './nodesConfig'
-
-// Function to convert level string to NodeLevel enum
-function getNodeLevel(level: string): NodeLevel {
-  switch (level) {
-    case 'Extraction':
-      return NodeLevel.Extraction
-    case 'Conversion':
-      return NodeLevel.Conversion
-    case 'Primary':
-      return NodeLevel.Primary
-    case 'Industrial':
-      return NodeLevel.Industrial
-    case 'Tertiary':
-      return NodeLevel.Tertiary
-    case 'Dump':
-      return NodeLevel.Dump
-    default:
-      throw new Error(`Unknown node level: ${level}`)
-  }
-}
+import { nodesConfig, NodesConfig, NodeType, NodeTypes, NodeWeights } from './nodesConfig'
 
 export function generateNodes(
   config: NodesConfig,
@@ -37,10 +10,8 @@ export function generateNodes(
   inputMaps: { [key: string]: NodeWeights }
 ): EnergyNode[] {
   return config.nodes.map((nodeConfig) => {
-    const nodeLevel = getNodeLevel(nodeConfig.level)
-
     return new EnergyNode(
-      nodeLevel,
+      nodeConfig.level,
       nodeConfig.id as any, // Type assertion since we know the IDs are valid NodeType
       nonPartialNodeWeights(nodeConfig.inputs),
       inputMaps[nodeConfig.id],
