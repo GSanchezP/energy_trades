@@ -1,8 +1,9 @@
-import { BASE_NODE_HEIGHT, BasicNode, EnergyNode, NodeLevel, NodeType } from './energyNode'
+import { EnergyNode, NodeLevel, NodeType } from './energyNode'
+import { BASE_NODE_HEIGHT, NodeDrawer } from './nodeDrawer'
 
 export class EnergyGraph {
   public energyNodes: EnergyNode[] = []
-  public dumpNode?: BasicNode
+  public dumpNode?: NodeDrawer
 
   private upperUsage: number[] = []
   private lowerUsage: number[] = []
@@ -15,7 +16,7 @@ export class EnergyGraph {
     return this.lowerUsage.reduce((a, b) => a + b, 0)
   }
 
-  get nodes(): BasicNode[] {
+  get nodes(): NodeDrawer[] {
     return this.dumpNode ? [...this.energyNodes, this.dumpNode] : [...this.energyNodes]
   }
 
@@ -38,7 +39,7 @@ export class EnergyGraph {
   addDumpNode() {
     const x1 = Math.min(...this.energyNodes.map((n) => n.x))
     const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 120))
-    const dumpNode = new BasicNode(NodeLevel.Dump, '#e04c4cff', { width: x2 - x1, height: 100 })
+    const dumpNode = new NodeDrawer(NodeLevel.Dump, '#e04c4cff', { width: x2 - x1, height: 100 })
     dumpNode.setPosition = { x: x1, y: 850 }
     this.dumpNode = dumpNode
   }

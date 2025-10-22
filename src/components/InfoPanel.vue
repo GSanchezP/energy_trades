@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { BasicNode, EnergyNode } from '../types/energyNode'
+import type { EnergyNode } from '../types/energyNode'
 import { NodeLevel, NodeTypes } from '../types/energyNode'
 import type { Connector } from '../types/energyGraph'
+import { NodeDrawer } from '../types/nodeDrawer';
 
 const props = defineProps<{
   selectedNodes: any[]
@@ -58,7 +59,7 @@ const getEfficiencyClass = (eroi: number): string => {
 // Get non-energy nodes (BasicNodes like dump)
 const basicNodes = computed(() => {
   return props.selectedNodes.filter(
-    (node): node is BasicNode => !('nodeType' in node && 'inputMap' in node && 'outputMap' in node)
+    (node): node is NodeDrawer => !('nodeType' in node && 'inputMap' in node && 'outputMap' in node)
   )
 })
 
@@ -214,14 +215,14 @@ const graphEroi = computed(() => {
                         <div v-if="(node.treDependencies[nodeType] || 0) > 0" class="satisfaction-bar">
                           <div 
                             class="satisfaction-fill" 
-                            :style="{ width: `${(node.limitingFactor(nodeType) * 100).toFixed(0)}%` }"
+                            :style="{ width: `${(node.inputRelativeUsage(nodeType) * 100).toFixed(0)}%` }"
                             :class="{
-                              'satisfied': (node.limitingFactor(nodeType) >= 0.98),
-                              'partial': node.limitingFactor(nodeType) < 0.98,
+                              'satisfied': (node.inputRelativeUsage(nodeType) >= 0.98),
+                              'partial': node.inputRelativeUsage(nodeType) < 0.98,
                             }"
                           ></div>
                           <span class="satisfaction-text">
-                            {{ (node.limitingFactor(nodeType) * 100).toFixed(0) }}%
+                            {{ (node.inputRelativeUsage(nodeType) * 100).toFixed(0) }}%
                           </span>
                         </div>
                         <span v-else class="no-requirement">-</span>
