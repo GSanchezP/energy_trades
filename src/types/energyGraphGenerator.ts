@@ -73,6 +73,7 @@ export async function generateEnergyGraph(): Promise<EnergyGraph> {
   generateNodes(nodesConfig, outputMap, inputMap).forEach((node) => energyGraph.push(node))
 
   energyGraph.addDumpNode()
+  energyGraph.generateFlowConnectors()
 
   return energyGraph
 }

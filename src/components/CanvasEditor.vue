@@ -116,7 +116,7 @@ const nodes = computed(() => {
 
 
 const connectors = computed<Connector[]>(() => {
-  return energyGraph.value?.generateFlowConnectors() || []
+  return energyGraph.value?.connectors || []
 })
 
 const selectedSquares = computed(() => {

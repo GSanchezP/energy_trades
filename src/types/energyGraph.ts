@@ -6,6 +6,8 @@ export class EnergyGraph {
   public energyNodes: EnergyNode[] = []
   public dumpNode?: NodeDrawer
 
+  public connectors: Connector[] = []
+
   private upperUsage: number[] = []
   private lowerUsage: number[] = []
 
@@ -52,8 +54,7 @@ export class EnergyGraph {
     }
   }
 
-  generateFlowConnectors(): Connector[] {
-    const connectors: Connector[] = []
+  generateFlowConnectors() {
     this.lowerUsage = []
     this.upperUsage = []
 
@@ -64,13 +65,11 @@ export class EnergyGraph {
       ][]) {
         const targetNode = this.energyNodes.find((node) => node.id === targetId)
         if (targetNode && targetNode.id !== sourceNode.id) {
-          connectors.push(this.createConnector(sourceNode, targetNode, power))
+          this.connectors.push(this.createConnector(sourceNode, targetNode, power))
         }
       }
-      connectors.push(this.createDumpConnector(sourceNode))
+      this.connectors.push(this.createDumpConnector(sourceNode))
     }
-
-    return connectors
   }
 
   createDumpConnector(source: EnergyNode): Connector {
