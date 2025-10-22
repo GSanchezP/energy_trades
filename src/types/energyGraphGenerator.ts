@@ -64,16 +64,11 @@ function inputMapFromOutputMap(outputMap: { [key: string]: Partial<NodeWeights> 
 }
 
 export async function generateEnergyGraph(): Promise<EnergyGraph> {
-  const energyGraph = new EnergyGraph()
-
   // Load nodes from YAML configuration asynchronously
   const outputMap: { [key: string]: NodeWeights } = await outputMapSolver(nodesConfig)
   const inputMap: { [key: string]: NodeWeights } = inputMapFromOutputMap(outputMap)
 
-  generateNodes(nodesConfig, outputMap, inputMap).forEach((node) => energyGraph.push(node))
-
-  energyGraph.addDumpNode()
-  energyGraph.generateFlowConnectors()
+  const energyGraph = new EnergyGraph(generateNodes(nodesConfig, outputMap, inputMap))
 
   return energyGraph
 }

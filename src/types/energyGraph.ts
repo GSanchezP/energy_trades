@@ -3,6 +3,9 @@ import { BASE_NODE_HEIGHT, NodeDrawer } from './nodeDrawer'
 import { NodeLevel, nodeLevelIndex, NodeLevels, NodeType } from './nodesConfig'
 
 export class EnergyGraph {
+  private LOW_AUTOBAHN = 680
+  private UPPER_AUTOBAHN = 180
+
   public energyNodes: EnergyNode[] = []
   public dumpNode?: NodeDrawer
 
@@ -10,6 +13,15 @@ export class EnergyGraph {
 
   private upperUsage: number[] = []
   private lowerUsage: number[] = []
+
+  private verticalUsage: number[][] = []
+
+  constructor(nodes: EnergyNode[]) {
+    this.energyNodes = nodes
+    this.computeNodePositions()
+    this.addDumpNode()
+    this.generateFlowConnectors()
+  }
 
   get upperUsageLevel(): number {
     return this.upperUsage.reduce((a, b) => a + b, 0)
@@ -34,11 +46,6 @@ export class EnergyGraph {
     )
   }
 
-  push(node: EnergyNode) {
-    node.setPosition = this.computePos(node.nodeLevel)
-    this.energyNodes.push(node)
-  }
-
   addDumpNode() {
     const x1 = Math.min(...this.energyNodes.map((n) => n.x))
     const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 120))
@@ -47,11 +54,23 @@ export class EnergyGraph {
     this.dumpNode = dumpNode
   }
 
-  private computePos(nodeLevel: NodeLevel) {
-    return {
-      x: 100 + (nodeLevelIndex(nodeLevel) - 1) * 300,
-      y: 200 + this.energyNodes.filter((en) => en.nodeLevel === nodeLevel).length * 200
+  computeNodePositions() {
+    const numNodesPerLevel = NodeLevels.reduce(
+      (acc, curr) => {
+        acc[curr] = 0
+        return acc
+      },
+      {} as Record<NodeLevel, number>
+    )
+    for (const node of this.energyNodes) {
+      node.setPosition = {
+        x: 100 + (nodeLevelIndex(node.nodeLevel) - 1) * 300,
+        y: 200 + numNodesPerLevel[node.nodeLevel] * 200
+      }
+      numNodesPerLevel[node.nodeLevel] += 1
     }
+
+    this.LOW_AUTOBAHN = (Math.max(...Object.values(numNodesPerLevel)) + 1) * 200
   }
 
   generateFlowConnectors() {
@@ -110,9 +129,6 @@ export class EnergyGraph {
   }
 
   private createConnector(source: EnergyNode, target: EnergyNode, power: number): Connector {
-    const LOW_AUTOBAHN = 680
-    const UPPER_AUTOBAHN = 180
-
     let sourceOffset = 0
     for (const [key, value] of Object.entries(source.outputMap)) {
       if (key === target.id) break
@@ -139,14 +155,17 @@ export class EnergyGraph {
 
     // Flow goes to lower level - exit from top of source
 
+    const sourceLevel = nodeLevelIndex(source.nodeLevel)
+    const targetLevel = nodeLevelIndex(target.nodeLevel)
+
     let yAutobahn
-    if (nodeLevelIndex(target.nodeLevel) - nodeLevelIndex(source.nodeLevel) === 1) {
+    if (targetLevel - sourceLevel === 1) {
       yAutobahn = sourceY
-    } else if (source.nodeLevel < target.nodeLevel) {
-      yAutobahn = LOW_AUTOBAHN + this.lowerUsageLevel + strokeWidth / 2
+    } else if (sourceLevel < targetLevel) {
+      yAutobahn = this.LOW_AUTOBAHN + this.lowerUsageLevel + strokeWidth / 2
       this.lowerUsage.push(strokeWidth)
     } else {
-      yAutobahn = UPPER_AUTOBAHN - this.upperUsageLevel - strokeWidth / 2
+      yAutobahn = this.UPPER_AUTOBAHN - this.upperUsageLevel - strokeWidth / 2
       this.upperUsage.push(strokeWidth)
     }
 

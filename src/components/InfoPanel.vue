@@ -1,73 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-import type { EnergyNode } from '../types/energyNode'
-import type { Connector } from '../types/energyGraph'
-import { NodeDrawer } from '../types/nodeDrawer';
-import {  NodeTypes } from '../types/nodesConfig';
-
-const props = defineProps<{
-  selectedNodes: any[]
-  selectedConnector: Connector | null
-  energyGraph?: any
-}>()
-
-const selectionCount = computed(() => props.selectedNodes.length)
-
-// Filter to only show EnergyNodes (not BasicNodes like dump)
-const energyNodes = computed(() => {
-  return props.selectedNodes.filter(
-    (node): node is EnergyNode => 'inputMap' in node && 'outputMap' in node
-  )
-})
-
-
-// Helper function to format numbers
-const formatNumber = (value: number): string => {
-  if (value === 0) return '0'
-  if (value < 0.001) return value.toExponential(2)
-  return value.toFixed(3)
-}
-
-// Helper function to format percentages
-const formatPercentage = (value: number): string => {
-  return `${(value * 100).toFixed(1)}%`
-}
-
-
-// Helper function to get efficiency color class
-const getEfficiencyClass = (eroi: number): string => {
-  if (eroi >= 10) return 'excellent'
-  if (eroi >= 5) return 'good'
-  if (eroi >= 0.5) return 'moderate'
-  if (eroi >= 0.3) return 'poor'
-  return 'critical'
-}
-
-
-// Get non-energy nodes (BasicNodes like dump)
-const basicNodes = computed(() => {
-  return props.selectedNodes.filter(
-    (node): node is NodeDrawer => !('nodeType' in node && 'inputMap' in node && 'outputMap' in node)
-  )
-})
-
-// EROI data for the graph
-const eroiData = computed(() => {
-  if (!props.energyGraph) return []
-  
-  return props.energyGraph.energyNodes.map((node: { nodeType: any; eroi: any; nodeLevel: any; color: any; }) => ({
-    nodeType: node.nodeType,
-    eroi: node.eroi,
-    nodeLevel: node.nodeLevel,
-    color: node.color
-  })).sort((a: { eroi: number; }, b: { eroi: number; }) => b.eroi - a.eroi)
-})
-
-const graphEroi = computed(() => {
-  return props.energyGraph?.graphEroi || 0
-})
-</script>
-
 <template>
   <div class="info-panel">
     <div class="panel-content">
@@ -147,7 +77,7 @@ const graphEroi = computed(() => {
             <div class="node-header">
               <div class="node-title">
                 <h2>{{ node.id }}</h2>
-                <div class="node-level-badge" :class="`level-${node.nodeLevel}`">
+                <div  >
                   {{ node.nodeLevel }}
                 </div>
               </div>
@@ -279,6 +209,76 @@ const graphEroi = computed(() => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import type { EnergyNode } from '../types/energyNode'
+import type { Connector } from '../types/energyGraph'
+import { NodeDrawer } from '../types/nodeDrawer';
+import {  NodeTypes } from '../types/nodesConfig';
+
+const props = defineProps<{
+  selectedNodes: any[]
+  selectedConnector: Connector | null
+  energyGraph?: any
+}>()
+
+const selectionCount = computed(() => props.selectedNodes.length)
+
+// Filter to only show EnergyNodes (not BasicNodes like dump)
+const energyNodes = computed(() => {
+  return props.selectedNodes.filter(
+    (node): node is EnergyNode => 'inputMap' in node && 'outputMap' in node
+  )
+})
+
+
+// Helper function to format numbers
+const formatNumber = (value: number): string => {
+  if (value === 0) return '0'
+  if (value < 0.001) return value.toExponential(2)
+  return value.toFixed(3)
+}
+
+// Helper function to format percentages
+const formatPercentage = (value: number): string => {
+  return `${(value * 100).toFixed(1)}%`
+}
+
+
+// Helper function to get efficiency color class
+const getEfficiencyClass = (eroi: number): string => {
+  if (eroi >= 10) return 'excellent'
+  if (eroi >= 5) return 'good'
+  if (eroi >= 0.5) return 'moderate'
+  if (eroi >= 0.3) return 'poor'
+  return 'critical'
+}
+
+
+// Get non-energy nodes (BasicNodes like dump)
+const basicNodes = computed(() => {
+  return props.selectedNodes.filter(
+    (node): node is NodeDrawer => !('nodeType' in node && 'inputMap' in node && 'outputMap' in node)
+  )
+})
+
+// EROI data for the graph
+const eroiData = computed(() => {
+  if (!props.energyGraph) return []
+  
+  return props.energyGraph.energyNodes.map((node: { nodeType: any; eroi: any; nodeLevel: any; color: any; }) => ({
+    nodeType: node.nodeType,
+    eroi: node.eroi,
+    nodeLevel: node.nodeLevel,
+    color: node.color
+  })).sort((a: { eroi: number; }, b: { eroi: number; }) => b.eroi - a.eroi)
+})
+
+const graphEroi = computed(() => {
+  return props.energyGraph?.graphEroi || 0
+})
+</script>
 
 <style scoped>
 .info-panel {
