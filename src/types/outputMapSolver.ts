@@ -1,6 +1,5 @@
 import GLPK from 'glpk.js'
-import { NodeType } from './energyNode'
-import { NodesConfig } from './nodesConfig'
+import { NodesConfig, NodeType } from './nodesConfig'
 import { iNodeWeights, nonPartialNodeWeights } from './energyGraphGenerator'
 
 const glpk = await GLPK()
@@ -31,8 +30,8 @@ function solutionToOutputMap(
 ): {
   [key: string]: { [key in NodeType]: number }
 } {
-  const nodeFromAcr = (nodeAcr: string) => {
-    return config.nodes.find((n) => n.id === nodeAcr)!
+  const nodeFromId = (nodeId: string) => {
+    return config.nodes.find((n) => n.id === nodeId)!
   }
   const outputMap: {
     [key: string]: { [key in NodeType]: number }
@@ -43,7 +42,7 @@ function solutionToOutputMap(
     for (const [keyName, value] of Object.entries(vars)) {
       const key = keyName.split('-')
       if (key[1] === node.id && key[2] !== undefined) {
-        const target = nodeFromAcr(key[2])
+        const target = nodeFromId(key[2])
 
         outputMap[node.id][target.id as NodeType] = value
       }
@@ -58,10 +57,6 @@ export async function outputMapSolver(config: NodesConfig) {
   const bounds: Bound[] = []
 
   const constraints: Constraint[] = []
-
-  const nodeAcr = (nodeName: string) => {
-    return config.nodes.find((n) => n.id === nodeName)?.id!
-  }
 
   const bound = (name: string) => {
     return { name: `${name}`, type: glpk.GLP_DB, lb: 0, ub: 1 }
@@ -134,7 +129,7 @@ export async function outputMapSolver(config: NodesConfig) {
   // Net sum constraints
   for (const node of config.nodes) {
     const varName = 'x-' + node.id
-    if (node.id === 'Leisure') continue // TODO: Figure out this
+    if (node.id === 'leisure') continue // TODO: Figure out this
     const sumConstraints: string[] = []
     for (const sourceNode of config.nodes) {
       if (sourceNode.id === node.id) continue
@@ -150,7 +145,7 @@ export async function outputMapSolver(config: NodesConfig) {
   const objective = {
     direction: glpk.GLP_MAX,
     name: 'maximize_leisure',
-    vars: [{ name: 'x-Leisure', coef: 1 }]
+    vars: [{ name: 'x-leisure', coef: 1 }]
   }
 
   const lp = {

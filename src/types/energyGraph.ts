@@ -1,5 +1,6 @@
-import { EnergyNode, NodeLevel, NodeType } from './energyNode'
+import { EnergyNode } from './energyNode'
 import { BASE_NODE_HEIGHT, NodeDrawer } from './nodeDrawer'
+import { NodeLevel, NodeType } from './nodesConfig'
 
 export class EnergyGraph {
   public energyNodes: EnergyNode[] = []

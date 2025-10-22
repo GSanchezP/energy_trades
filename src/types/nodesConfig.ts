@@ -1,8 +1,33 @@
-import { NodeType } from './energyNode'
+export const NodeTypes = [
+  'petroleum',
+  'coal',
+  'mining',
+  'fuels',
+  'electricity',
+  'manufacture',
+  'food',
+  'transport',
+  'wellBeing',
+  'leisure',
+  'heat'
+] as const
+
+export type NodeType = (typeof NodeTypes)[number]
+
+export type NodeWeights = Record<NodeType, number>
+
+export enum NodeLevel {
+  Dump = 0,
+  Extraction = 1,
+  Conversion = 2,
+  Primary = 3,
+  Industrial = 4,
+  Tertiary = 5
+}
 
 export interface NodeConfig {
-  id: string
-  acr: string
+  id: NodeType
+  label: string
   level: string
   color: string
   inputs: Partial<Record<NodeType, number>>
@@ -15,121 +40,121 @@ export interface NodesConfig {
 export const nodesConfig: NodesConfig = {
   nodes: [
     {
-      id: 'Petroleum',
-      acr: 'p',
+      id: 'petroleum',
+      label: 'p',
       level: 'Extraction',
       color: '#442d54ff',
       inputs: {
-        WellBeing: 0.05,
-        Fuels: 0.02,
-        Electricity: 0.02,
-        Manufacture: 0.02
+        wellBeing: 0.05,
+        fuels: 0.02,
+        electricity: 0.02,
+        manufacture: 0.02
       }
     },
     {
-      id: 'Coal',
-      acr: 'c',
+      id: 'coal',
+      label: 'c',
       level: 'Extraction',
       color: '#3d2913ff',
       inputs: {
-        WellBeing: 0.05,
-        Fuels: 0.02,
-        Electricity: 0.02,
-        Manufacture: 0.02
+        wellBeing: 0.05,
+        fuels: 0.02,
+        electricity: 0.02,
+        manufacture: 0.02
       }
     },
     {
-      id: 'Fuels',
-      acr: 'f',
+      id: 'fuels',
+      label: 'f',
       level: 'Conversion',
       color: '#610a52ff',
       inputs: {
-        WellBeing: 0.05,
-        Petroleum: 1.2,
-        Electricity: 0.01
+        wellBeing: 0.05,
+        petroleum: 1.2,
+        electricity: 0.01
       }
     },
     {
-      id: 'Electricity',
-      acr: 'e',
+      id: 'electricity',
+      label: 'e',
       level: 'Conversion',
       color: '#0d92a3ff',
       inputs: {
-        WellBeing: 0.05,
-        Coal: 2.5
+        wellBeing: 0.05,
+        coal: 2.5
       }
     },
     {
-      id: 'Mining',
-      acr: 'm',
+      id: 'mining',
+      label: 'm',
       level: 'Primary',
       color: '#856350ff',
       inputs: {
-        WellBeing: 0.05,
-        Fuels: 1,
-        Electricity: 0.25
+        wellBeing: 0.05,
+        fuels: 1,
+        electricity: 0.25
       }
     },
     {
-      id: 'Food',
-      acr: 'o',
+      id: 'food',
+      label: 'o',
       level: 'Primary',
       color: '#b0b00aff',
       inputs: {
-        WellBeing: 0.15,
-        Fuels: 0.65,
-        Manufacture: 0.25,
-        Mining: 0.15
+        wellBeing: 0.15,
+        fuels: 0.65,
+        manufacture: 0.25,
+        mining: 0.15
       }
     },
     {
-      id: 'Transport',
-      acr: 't',
+      id: 'transport',
+      label: 't',
       level: 'Industrial',
       color: '#58b00aff',
       inputs: {
-        WellBeing: 0.05,
-        Fuels: 3,
-        Manufacture: 0.15
+        wellBeing: 0.05,
+        fuels: 3,
+        manufacture: 0.15
       }
     },
     {
-      id: 'Manufacture',
-      acr: 'i',
+      id: 'manufacture',
+      label: 'i',
       level: 'Industrial',
       color: '#976c17ff',
       inputs: {
-        WellBeing: 0.05,
-        Mining: 1,
-        Electricity: 1.6,
-        Transport: 0.1
+        wellBeing: 0.05,
+        mining: 1,
+        electricity: 1.6,
+        transport: 0.1
       }
     },
     {
-      id: 'WellBeing',
-      acr: 'w',
+      id: 'wellBeing',
+      label: 'w',
       level: 'Tertiary',
       color: '#1fbb65ff',
       inputs: {
-        Fuels: 0.25,
-        Electricity: 0.2,
-        Manufacture: 0.2,
-        Transport: 0.4,
-        Food: 0.4
+        fuels: 0.25,
+        electricity: 0.2,
+        manufacture: 0.2,
+        transport: 0.4,
+        food: 0.4
       }
     },
     {
-      id: 'Leisure',
-      acr: 'l',
+      id: 'leisure',
+      label: 'l',
       level: 'Tertiary',
       color: '#c953bdff',
       inputs: {
-        Fuels: 0.15,
-        Electricity: 0.2,
-        Manufacture: 0.2,
-        Transport: 0.4,
-        WellBeing: 0.6,
-        Food: 0.4
+        fuels: 0.15,
+        electricity: 0.2,
+        manufacture: 0.2,
+        transport: 0.4,
+        wellBeing: 0.6,
+        food: 0.4
       }
     }
   ]

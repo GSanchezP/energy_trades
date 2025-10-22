@@ -1,4 +1,4 @@
-import { NodeLevel } from './energyNode'
+import { NodeLevel } from './nodesConfig'
 
 export interface Position {
   x: number

@@ -1,8 +1,15 @@
-import { EnergyNode, NodeLevel, NodeType, NodeTypes, NodeWeights } from './energyNode'
+import { EnergyNode } from './energyNode'
 
 import { EnergyGraph } from './energyGraph'
 import { outputMapSolver } from './outputMapSolver'
-import { nodesConfig, NodesConfig } from './nodesConfig'
+import {
+  NodeLevel,
+  nodesConfig,
+  NodesConfig,
+  NodeType,
+  NodeTypes,
+  NodeWeights
+} from './nodesConfig'
 
 // Function to convert level string to NodeLevel enum
 function getNodeLevel(level: string): NodeLevel {

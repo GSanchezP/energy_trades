@@ -1,31 +1,5 @@
 import { BASE_NODE_HEIGHT, NodeDrawer } from './nodeDrawer'
-
-export const NodeTypes = [
-  'Petroleum',
-  'Coal',
-  'Mining',
-  'Fuels',
-  'Electricity',
-  'Manufacture',
-  'Food',
-  'Transport',
-  'WellBeing',
-  'Leisure',
-  'Heat'
-] as const
-
-export type NodeType = (typeof NodeTypes)[number]
-
-export type NodeWeights = Record<NodeType, number>
-
-export enum NodeLevel {
-  Dump = 0,
-  Extraction = 1,
-  Conversion = 2,
-  Primary = 3,
-  Industrial = 4,
-  Tertiary = 5
-}
+import { NodeType, NodeWeights, NodeLevel } from './nodesConfig'
 
 export class EnergyNode extends NodeDrawer {
   private _nodeType: NodeType

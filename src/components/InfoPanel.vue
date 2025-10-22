@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { EnergyNode } from '../types/energyNode'
-import { NodeLevel, NodeTypes } from '../types/energyNode'
 import type { Connector } from '../types/energyGraph'
 import { NodeDrawer } from '../types/nodeDrawer';
+import { NodeLevel, NodeTypes } from '../types/nodesConfig';
 
 const props = defineProps<{
   selectedNodes: any[]
