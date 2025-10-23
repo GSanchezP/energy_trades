@@ -198,15 +198,16 @@ export class EnergyGraph {
       }
     }
 
-    for (const sourceNode of this.energyNodes) {
-      for (const [targetId, power] of Object.entries(sourceNode.outputMap) as [
-        NodeType,
-        number
-      ][]) {
-        const targetNode = this.energyNodes.find((node) => node.id === targetId)
-        if (targetNode && targetNode.id !== sourceNode.id) {
-          const conn = this.createMiddleConnector(sourceNode, targetNode, power)
-          if (conn) this.connectors.push(conn)
+    // Middle Connectors
+    for (const level of NodeLevels) {
+      for (const node of this.energyNodes.filter((n) => n.level.id === level)) {
+        for (const [targetNodeId, power] of Object.entries(node.outputMap)) {
+          const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
+          if (!targetNode || !power) continue
+          if (this.levelComparer(node, targetNode) === 'next') {
+            const connector = this.createMiddleConnector(node, targetNode, power, xTargetOffsetMap)
+            this.connectors.push(connector)
+          }
         }
       }
     }
@@ -225,6 +226,12 @@ export class EnergyGraph {
       sourceYOffset += value * BASE_NODE_HEIGHT
     }
 
+    let targetOffset = 0
+    for (const [key, value] of Object.entries(target.inputMap)) {
+      if (key === source.id) break
+      targetOffset += value * BASE_NODE_HEIGHT
+    }
+
     if (!xTargetOffsetMap[target.level.id]) {
       xTargetOffsetMap[target.level.id] = 0
     }
@@ -240,7 +247,7 @@ export class EnergyGraph {
     const sourceX = source.x + source.width
     const sourceY = source.y + sourceYOffset + strokeWidth / 2
     const targetX = target.x
-    const targetY = target.y + strokeWidth / 2
+    const targetY = target.y + strokeWidth / 2 + targetOffset
 
     let points: number[]
 
@@ -298,6 +305,12 @@ export class EnergyGraph {
       sourceYOffset += value * BASE_NODE_HEIGHT
     }
 
+    let targetOffset = 0
+    for (const [key, value] of Object.entries(target.inputMap)) {
+      if (key === source.id) break
+      targetOffset += value * BASE_NODE_HEIGHT
+    }
+
     if (!xTargetOffsetMap[target.level.id]) {
       xTargetOffsetMap[target.level.id] = 0
     }
@@ -307,16 +320,13 @@ export class EnergyGraph {
 
     const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
     xTargetOffsetMap[target.level.id]! = targetXOffset
-    console.log(
-      `Connector ${source.id} -> ${target.id} added ${strokeWidth} to target offset(${target.level.id}): ${xTargetOffsetMap[target.level.id]}`
-    )
 
     let sourceXOffset = 10 + xOffset + strokeWidth / 2
 
     const sourceX = source.x + source.width
     const sourceY = source.y + sourceYOffset + strokeWidth / 2
     const targetX = target.x
-    const targetY = target.y + strokeWidth / 2
+    const targetY = target.y + strokeWidth / 2 + targetOffset
 
     let points: number[]
 
@@ -340,10 +350,10 @@ export class EnergyGraph {
       sourceX + sourceXOffset,
       yAutobahn, // Go down the autobahn
 
-      targetX - targetXOffset + strokeWidth / 2,
+      targetX - targetXOffset + strokeWidth / 2 - 10,
       yAutobahn, // Go horizontally to target
 
-      targetX - targetXOffset + strokeWidth / 2,
+      targetX - targetXOffset + strokeWidth / 2 - 10,
       targetY, // Go down to target center
 
       targetX,
@@ -364,8 +374,9 @@ export class EnergyGraph {
   private createMiddleConnector(
     source: EnergyNode,
     target: EnergyNode,
-    power: number
-  ): Connector | undefined {
+    power: number,
+    xTargetOffsetMap: Partial<Record<NodeLevel, number>>
+  ): Connector {
     let sourceOffset = 0
     for (const [key, value] of Object.entries(source.outputMap)) {
       if (key === target.id) break
@@ -378,8 +389,15 @@ export class EnergyGraph {
       targetOffset += value * BASE_NODE_HEIGHT
     }
 
+    if (!xTargetOffsetMap[target.level.id]) {
+      xTargetOffsetMap[target.level.id] = 0
+    }
+
     // Calculate stroke width based on power (min 0, max 100)
     const strokeWidth = power * BASE_NODE_HEIGHT
+
+    const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
+    xTargetOffsetMap[target.level.id]! = targetXOffset
 
     let xOffset = 10 + strokeWidth / 2
 
@@ -392,16 +410,7 @@ export class EnergyGraph {
 
     // Flow goes to lower level - exit from top of source
 
-    const levelRelation = this.levelComparer(source, target)
-
-    let yAutobahn
-    if (levelRelation === 'next') {
-      yAutobahn = sourceY
-    } else if (levelRelation === 'above') {
-      return undefined
-    } else {
-      return undefined
-    }
+    let yAutobahn = sourceY
 
     points = [
       sourceX,
@@ -413,10 +422,10 @@ export class EnergyGraph {
       sourceX + xOffset + sourceOffset,
       yAutobahn, // Go down the autobahn
 
-      targetX - xOffset - targetOffset,
+      targetX - xOffset - targetXOffset,
       yAutobahn, // Go horizontally to target
 
-      targetX - xOffset - targetOffset,
+      targetX - xOffset - targetXOffset,
       targetY, // Go down to target center
 
       targetX,
