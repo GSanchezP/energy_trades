@@ -1,5 +1,5 @@
 import { EnergyNode } from './energyNode'
-import { BASE_NODE_HEIGHT, nextLevel, NodeDrawer, nodeLevelValue, prevLevel } from './nodeDrawer'
+import { BASE_NODE_HEIGHT, NodeDrawer, nodeLevelValue, prevLevel } from './nodeDrawer'
 import { NodeLevel, NodeLevels, NodeType } from './nodesConfig'
 
 export class EnergyGraph {
@@ -12,13 +12,15 @@ export class EnergyGraph {
   public connectors: Connector[] = []
 
   private upperUsage: number[] = []
-  private lowerUsage: number[] = []
+  private lowerTotalUsage: number = 0
+  private lowerCurrentUsage: number = 0
 
   private verticalUsage: Partial<Record<NodeLevel, number>> = {}
 
   constructor(nodes: EnergyNode[]) {
     this.energyNodes = nodes
     this.calculateVerticalUsage()
+    this.calculateLowBahnUsage()
     this.computeNodePositions()
     this.addDumpNode()
     this.generateFlowConnectors()
@@ -26,10 +28,6 @@ export class EnergyGraph {
 
   get upperUsageLevel(): number {
     return this.upperUsage.reduce((a, b) => a + b, 0)
-  }
-
-  get lowerUsageLevel(): number {
-    return this.lowerUsage.reduce((a, b) => a + b, 0)
   }
 
   get nodes(): NodeDrawer[] {
@@ -45,6 +43,21 @@ export class EnergyGraph {
         .filter((node) => node.level.id === 'extraction')
         .reduce((a, b) => a + b.inputPower, 0)
     )
+  }
+
+  calculateLowBahnUsage() {
+    this.lowerTotalUsage = 0
+    for (const node of this.energyNodes) {
+      // Add low output
+      for (const [targetNodeId, value] of Object.entries(node.outputMap)) {
+        if (!value) continue
+        const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
+        if (!targetNode) continue
+        if (this.levelComparer(node, targetNode) === 'above') {
+          this.lowerTotalUsage += value
+        }
+      }
+    }
   }
 
   calculateVerticalUsage() {
@@ -109,15 +122,12 @@ export class EnergyGraph {
   }
 
   computeNodePositions() {
-    console.log(this.verticalUsage)
     let maxLevel = 0
     let xOffset = 0
     for (const level of NodeLevels) {
       if (nodeLevelValue(level)) {
         const value = (this.verticalUsage[prevLevel(level)] ?? 0) * BASE_NODE_HEIGHT
         xOffset += value
-        console.log(`Xoffset for ${level} = ${value}, ${xOffset}`)
-        console.log(xOffset)
       }
 
       let i = 0
@@ -135,8 +145,26 @@ export class EnergyGraph {
   }
 
   generateFlowConnectors() {
-    this.lowerUsage = []
     this.upperUsage = []
+
+    for (const level of NodeLevels) {
+      // Starting from below
+      let xOffset = 0
+      for (const node of this.energyNodes.filter((n) => n.level.id === level).reverse()) {
+        const dumpConnector = this.createDumpConnector(node, xOffset)
+        xOffset += dumpConnector.strokeWidth
+        this.connectors.push(dumpConnector)
+        for (const [targetNodeId, power] of Object.entries(node.outputMap).reverse()) {
+          const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
+          if (!targetNode || !power) continue
+          if (this.levelComparer(node, targetNode) === 'above') {
+            const connector = this.createBelowConnector(node, targetNode, power, xOffset)
+            xOffset += connector.strokeWidth
+            this.connectors.push(connector)
+          }
+        }
+      }
+    }
 
     for (const sourceNode of this.energyNodes) {
       for (const [targetId, power] of Object.entries(sourceNode.outputMap) as [
@@ -145,51 +173,89 @@ export class EnergyGraph {
       ][]) {
         const targetNode = this.energyNodes.find((node) => node.id === targetId)
         if (targetNode && targetNode.id !== sourceNode.id) {
-          this.connectors.push(this.createConnector(sourceNode, targetNode, power))
+          const conn = this.createConnector(sourceNode, targetNode, power)
+          if (conn) this.connectors.push(conn)
         }
       }
-      this.connectors.push(this.createDumpConnector(sourceNode))
     }
   }
 
-  createDumpConnector(source: EnergyNode): Connector {
-    let sourceOffset = source.outputPower * BASE_NODE_HEIGHT
+  private createBelowConnector(
+    source: EnergyNode,
+    target: EnergyNode,
+    power: number,
+    xOffset: number
+  ): Connector {
+    let sourceYOffset = 0
+    for (const [key, value] of Object.entries(source.outputMap)) {
+      if (key === target.id) break
+      sourceYOffset += value * BASE_NODE_HEIGHT
+    }
+
+    let targetYOffset = 0
+    for (const [key, value] of Object.entries(target.inputMap)) {
+      if (key === source.id) break
+      targetYOffset += value * BASE_NODE_HEIGHT
+    }
 
     // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = source.losses * BASE_NODE_HEIGHT
+    const strokeWidth = power * BASE_NODE_HEIGHT
 
-    let xOffset = 10 + strokeWidth / 2
+    let sourceXOffset = 10 + xOffset + strokeWidth / 2
 
     const sourceX = source.x + source.width
-    const sourceY = source.y + sourceOffset + strokeWidth / 2
+    const sourceY = source.y + sourceYOffset + strokeWidth / 2
+    const targetX = target.x
+    const targetY = target.y + targetYOffset + strokeWidth / 2
 
     let points: number[]
 
     // Flow goes to lower level - exit from top of source
 
+    let yAutobahn =
+      this.LOW_AUTOBAHN +
+      this.lowerTotalUsage * BASE_NODE_HEIGHT -
+      strokeWidth / 2 -
+      this.lowerCurrentUsage
+
+    this.lowerCurrentUsage += strokeWidth
+
     points = [
       sourceX,
       sourceY, // Start at top center of source
 
-      sourceX + xOffset + sourceOffset,
+      sourceX + sourceXOffset,
       sourceY, // Go to the left
 
-      sourceX + xOffset + sourceOffset,
-      900
+      sourceX + sourceXOffset,
+      yAutobahn, // Go down the autobahn
+
+      targetX - targetYOffset,
+      yAutobahn, // Go horizontally to target
+
+      targetX - targetYOffset,
+      targetY, // Go down to target center
+
+      targetX,
+      targetY // Go down to target center
     ]
 
     return {
-      id: `${source.id}-dump`,
+      id: `${source.id}-${target.id}`,
       from: source.id,
-      to: 'Dump',
+      to: target.id,
       points,
-      power: source.losses,
+      power,
       strokeWidth,
-      color: '#e04c4cff'
+      color: source.color
     }
   }
 
-  private createConnector(source: EnergyNode, target: EnergyNode, power: number): Connector {
+  private createConnector(
+    source: EnergyNode,
+    target: EnergyNode,
+    power: number
+  ): Connector | undefined {
     let sourceOffset = 0
     for (const [key, value] of Object.entries(source.outputMap)) {
       if (key === target.id) break
@@ -222,8 +288,7 @@ export class EnergyGraph {
     if (levelRelation === 'next') {
       yAutobahn = sourceY
     } else if (levelRelation === 'above') {
-      yAutobahn = this.LOW_AUTOBAHN + this.lowerUsageLevel + strokeWidth / 2
-      this.lowerUsage.push(strokeWidth)
+      return undefined
     } else {
       yAutobahn = this.UPPER_AUTOBAHN - this.upperUsageLevel - strokeWidth / 2
       this.upperUsage.push(strokeWidth)
@@ -257,6 +322,43 @@ export class EnergyGraph {
       power,
       strokeWidth,
       color: source.color
+    }
+  }
+
+  createDumpConnector(source: EnergyNode, offset: number): Connector {
+    let sourceOffset = source.outputPower * BASE_NODE_HEIGHT
+
+    // Calculate stroke width based on power (min 0, max 100)
+    const strokeWidth = source.losses * BASE_NODE_HEIGHT
+
+    let xOffset = offset + 10 + strokeWidth / 2
+
+    const sourceX = source.x + source.width
+    const sourceY = source.y + sourceOffset + strokeWidth / 2
+
+    let points: number[]
+
+    // Flow goes to lower level - exit from top of source
+
+    points = [
+      sourceX,
+      sourceY, // Start at top center of source
+
+      sourceX + xOffset,
+      sourceY, // Go to the left
+
+      sourceX + xOffset,
+      900
+    ]
+
+    return {
+      id: `${source.id}-dump`,
+      from: source.id,
+      to: 'Dump',
+      points,
+      power: source.losses,
+      strokeWidth,
+      color: '#e04c4cff'
     }
   }
 

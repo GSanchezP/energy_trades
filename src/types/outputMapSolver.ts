@@ -157,9 +157,6 @@ export async function outputMapSolver(config: NodesConfig) {
 
   const result = await glpk.solve(lp)
 
-  console.log(bounds)
-  console.log(constraints)
-
   // Convert result to readable format
   const readableResult = formatSolverResult(result)
   console.log(readableResult)

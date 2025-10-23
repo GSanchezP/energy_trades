@@ -16,6 +16,19 @@
             }"
             @click="(e: any) => handleConnectorClick(connector.id, e)"
           />
+          <v-line
+            v-for="connector in connectors"
+            :key="connector.id"
+            :config="{
+              points: connector.points,
+              stroke: connector.color,
+              strokeWidth: connector.strokeWidth - 2,
+              lineCap: 'round',
+              lineJoin: 'round',
+              opacity: selectedConnectorId === connector.id ? 0.9 : 0.4
+            }"
+            @click="(e: any) => handleConnectorClick(connector.id, e)"
+          />
 
           <v-rect
             v-for="square in nodes"
