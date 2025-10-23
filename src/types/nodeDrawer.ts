@@ -8,8 +8,16 @@ export interface Position {
 export const BASE_NODE_HEIGHT = 160
 export const BASE_NODE_WIDTH = 120
 
-function nodeLevelIndex(nodeLevel: NodeLevel) {
+export function nodeLevelValue(nodeLevel: NodeLevel) {
   return NodeLevels.indexOf(nodeLevel)
+}
+
+export function nextLevel(nodeLevel: NodeLevel) {
+  return NodeLevels[nodeLevelValue(nodeLevel) + 1]
+}
+
+export function prevLevel(nodeLevel: NodeLevel) {
+  return NodeLevels[nodeLevelValue(nodeLevel) - 1]
 }
 
 export class NodeDrawer {
@@ -26,7 +34,7 @@ export class NodeDrawer {
     size?: { height?: number; width?: number }
   ) {
     this._id = id
-    this._level = { id: nodeLevel, value: nodeLevelIndex(nodeLevel) }
+    this._level = { id: nodeLevel, value: nodeLevelValue(nodeLevel) }
     this._color = color
     this._size = { height: size?.height ?? BASE_NODE_HEIGHT, width: size?.width ?? BASE_NODE_WIDTH }
   }

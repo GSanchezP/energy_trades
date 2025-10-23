@@ -1,5 +1,5 @@
 import { EnergyNode } from './energyNode'
-import { BASE_NODE_HEIGHT, NodeDrawer } from './nodeDrawer'
+import { BASE_NODE_HEIGHT, nextLevel, NodeDrawer, nodeLevelValue, prevLevel } from './nodeDrawer'
 import { NodeLevel, NodeLevels, NodeType } from './nodesConfig'
 
 export class EnergyGraph {
@@ -14,10 +14,11 @@ export class EnergyGraph {
   private upperUsage: number[] = []
   private lowerUsage: number[] = []
 
-  private verticalUsage: number[][] = []
+  private verticalUsage: Partial<Record<NodeLevel, number>> = {}
 
   constructor(nodes: EnergyNode[]) {
     this.energyNodes = nodes
+    this.calculateVerticalUsage()
     this.computeNodePositions()
     this.addDumpNode()
     this.generateFlowConnectors()
@@ -46,6 +47,59 @@ export class EnergyGraph {
     )
   }
 
+  calculateVerticalUsage() {
+    const calculate = (dir: 'low' | 'high') => {
+      const verticalUsage: Partial<Record<NodeLevel, number>> = {}
+      const nodeDir = dir === 'low' ? 'above' : 'below'
+      for (const level of NodeLevels) {
+        const nodes = this.energyNodes.filter((n) => n.level.id === level)
+
+        for (const node of nodes) {
+          // Add low output
+          for (const [targetNodeId, value] of Object.entries(node.outputMap)) {
+            if (!value) continue
+            const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
+            if (!targetNode) continue
+            const relation = this.levelComparer(node, targetNode)
+            if (relation === nodeDir) {
+              verticalUsage[level] = verticalUsage[level] ? verticalUsage[level] + value : value
+            }
+          }
+
+          // Add low input
+          for (const [sourceNodeId, value] of Object.entries(node.inputMap)) {
+            if (!value) continue
+            const sourceNode = this.energyNodes.find((n) => n.id === sourceNodeId)
+            if (!sourceNode) continue
+            const relation = this.levelComparer(sourceNode, node)
+            const prevLevel = NodeLevels[nodeLevelValue(level) - 1]
+            if (relation === nodeDir) {
+              verticalUsage[prevLevel] = verticalUsage[prevLevel]
+                ? verticalUsage[prevLevel] + value
+                : value
+            }
+          }
+
+          if (dir === 'low') {
+            // Add losses
+            verticalUsage[level]! = verticalUsage[level]
+              ? verticalUsage[level] + node.losses
+              : node.losses
+          }
+        }
+      }
+
+      return verticalUsage
+    }
+
+    const lowUsage = calculate('low')
+    const highUsage = calculate('high')
+
+    for (const level of NodeLevels) {
+      this.verticalUsage[level] = Math.max(lowUsage[level] ?? 0, highUsage[level] ?? 0)
+    }
+  }
+
   addDumpNode() {
     const x1 = Math.min(...this.energyNodes.map((n) => n.x))
     const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 120))
@@ -55,22 +109,29 @@ export class EnergyGraph {
   }
 
   computeNodePositions() {
-    const numNodesPerLevel = NodeLevels.reduce(
-      (acc, curr) => {
-        acc[curr] = 0
-        return acc
-      },
-      {} as Record<NodeLevel, number>
-    )
-    for (const node of this.energyNodes) {
-      node.setPosition = {
-        x: 100 + (node.level.value - 1) * 300,
-        y: 200 + numNodesPerLevel[node.level.id] * 200
+    console.log(this.verticalUsage)
+    let maxLevel = 0
+    let xOffset = 0
+    for (const level of NodeLevels) {
+      if (nodeLevelValue(level)) {
+        const value = (this.verticalUsage[prevLevel(level)] ?? 0) * BASE_NODE_HEIGHT
+        xOffset += value
+        console.log(`Xoffset for ${level} = ${value}, ${xOffset}`)
+        console.log(xOffset)
       }
-      numNodesPerLevel[node.level.id] += 1
+
+      let i = 0
+      for (const node of this.energyNodes.filter((n) => n.level.id === level)) {
+        node.setPosition = {
+          x: 100 + (node.level.value - 1) * 200 + xOffset,
+          y: 200 + i * 200
+        }
+        i++
+      }
+      maxLevel = Math.max(maxLevel, i)
     }
 
-    this.LOW_AUTOBAHN = (Math.max(...Object.values(numNodesPerLevel)) + 1) * 200
+    this.LOW_AUTOBAHN = (maxLevel + 1) * 200
   }
 
   generateFlowConnectors() {
@@ -155,13 +216,12 @@ export class EnergyGraph {
 
     // Flow goes to lower level - exit from top of source
 
-    const sourceLevel = source.level.value
-    const targetLevel = target.level.value
+    const levelRelation = this.levelComparer(source, target)
 
     let yAutobahn
-    if (targetLevel - sourceLevel === 1) {
+    if (levelRelation === 'next') {
       yAutobahn = sourceY
-    } else if (sourceLevel < targetLevel) {
+    } else if (levelRelation === 'above') {
       yAutobahn = this.LOW_AUTOBAHN + this.lowerUsageLevel + strokeWidth / 2
       this.lowerUsage.push(strokeWidth)
     } else {
@@ -197,6 +257,18 @@ export class EnergyGraph {
       power,
       strokeWidth,
       color: source.color
+    }
+  }
+
+  private levelComparer(sourceNode: EnergyNode, targetNode: EnergyNode) {
+    const sourceLevel = sourceNode.level.value
+    const targetLevel = targetNode.level.value
+    if (targetLevel - sourceLevel === 1) {
+      return 'next'
+    } else if (sourceLevel < targetLevel) {
+      return 'above'
+    } else {
+      return 'below'
     }
   }
 }
