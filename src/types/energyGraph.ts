@@ -153,78 +153,53 @@ export class EnergyGraph {
     let xSourceOffsetMap: Partial<Record<NodeLevel, number>> = {}
     const xTargetOffsetMap: Partial<Record<NodeLevel, number>> = {}
 
-    // Below Connectors
-    for (const level of NodeLevels) {
-      // Starting from below
-      if (!xSourceOffsetMap[level]) {
-        xSourceOffsetMap[level] = 0
-      }
-      for (const node of this.energyNodes.filter((n) => n.level.id === level).reverse()) {
-        const dumpConnector = this.createDumpConnector(node, xSourceOffsetMap[level])
+    const iterations: Array<{
+      addDump: boolean
+      reverse: boolean
+      levelComparer: LevelComparerResult
+      connectorType: ConnectorType
+    }> = [
+      { addDump: true, reverse: true, levelComparer: 'smaller', connectorType: 'below' },
+      { addDump: false, reverse: false, levelComparer: 'greater', connectorType: 'above' },
+      { addDump: false, reverse: false, levelComparer: 'next', connectorType: 'middle' }
+    ]
 
-        xSourceOffsetMap[node.level.id]! += dumpConnector.strokeWidth
-        this.connectors.push(dumpConnector)
-        for (const [targetNodeId, power] of Object.entries(node.outputMap).reverse()) {
-          const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
-          if (!targetNode || !power) continue
-          if (this.levelComparer(node, targetNode) === 'smaller') {
-            const connector = this.createConnector(
-              node,
-              targetNode,
-              power,
-              xSourceOffsetMap,
-              xTargetOffsetMap,
-              'below'
-            )
-            this.connectors.push(connector)
-          }
+    for (const i of iterations) {
+      function r<T>(arr: Array<T>, r: boolean) {
+        if (r) return arr.reverse()
+        return arr
+      }
+      // Reset from above
+      xSourceOffsetMap = {}
+      for (const level of NodeLevels) {
+        // Starting from below
+        if (!xSourceOffsetMap[level]) {
+          xSourceOffsetMap[level] = 0
         }
-      }
-    }
-
-    // Reset from above
-    xSourceOffsetMap = {}
-    // Above Connectors
-    for (const level of NodeLevels) {
-      // Starting from above
-      if (!xSourceOffsetMap[level]) {
-        xSourceOffsetMap[level] = 0
-      }
-      for (const node of this.energyNodes.filter((n) => n.level.id === level)) {
-        for (const [targetNodeId, power] of Object.entries(node.outputMap)) {
-          const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
-          if (!targetNode || !power) continue
-          if (this.levelComparer(node, targetNode) === 'greater') {
-            const connector = this.createConnector(
-              node,
-              targetNode,
-              power,
-              xSourceOffsetMap,
-              xTargetOffsetMap,
-              'above'
-            )
-            this.connectors.push(connector)
+        for (const node of r(
+          this.energyNodes.filter((n) => n.level.id === level),
+          i.reverse
+        )) {
+          if (i.addDump) {
+            const dumpConnector = this.createDumpConnector(node, xSourceOffsetMap[level])
+            xSourceOffsetMap[node.level.id]! += dumpConnector.strokeWidth
+            this.connectors.push(dumpConnector)
           }
-        }
-      }
-    }
 
-    // Middle Connectors
-    for (const level of NodeLevels) {
-      for (const node of this.energyNodes.filter((n) => n.level.id === level)) {
-        for (const [targetNodeId, power] of Object.entries(node.outputMap)) {
-          const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
-          if (!targetNode || !power) continue
-          if (this.levelComparer(node, targetNode) === 'next') {
-            const connector = this.createConnector(
-              node,
-              targetNode,
-              power,
-              xSourceOffsetMap,
-              xTargetOffsetMap,
-              'middle'
-            )
-            this.connectors.push(connector)
+          for (const [targetNodeId, power] of r(Object.entries(node.outputMap), i.reverse)) {
+            const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
+            if (!targetNode || !power) continue
+            if (this.levelComparer(node, targetNode) === i.levelComparer) {
+              const connector = this.createConnector(
+                node,
+                targetNode,
+                power,
+                xSourceOffsetMap,
+                xTargetOffsetMap,
+                i.connectorType
+              )
+              this.connectors.push(connector)
+            }
           }
         }
       }
@@ -299,6 +274,11 @@ export class EnergyGraph {
     }
 
     // Calculate points based on direction
+    const horizontalX =
+      connectorType === 'middle'
+        ? Math.max(sourceX + sourceXOffset, targetX - targetXOffset + strokeWidth / 2 - 10)
+        : targetX - targetXOffset + strokeWidth / 2 - 10
+
     let points = [
       sourceX,
       sourceY, // Start at source
@@ -306,9 +286,9 @@ export class EnergyGraph {
       sourceY, // Go right
       sourceX + sourceXOffset,
       yAutobahn, // Go down to autobahn
-      targetX - targetXOffset + strokeWidth / 2 - 10,
+      horizontalX,
       yAutobahn, // Go horizontally to target
-      targetX - targetXOffset + strokeWidth / 2 - 10,
+      horizontalX,
       targetY, // Go down to target
       targetX,
       targetY // Final position
