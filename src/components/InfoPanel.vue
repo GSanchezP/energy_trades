@@ -78,7 +78,7 @@
               <div class="node-title">
                 <h2>{{ node.id }}</h2>
                 <div  >
-                  {{ node.nodeLevel }}
+                  {{ node.level.id }}
                 </div>
               </div>
               

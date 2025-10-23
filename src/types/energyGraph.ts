@@ -1,6 +1,6 @@
 import { EnergyNode } from './energyNode'
 import { BASE_NODE_HEIGHT, NodeDrawer } from './nodeDrawer'
-import { NodeLevel, nodeLevelIndex, NodeLevels, NodeType } from './nodesConfig'
+import { NodeLevel, NodeLevels, NodeType } from './nodesConfig'
 
 export class EnergyGraph {
   private LOW_AUTOBAHN = 680
@@ -38,10 +38,10 @@ export class EnergyGraph {
   get graphEroi(): number {
     return (
       this.energyNodes
-        .filter((node) => node.nodeLevel === 'tertiary')
+        .filter((node) => node.level.id === 'tertiary')
         .reduce((a, b) => a + b.inputPower, 0) /
       this.energyNodes
-        .filter((node) => node.nodeLevel === 'extraction')
+        .filter((node) => node.level.id === 'extraction')
         .reduce((a, b) => a + b.inputPower, 0)
     )
   }
@@ -64,10 +64,10 @@ export class EnergyGraph {
     )
     for (const node of this.energyNodes) {
       node.setPosition = {
-        x: 100 + (nodeLevelIndex(node.nodeLevel) - 1) * 300,
-        y: 200 + numNodesPerLevel[node.nodeLevel] * 200
+        x: 100 + (node.level.value - 1) * 300,
+        y: 200 + numNodesPerLevel[node.level.id] * 200
       }
-      numNodesPerLevel[node.nodeLevel] += 1
+      numNodesPerLevel[node.level.id] += 1
     }
 
     this.LOW_AUTOBAHN = (Math.max(...Object.values(numNodesPerLevel)) + 1) * 200
@@ -155,8 +155,8 @@ export class EnergyGraph {
 
     // Flow goes to lower level - exit from top of source
 
-    const sourceLevel = nodeLevelIndex(source.nodeLevel)
-    const targetLevel = nodeLevelIndex(target.nodeLevel)
+    const sourceLevel = source.level.value
+    const targetLevel = target.level.value
 
     let yAutobahn
     if (targetLevel - sourceLevel === 1) {

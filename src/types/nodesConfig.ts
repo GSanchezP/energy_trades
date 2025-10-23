@@ -26,10 +26,6 @@ export const NodeLevels = [
 ] as const
 export type NodeLevel = (typeof NodeLevels)[number]
 
-export function nodeLevelIndex(nodeLevel: NodeLevel) {
-  return NodeLevels.indexOf(nodeLevel)
-}
-
 export interface NodeConfig {
   id: NodeType
   label: string

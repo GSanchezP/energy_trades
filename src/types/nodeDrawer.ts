@@ -1,4 +1,4 @@
-import { NodeLevel, NodeType } from './nodesConfig'
+import { NodeLevel, NodeLevels, NodeType } from './nodesConfig'
 
 export interface Position {
   x: number
@@ -8,9 +8,13 @@ export interface Position {
 export const BASE_NODE_HEIGHT = 160
 export const BASE_NODE_WIDTH = 120
 
+function nodeLevelIndex(nodeLevel: NodeLevel) {
+  return NodeLevels.indexOf(nodeLevel)
+}
+
 export class NodeDrawer {
   private _id: NodeType
-  private _nodeLevel: NodeLevel
+  private _level: { id: NodeLevel; value: number }
   private _position: Position = { x: 0, y: 0 }
   private _size: { height: number; width: number }
   private _color: string = '#ffffff'
@@ -22,7 +26,7 @@ export class NodeDrawer {
     size?: { height?: number; width?: number }
   ) {
     this._id = id
-    this._nodeLevel = nodeLevel
+    this._level = { id: nodeLevel, value: nodeLevelIndex(nodeLevel) }
     this._color = color
     this._size = { height: size?.height ?? BASE_NODE_HEIGHT, width: size?.width ?? BASE_NODE_WIDTH }
   }
@@ -31,8 +35,8 @@ export class NodeDrawer {
     return this._id
   }
 
-  get nodeLevel(): NodeLevel {
-    return this._nodeLevel
+  get level(): { id: NodeLevel; value: number } {
+    return this._level
   }
 
   get color(): string {
