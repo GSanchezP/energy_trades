@@ -1,6 +1,8 @@
 import { EnergyNode } from './energyNode'
 import { BASE_NODE_HEIGHT, NodeDrawer, nodeLevelValue, prevLevel } from './nodeDrawer'
-import { NodeLevel, NodeLevels, NodeType } from './nodesConfig'
+import { NodeLevel, NodeLevels } from './nodesConfig'
+
+type ConnectorType = 'above' | 'below' | 'middle'
 
 export class EnergyGraph {
   private LOW_AUTOBAHN = 680
@@ -54,7 +56,7 @@ export class EnergyGraph {
         if (!value) continue
         const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
         if (!targetNode) continue
-        if (this.levelComparer(node, targetNode) === 'above') {
+        if (this.levelComparer(node, targetNode) === 'greater') {
           this.lowerTotalUsage += value
         }
       }
@@ -64,7 +66,7 @@ export class EnergyGraph {
   calculateVerticalUsage() {
     const calculate = (dir: 'low' | 'high') => {
       const verticalUsage: Partial<Record<NodeLevel, number>> = {}
-      const nodeDir = dir === 'low' ? 'above' : 'below'
+      const nodeDir: LevelComparerResult = dir === 'low' ? 'smaller' : 'greater'
       for (const level of NodeLevels) {
         const nodes = this.energyNodes.filter((n) => n.level.id === level)
 
@@ -165,7 +167,7 @@ export class EnergyGraph {
         for (const [targetNodeId, power] of Object.entries(node.outputMap).reverse()) {
           const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
           if (!targetNode || !power) continue
-          if (this.levelComparer(node, targetNode) === 'above') {
+          if (this.levelComparer(node, targetNode) === 'smaller') {
             const connector = this.createConnector(
               node,
               targetNode,
@@ -192,7 +194,7 @@ export class EnergyGraph {
         for (const [targetNodeId, power] of Object.entries(node.outputMap)) {
           const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
           if (!targetNode || !power) continue
-          if (this.levelComparer(node, targetNode) === 'below') {
+          if (this.levelComparer(node, targetNode) === 'greater') {
             const connector = this.createConnector(
               node,
               targetNode,
@@ -259,7 +261,7 @@ export class EnergyGraph {
     power: number,
     xSourceOffsetMap: Partial<Record<NodeLevel, number>>,
     xTargetOffsetMap: Partial<Record<NodeLevel, number>>,
-    direction: 'above' | 'below' | 'middle'
+    connectorType: ConnectorType
   ): Connector {
     const strokeWidth = power * BASE_NODE_HEIGHT
 
@@ -278,7 +280,7 @@ export class EnergyGraph {
 
     // Update offset maps
     xTargetOffsetMap[target.level.id]! = targetXOffset
-    if (direction !== 'middle') {
+    if (connectorType !== 'middle') {
       xSourceOffsetMap[source.level.id]! += strokeWidth
     }
 
@@ -290,10 +292,10 @@ export class EnergyGraph {
 
     // Calculate autobahn Y based on direction
     let yAutobahn: number
-    if (direction === 'middle') {
+    if (connectorType === 'middle') {
       yAutobahn = sourceY // Direct horizontal connection
     } else {
-      yAutobahn = this.calculateAutobahnY(direction, strokeWidth)
+      yAutobahn = this.calculateAutobahnY(connectorType, strokeWidth)
     }
 
     // Calculate points based on direction
@@ -360,18 +362,20 @@ export class EnergyGraph {
     }
   }
 
-  private levelComparer(sourceNode: EnergyNode, targetNode: EnergyNode) {
+  private levelComparer(sourceNode: EnergyNode, targetNode: EnergyNode): LevelComparerResult {
     const sourceLevel = sourceNode.level.value
     const targetLevel = targetNode.level.value
     if (targetLevel - sourceLevel === 1) {
       return 'next'
     } else if (sourceLevel < targetLevel) {
-      return 'above'
+      return 'smaller'
     } else {
-      return 'below'
+      return 'greater'
     }
   }
 }
+
+export type LevelComparerResult = 'next' | 'smaller' | 'greater'
 
 export interface Connector {
   id: string
