@@ -149,6 +149,7 @@ export class EnergyGraph {
 
     const xTargetOffsetMap: Partial<Record<NodeLevel, number>> = {}
 
+    // Below Connectors
     for (const level of NodeLevels) {
       // Starting from below
       let xOffset = 0
@@ -161,6 +162,29 @@ export class EnergyGraph {
           if (!targetNode || !power) continue
           if (this.levelComparer(node, targetNode) === 'above') {
             const connector = this.createBelowConnector(
+              node,
+              targetNode,
+              power,
+              xOffset,
+              xTargetOffsetMap
+            )
+            xOffset += connector.strokeWidth
+            this.connectors.push(connector)
+          }
+        }
+      }
+    }
+
+    // Above Connectors
+    for (const level of NodeLevels) {
+      // Starting from below
+      let xOffset = 0
+      for (const node of this.energyNodes.filter((n) => n.level.id === level)) {
+        for (const [targetNodeId, power] of Object.entries(node.outputMap)) {
+          const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
+          if (!targetNode || !power) continue
+          if (this.levelComparer(node, targetNode) === 'below') {
+            const connector = this.createAboveConnector(
               node,
               targetNode,
               power,
@@ -210,6 +234,79 @@ export class EnergyGraph {
 
     const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
     xTargetOffsetMap[target.level.id]! = targetXOffset
+
+    let sourceXOffset = 10 + xOffset + strokeWidth / 2
+
+    const sourceX = source.x + source.width
+    const sourceY = source.y + sourceYOffset + strokeWidth / 2
+    const targetX = target.x
+    const targetY = target.y + strokeWidth / 2
+
+    let points: number[]
+
+    // Flow goes to lower level - exit from top of source
+
+    let yAutobahn =
+      this.LOW_AUTOBAHN +
+      this.lowerTotalUsage * BASE_NODE_HEIGHT -
+      strokeWidth / 2 -
+      this.lowerCurrentUsage
+
+    this.lowerCurrentUsage += strokeWidth
+
+    points = [
+      sourceX,
+      sourceY, // Start at top center of source
+
+      sourceX + sourceXOffset,
+      sourceY, // Go to the left
+
+      sourceX + sourceXOffset,
+      yAutobahn, // Go down the autobahn
+
+      targetX - targetXOffset + strokeWidth / 2 - 10,
+      yAutobahn, // Go horizontally to target
+
+      targetX - targetXOffset + strokeWidth / 2 - 10,
+      targetY, // Go down to target center
+
+      targetX,
+      targetY // Go down to target center
+    ]
+
+    return {
+      id: `${source.id}-${target.id}`,
+      from: source.id,
+      to: target.id,
+      points,
+      power,
+      strokeWidth,
+      color: source.color
+    }
+  }
+
+  private createAboveConnector(
+    source: EnergyNode,
+    target: EnergyNode,
+    power: number,
+    xOffset: number,
+    xTargetOffsetMap: Partial<Record<NodeLevel, number>>
+  ): Connector {
+    let sourceYOffset = 0
+    for (const [key, value] of Object.entries(source.outputMap)) {
+      if (key === target.id) break
+      sourceYOffset += value * BASE_NODE_HEIGHT
+    }
+
+    if (!xTargetOffsetMap[target.level.id]) {
+      xTargetOffsetMap[target.level.id] = 0
+    }
+
+    // Calculate stroke width based on power (min 0, max 100)
+    const strokeWidth = power * BASE_NODE_HEIGHT
+
+    const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
+    xTargetOffsetMap[target.level.id]! = targetXOffset
     console.log(
       `Connector ${source.id} -> ${target.id} added ${strokeWidth} to target offset(${target.level.id}): ${xTargetOffsetMap[target.level.id]}`
     )
@@ -226,7 +323,7 @@ export class EnergyGraph {
     // Flow goes to lower level - exit from top of source
 
     let yAutobahn =
-      this.LOW_AUTOBAHN +
+      this.UPPER_AUTOBAHN +
       this.lowerTotalUsage * BASE_NODE_HEIGHT -
       strokeWidth / 2 -
       this.lowerCurrentUsage
@@ -303,8 +400,7 @@ export class EnergyGraph {
     } else if (levelRelation === 'above') {
       return undefined
     } else {
-      yAutobahn = this.UPPER_AUTOBAHN - this.upperUsageLevel - strokeWidth / 2
-      this.upperUsage.push(strokeWidth)
+      return undefined
     }
 
     points = [
