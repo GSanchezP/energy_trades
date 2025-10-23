@@ -14,6 +14,7 @@ export class EnergyGraph {
   private upperUsage: number[] = []
   private lowerTotalUsage: number = 0
   private lowerCurrentUsage: number = 0
+  private upperCurrentUsage: number = 0
 
   private verticalUsage: Partial<Record<NodeLevel, number>> = {}
 
@@ -221,6 +222,30 @@ export class EnergyGraph {
     }
   }
 
+  private calculateYOffset(node: EnergyNode, targetId: string, isInput: boolean): number {
+    const map = isInput ? node.inputMap : node.outputMap
+    let offset = 0
+    for (const [key, value] of Object.entries(map)) {
+      if (key === targetId) break
+      offset += value * BASE_NODE_HEIGHT
+    }
+    return offset
+  }
+
+  private calculateAutobahnY(direction: 'above' | 'below', strokeWidth: number): number {
+    const baseAutobahn = direction === 'below' ? this.LOW_AUTOBAHN : this.UPPER_AUTOBAHN
+    const curr = direction === 'below' ? this.lowerCurrentUsage : this.upperCurrentUsage
+    const total = direction === 'below' ? this.lowerTotalUsage : 0
+    if (direction === 'below') {
+      // Update usage tracking
+      this.lowerCurrentUsage += strokeWidth
+    } else {
+      // Update usage tracking
+      this.upperCurrentUsage += strokeWidth
+    }
+    return baseAutobahn + total * BASE_NODE_HEIGHT - strokeWidth / 2 - curr
+  }
+
   private createVerticalConnector(
     source: EnergyNode,
     target: EnergyNode,
@@ -229,66 +254,43 @@ export class EnergyGraph {
     xTargetOffsetMap: Partial<Record<NodeLevel, number>>,
     direction: 'above' | 'below'
   ): Connector {
-    let sourceYOffset = 0
-    for (const [key, value] of Object.entries(source.outputMap)) {
-      if (key === target.id) break
-      sourceYOffset += value * BASE_NODE_HEIGHT
-    }
+    const strokeWidth = power * BASE_NODE_HEIGHT
 
-    let targetOffset = 0
-    for (const [key, value] of Object.entries(target.inputMap)) {
-      if (key === source.id) break
-      targetOffset += value * BASE_NODE_HEIGHT
-    }
-
+    // Initialize target offset map if needed
     if (!xTargetOffsetMap[target.level.id]) {
       xTargetOffsetMap[target.level.id] = 0
     }
 
-    // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = power * BASE_NODE_HEIGHT
-
+    // Calculate offsets
+    const sourceYOffset = this.calculateYOffset(source, target.id, false)
+    const targetOffset = this.calculateYOffset(target, source.id, true)
     const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
-    xTargetOffsetMap[target.level.id]! = targetXOffset
+    const sourceXOffset = 10 + (xSourceOffsetMap[source.level.id]! ?? 0) + strokeWidth / 2
 
-    let sourceXOffset = 10 + xSourceOffsetMap[source.level.id]! + strokeWidth / 2
+    // Update offset maps
+    xTargetOffsetMap[target.level.id]! = targetXOffset
     xSourceOffsetMap[source.level.id]! += strokeWidth
 
+    // Calculate positions
     const sourceX = source.x + source.width
     const sourceY = source.y + sourceYOffset + strokeWidth / 2
     const targetX = target.x
     const targetY = target.y + strokeWidth / 2 + targetOffset
+    const yAutobahn = this.calculateAutobahnY(direction, strokeWidth)
 
-    let points: number[]
-
-    // Flow goes to lower level - exit from top of source
-
-    let yAutobahn =
-      (direction === 'below' ? this.LOW_AUTOBAHN : this.UPPER_AUTOBAHN) +
-      this.lowerTotalUsage * BASE_NODE_HEIGHT -
-      strokeWidth / 2 -
-      this.lowerCurrentUsage
-
-    this.lowerCurrentUsage += strokeWidth
-
-    points = [
+    const points = [
       sourceX,
-      sourceY, // Start at top center of source
-
+      sourceY, // Start at source
       sourceX + sourceXOffset,
-      sourceY, // Go to the left
-
+      sourceY, // Go right
       sourceX + sourceXOffset,
-      yAutobahn, // Go down the autobahn
-
+      yAutobahn, // Go down to autobahn
       targetX - targetXOffset + strokeWidth / 2 - 10,
       yAutobahn, // Go horizontally to target
-
       targetX - targetXOffset + strokeWidth / 2 - 10,
-      targetY, // Go down to target center
-
+      targetY, // Go down to target
       targetX,
-      targetY // Go down to target center
+      targetY // Final position
     ]
 
     return {
