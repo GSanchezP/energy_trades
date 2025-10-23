@@ -147,15 +147,19 @@ export class EnergyGraph {
   generateFlowConnectors() {
     this.upperUsage = []
 
+    let xSourceOffsetMap: Partial<Record<NodeLevel, number>> = {}
     const xTargetOffsetMap: Partial<Record<NodeLevel, number>> = {}
 
     // Below Connectors
     for (const level of NodeLevels) {
       // Starting from below
-      let xOffset = 0
+      if (!xSourceOffsetMap[level]) {
+        xSourceOffsetMap[level] = 0
+      }
       for (const node of this.energyNodes.filter((n) => n.level.id === level).reverse()) {
-        const dumpConnector = this.createDumpConnector(node, xOffset)
-        xOffset += dumpConnector.strokeWidth
+        const dumpConnector = this.createDumpConnector(node, xSourceOffsetMap[level])
+
+        xSourceOffsetMap[node.level.id]! += dumpConnector.strokeWidth
         this.connectors.push(dumpConnector)
         for (const [targetNodeId, power] of Object.entries(node.outputMap).reverse()) {
           const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
@@ -165,20 +169,23 @@ export class EnergyGraph {
               node,
               targetNode,
               power,
-              xOffset,
+              xSourceOffsetMap,
               xTargetOffsetMap
             )
-            xOffset += connector.strokeWidth
             this.connectors.push(connector)
           }
         }
       }
     }
 
+    // Reset from above
+    xSourceOffsetMap = {}
     // Above Connectors
     for (const level of NodeLevels) {
-      // Starting from below
-      let xOffset = 0
+      // Starting from above
+      if (!xSourceOffsetMap[level]) {
+        xSourceOffsetMap[level] = 0
+      }
       for (const node of this.energyNodes.filter((n) => n.level.id === level)) {
         for (const [targetNodeId, power] of Object.entries(node.outputMap)) {
           const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
@@ -188,10 +195,9 @@ export class EnergyGraph {
               node,
               targetNode,
               power,
-              xOffset,
+              xSourceOffsetMap,
               xTargetOffsetMap
             )
-            xOffset += connector.strokeWidth
             this.connectors.push(connector)
           }
         }
@@ -217,7 +223,7 @@ export class EnergyGraph {
     source: EnergyNode,
     target: EnergyNode,
     power: number,
-    xOffset: number,
+    xSourceOffsetMap: Partial<Record<NodeLevel, number>>,
     xTargetOffsetMap: Partial<Record<NodeLevel, number>>
   ): Connector {
     let sourceYOffset = 0
@@ -242,7 +248,8 @@ export class EnergyGraph {
     const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
     xTargetOffsetMap[target.level.id]! = targetXOffset
 
-    let sourceXOffset = 10 + xOffset + strokeWidth / 2
+    let sourceXOffset = 10 + xSourceOffsetMap[source.level.id]! + strokeWidth / 2
+    xSourceOffsetMap[source.level.id]! += strokeWidth
 
     const sourceX = source.x + source.width
     const sourceY = source.y + sourceYOffset + strokeWidth / 2
@@ -296,7 +303,7 @@ export class EnergyGraph {
     source: EnergyNode,
     target: EnergyNode,
     power: number,
-    xOffset: number,
+    xSourceOffsetMap: Partial<Record<NodeLevel, number>>,
     xTargetOffsetMap: Partial<Record<NodeLevel, number>>
   ): Connector {
     let sourceYOffset = 0
@@ -321,7 +328,8 @@ export class EnergyGraph {
     const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
     xTargetOffsetMap[target.level.id]! = targetXOffset
 
-    let sourceXOffset = 10 + xOffset + strokeWidth / 2
+    let sourceXOffset = 10 + xSourceOffsetMap[source.level.id]! + strokeWidth / 2
+    xSourceOffsetMap[source.level.id]! += strokeWidth
 
     const sourceX = source.x + source.width
     const sourceY = source.y + sourceYOffset + strokeWidth / 2
