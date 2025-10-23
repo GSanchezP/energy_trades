@@ -270,16 +270,11 @@ export class EnergyGraph {
 
     // Calculate offsets
     const sourceYOffset = this.calculateYOffset(source, target.id, false)
-    const targetOffset = this.calculateYOffset(target, source.id, true)
+    const targetYOffset = this.calculateYOffset(target, source.id, true)
     const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
 
     // Calculate X offsets based on direction
-    let sourceXOffset: number
-    if (direction === 'middle') {
-      sourceXOffset = 10 + strokeWidth / 2
-    } else {
-      sourceXOffset = 10 + (xSourceOffsetMap[source.level.id]! ?? 0) + strokeWidth / 2
-    }
+    let sourceXOffset = 10 + (xSourceOffsetMap[source.level.id]! ?? 0) + strokeWidth / 2
 
     // Update offset maps
     xTargetOffsetMap[target.level.id]! = targetXOffset
@@ -291,7 +286,7 @@ export class EnergyGraph {
     const sourceX = source.x + source.width
     const sourceY = source.y + sourceYOffset + strokeWidth / 2
     const targetX = target.x
-    const targetY = target.y + strokeWidth / 2 + targetOffset
+    const targetY = target.y + strokeWidth / 2 + targetYOffset
 
     // Calculate autobahn Y based on direction
     let yAutobahn: number
@@ -302,38 +297,20 @@ export class EnergyGraph {
     }
 
     // Calculate points based on direction
-    let points: number[]
-    if (direction === 'middle') {
-      points = [
-        sourceX,
-        sourceY, // Start at source
-        sourceX + sourceXOffset + sourceYOffset,
-        sourceY, // Go right
-        sourceX + sourceXOffset + sourceYOffset,
-        yAutobahn, // Stay horizontal
-        targetX - sourceXOffset - targetXOffset,
-        yAutobahn, // Go horizontally to target
-        targetX - sourceXOffset - targetXOffset,
-        targetY, // Go down to target
-        targetX,
-        targetY // Final position
-      ]
-    } else {
-      points = [
-        sourceX,
-        sourceY, // Start at source
-        sourceX + sourceXOffset,
-        sourceY, // Go right
-        sourceX + sourceXOffset,
-        yAutobahn, // Go down to autobahn
-        targetX - targetXOffset + strokeWidth / 2 - 10,
-        yAutobahn, // Go horizontally to target
-        targetX - targetXOffset + strokeWidth / 2 - 10,
-        targetY, // Go down to target
-        targetX,
-        targetY // Final position
-      ]
-    }
+    let points = [
+      sourceX,
+      sourceY, // Start at source
+      sourceX + sourceXOffset,
+      sourceY, // Go right
+      sourceX + sourceXOffset,
+      yAutobahn, // Go down to autobahn
+      targetX - targetXOffset + strokeWidth / 2 - 10,
+      yAutobahn, // Go horizontally to target
+      targetX - targetXOffset + strokeWidth / 2 - 10,
+      targetY, // Go down to target
+      targetX,
+      targetY // Final position
+    ]
 
     return {
       id: `${source.id}-${target.id}`,
