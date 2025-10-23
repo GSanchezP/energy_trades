@@ -166,7 +166,7 @@ export class EnergyGraph {
           const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
           if (!targetNode || !power) continue
           if (this.levelComparer(node, targetNode) === 'above') {
-            const connector = this.createVerticalConnector(
+            const connector = this.createConnector(
               node,
               targetNode,
               power,
@@ -193,7 +193,7 @@ export class EnergyGraph {
           const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
           if (!targetNode || !power) continue
           if (this.levelComparer(node, targetNode) === 'below') {
-            const connector = this.createVerticalConnector(
+            const connector = this.createConnector(
               node,
               targetNode,
               power,
@@ -214,7 +214,14 @@ export class EnergyGraph {
           const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
           if (!targetNode || !power) continue
           if (this.levelComparer(node, targetNode) === 'next') {
-            const connector = this.createMiddleConnector(node, targetNode, power, xTargetOffsetMap)
+            const connector = this.createConnector(
+              node,
+              targetNode,
+              power,
+              xSourceOffsetMap,
+              xTargetOffsetMap,
+              'middle'
+            )
             this.connectors.push(connector)
           }
         }
@@ -246,13 +253,13 @@ export class EnergyGraph {
     return baseAutobahn + total * BASE_NODE_HEIGHT - strokeWidth / 2 - curr
   }
 
-  private createVerticalConnector(
+  private createConnector(
     source: EnergyNode,
     target: EnergyNode,
     power: number,
     xSourceOffsetMap: Partial<Record<NodeLevel, number>>,
     xTargetOffsetMap: Partial<Record<NodeLevel, number>>,
-    direction: 'above' | 'below'
+    direction: 'above' | 'below' | 'middle'
   ): Connector {
     const strokeWidth = power * BASE_NODE_HEIGHT
 
@@ -265,105 +272,68 @@ export class EnergyGraph {
     const sourceYOffset = this.calculateYOffset(source, target.id, false)
     const targetOffset = this.calculateYOffset(target, source.id, true)
     const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
-    const sourceXOffset = 10 + (xSourceOffsetMap[source.level.id]! ?? 0) + strokeWidth / 2
+
+    // Calculate X offsets based on direction
+    let sourceXOffset: number
+    if (direction === 'middle') {
+      sourceXOffset = 10 + strokeWidth / 2
+    } else {
+      sourceXOffset = 10 + (xSourceOffsetMap[source.level.id]! ?? 0) + strokeWidth / 2
+    }
 
     // Update offset maps
     xTargetOffsetMap[target.level.id]! = targetXOffset
-    xSourceOffsetMap[source.level.id]! += strokeWidth
+    if (direction !== 'middle') {
+      xSourceOffsetMap[source.level.id]! += strokeWidth
+    }
 
     // Calculate positions
     const sourceX = source.x + source.width
     const sourceY = source.y + sourceYOffset + strokeWidth / 2
     const targetX = target.x
     const targetY = target.y + strokeWidth / 2 + targetOffset
-    const yAutobahn = this.calculateAutobahnY(direction, strokeWidth)
 
-    const points = [
-      sourceX,
-      sourceY, // Start at source
-      sourceX + sourceXOffset,
-      sourceY, // Go right
-      sourceX + sourceXOffset,
-      yAutobahn, // Go down to autobahn
-      targetX - targetXOffset + strokeWidth / 2 - 10,
-      yAutobahn, // Go horizontally to target
-      targetX - targetXOffset + strokeWidth / 2 - 10,
-      targetY, // Go down to target
-      targetX,
-      targetY // Final position
-    ]
-
-    return {
-      id: `${source.id}-${target.id}`,
-      from: source.id,
-      to: target.id,
-      points,
-      power,
-      strokeWidth,
-      color: source.color
-    }
-  }
-
-  private createMiddleConnector(
-    source: EnergyNode,
-    target: EnergyNode,
-    power: number,
-    xTargetOffsetMap: Partial<Record<NodeLevel, number>>
-  ): Connector {
-    let sourceOffset = 0
-    for (const [key, value] of Object.entries(source.outputMap)) {
-      if (key === target.id) break
-      sourceOffset += value * BASE_NODE_HEIGHT
+    // Calculate autobahn Y based on direction
+    let yAutobahn: number
+    if (direction === 'middle') {
+      yAutobahn = sourceY // Direct horizontal connection
+    } else {
+      yAutobahn = this.calculateAutobahnY(direction, strokeWidth)
     }
 
-    let targetOffset = 0
-    for (const [key, value] of Object.entries(target.inputMap)) {
-      if (key === source.id) break
-      targetOffset += value * BASE_NODE_HEIGHT
-    }
-
-    if (!xTargetOffsetMap[target.level.id]) {
-      xTargetOffsetMap[target.level.id] = 0
-    }
-
-    // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = power * BASE_NODE_HEIGHT
-
-    const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
-    xTargetOffsetMap[target.level.id]! = targetXOffset
-
-    let xOffset = 10 + strokeWidth / 2
-
-    const sourceX = source.x + source.width
-    const sourceY = source.y + sourceOffset + strokeWidth / 2
-    const targetX = target.x
-    const targetY = target.y + targetOffset + strokeWidth / 2
-
+    // Calculate points based on direction
     let points: number[]
-
-    // Flow goes to lower level - exit from top of source
-
-    let yAutobahn = sourceY
-
-    points = [
-      sourceX,
-      sourceY, // Start at top center of source
-
-      sourceX + xOffset + sourceOffset,
-      sourceY, // Go to the left
-
-      sourceX + xOffset + sourceOffset,
-      yAutobahn, // Go down the autobahn
-
-      targetX - xOffset - targetXOffset,
-      yAutobahn, // Go horizontally to target
-
-      targetX - xOffset - targetXOffset,
-      targetY, // Go down to target center
-
-      targetX,
-      targetY // Go down to target center
-    ]
+    if (direction === 'middle') {
+      points = [
+        sourceX,
+        sourceY, // Start at source
+        sourceX + sourceXOffset + sourceYOffset,
+        sourceY, // Go right
+        sourceX + sourceXOffset + sourceYOffset,
+        yAutobahn, // Stay horizontal
+        targetX - sourceXOffset - targetXOffset,
+        yAutobahn, // Go horizontally to target
+        targetX - sourceXOffset - targetXOffset,
+        targetY, // Go down to target
+        targetX,
+        targetY // Final position
+      ]
+    } else {
+      points = [
+        sourceX,
+        sourceY, // Start at source
+        sourceX + sourceXOffset,
+        sourceY, // Go right
+        sourceX + sourceXOffset,
+        yAutobahn, // Go down to autobahn
+        targetX - targetXOffset + strokeWidth / 2 - 10,
+        yAutobahn, // Go horizontally to target
+        targetX - targetXOffset + strokeWidth / 2 - 10,
+        targetY, // Go down to target
+        targetX,
+        targetY // Final position
+      ]
+    }
 
     return {
       id: `${source.id}-${target.id}`,
