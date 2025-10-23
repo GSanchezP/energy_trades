@@ -165,12 +165,13 @@ export class EnergyGraph {
           const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
           if (!targetNode || !power) continue
           if (this.levelComparer(node, targetNode) === 'above') {
-            const connector = this.createBelowConnector(
+            const connector = this.createVerticalConnector(
               node,
               targetNode,
               power,
               xSourceOffsetMap,
-              xTargetOffsetMap
+              xTargetOffsetMap,
+              'below'
             )
             this.connectors.push(connector)
           }
@@ -191,12 +192,13 @@ export class EnergyGraph {
           const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
           if (!targetNode || !power) continue
           if (this.levelComparer(node, targetNode) === 'below') {
-            const connector = this.createAboveConnector(
+            const connector = this.createVerticalConnector(
               node,
               targetNode,
               power,
               xSourceOffsetMap,
-              xTargetOffsetMap
+              xTargetOffsetMap,
+              'above'
             )
             this.connectors.push(connector)
           }
@@ -219,12 +221,13 @@ export class EnergyGraph {
     }
   }
 
-  private createBelowConnector(
+  private createVerticalConnector(
     source: EnergyNode,
     target: EnergyNode,
     power: number,
     xSourceOffsetMap: Partial<Record<NodeLevel, number>>,
-    xTargetOffsetMap: Partial<Record<NodeLevel, number>>
+    xTargetOffsetMap: Partial<Record<NodeLevel, number>>,
+    direction: 'above' | 'below'
   ): Connector {
     let sourceYOffset = 0
     for (const [key, value] of Object.entries(source.outputMap)) {
@@ -261,87 +264,7 @@ export class EnergyGraph {
     // Flow goes to lower level - exit from top of source
 
     let yAutobahn =
-      this.LOW_AUTOBAHN +
-      this.lowerTotalUsage * BASE_NODE_HEIGHT -
-      strokeWidth / 2 -
-      this.lowerCurrentUsage
-
-    this.lowerCurrentUsage += strokeWidth
-
-    points = [
-      sourceX,
-      sourceY, // Start at top center of source
-
-      sourceX + sourceXOffset,
-      sourceY, // Go to the left
-
-      sourceX + sourceXOffset,
-      yAutobahn, // Go down the autobahn
-
-      targetX - targetXOffset + strokeWidth / 2 - 10,
-      yAutobahn, // Go horizontally to target
-
-      targetX - targetXOffset + strokeWidth / 2 - 10,
-      targetY, // Go down to target center
-
-      targetX,
-      targetY // Go down to target center
-    ]
-
-    return {
-      id: `${source.id}-${target.id}`,
-      from: source.id,
-      to: target.id,
-      points,
-      power,
-      strokeWidth,
-      color: source.color
-    }
-  }
-
-  private createAboveConnector(
-    source: EnergyNode,
-    target: EnergyNode,
-    power: number,
-    xSourceOffsetMap: Partial<Record<NodeLevel, number>>,
-    xTargetOffsetMap: Partial<Record<NodeLevel, number>>
-  ): Connector {
-    let sourceYOffset = 0
-    for (const [key, value] of Object.entries(source.outputMap)) {
-      if (key === target.id) break
-      sourceYOffset += value * BASE_NODE_HEIGHT
-    }
-
-    let targetOffset = 0
-    for (const [key, value] of Object.entries(target.inputMap)) {
-      if (key === source.id) break
-      targetOffset += value * BASE_NODE_HEIGHT
-    }
-
-    if (!xTargetOffsetMap[target.level.id]) {
-      xTargetOffsetMap[target.level.id] = 0
-    }
-
-    // Calculate stroke width based on power (min 0, max 100)
-    const strokeWidth = power * BASE_NODE_HEIGHT
-
-    const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
-    xTargetOffsetMap[target.level.id]! = targetXOffset
-
-    let sourceXOffset = 10 + xSourceOffsetMap[source.level.id]! + strokeWidth / 2
-    xSourceOffsetMap[source.level.id]! += strokeWidth
-
-    const sourceX = source.x + source.width
-    const sourceY = source.y + sourceYOffset + strokeWidth / 2
-    const targetX = target.x
-    const targetY = target.y + strokeWidth / 2 + targetOffset
-
-    let points: number[]
-
-    // Flow goes to lower level - exit from top of source
-
-    let yAutobahn =
-      this.UPPER_AUTOBAHN +
+      (direction === 'below' ? this.LOW_AUTOBAHN : this.UPPER_AUTOBAHN) +
       this.lowerTotalUsage * BASE_NODE_HEIGHT -
       strokeWidth / 2 -
       this.lowerCurrentUsage
