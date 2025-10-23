@@ -22,7 +22,7 @@
             :config="{
               points: connector.points,
               stroke: connector.color,
-              strokeWidth: connector.strokeWidth - 2,
+              strokeWidth: connector.strokeWidth - 1.2,
               lineCap: 'round',
               lineJoin: 'round',
               opacity: selectedConnectorId === connector.id ? 0.9 : 0.4
@@ -81,8 +81,7 @@
               align: 'center',
               verticalAlign: 'middle',
               offsetX: square.id.length * 5,
-              offsetY: 7,
-              draggable: true
+              offsetY: 7
             }"
             @click="(e: any) => handleSquareClick(square.id, e)"
           />
@@ -129,7 +128,7 @@ const nodes = computed(() => {
 
 
 const connectors = computed<Connector[]>(() => {
-  return energyGraph.value?.connectors || []
+  return energyGraph.value?.connectors?.filter(c => c.power) || []
 })
 
 const selectedSquares = computed(() => {
