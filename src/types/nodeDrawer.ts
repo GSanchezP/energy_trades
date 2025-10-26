@@ -43,6 +43,10 @@ export class NodeDrawer {
     return this._id
   }
 
+  get label(): string {
+    return this._id
+  }
+
   get level(): { id: NodeLevel; value: number } {
     return this._level
   }

@@ -77,7 +77,7 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'electricity',
-      label: 'Electricity',
+      label: 'Thermal Electricity',
       level: 'conversion',
       color: '#0d92a3ff',
       inputs: {

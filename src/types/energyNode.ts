@@ -1,7 +1,8 @@
 import { BASE_NODE_HEIGHT, NodeDrawer } from './nodeDrawer'
-import { NodeType, NodeWeights, NodeLevel } from './nodesConfig'
+import { NodeLevel, NodeType, NodeWeights } from './nodesConfig'
 
 export class EnergyNode extends NodeDrawer {
+  private _label: string
   private _treDependencies: NodeWeights // Amount of energy to produce 1 watt
   private _inputMap: NodeWeights
   private _outputMap: NodeWeights // which percentage of the produced energy goes into the other nodes,
@@ -12,6 +13,7 @@ export class EnergyNode extends NodeDrawer {
   private _limitingFactor: number
 
   constructor(
+    label: string,
     nodeLevel: NodeLevel,
     nodeType: NodeType,
     treDependencies: NodeWeights, // Amount of energy to produce 1 watt
@@ -24,6 +26,7 @@ export class EnergyNode extends NodeDrawer {
     super(nodeType, nodeLevel, color, {
       height: BASE_NODE_HEIGHT * Math.max(inputPower, outputPower)
     })
+    this._label = label
     this._treDependencies = treDependencies
     this._inputMap = inputMap
     this._outputMap = outputMap
@@ -33,6 +36,10 @@ export class EnergyNode extends NodeDrawer {
     this._eroi = this._outputPower / (this._inputPower + Number.MIN_VALUE)
 
     this._limitingFactor = this.calculateLimitingFactor()
+  }
+
+  get label() {
+    return this._label
   }
 
   get inputPower() {

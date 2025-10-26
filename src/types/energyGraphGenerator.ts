@@ -1,8 +1,8 @@
-import { EnergyNode } from './energyNode'
+import { NodeType, NodeTypes, NodeWeights, NodesConfig, nodesConfig } from './nodesConfig'
 
 import { EnergyGraph } from './energyGraph'
+import { EnergyNode } from './energyNode'
 import { outputMapSolver } from './outputMapSolver'
-import { nodesConfig, NodesConfig, NodeType, NodeTypes, NodeWeights } from './nodesConfig'
 
 export function generateNodes(
   config: NodesConfig,
@@ -11,6 +11,7 @@ export function generateNodes(
 ): EnergyNode[] {
   return config.nodes.map((nodeConfig) => {
     return new EnergyNode(
+      nodeConfig.label,
       nodeConfig.level,
       nodeConfig.id,
       nonPartialNodeWeights(nodeConfig.inputs),

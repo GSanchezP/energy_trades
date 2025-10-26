@@ -1,7 +1,15 @@
 <template>
   <div class="canvas-container">
     <div class="canvas-wrapper">
-      <v-stage ref="stageRef" :config="stageConfig" @wheel="handleWheel" @click="handleStageClick" @mousedown="handleMouseDown" @mousemove="handleMouseMove" @mouseup="handleMouseUp">
+      <v-stage
+        ref="stageRef"
+        :config="stageConfig"
+        @wheel="handleWheel"
+        @click="handleStageClick"
+        @mousedown="handleMouseDown"
+        @mousemove="handleMouseMove"
+        @mouseup="handleMouseUp"
+      >
         <v-layer>
           <v-line
             v-for="connector in connectors"
@@ -74,21 +82,25 @@
             :config="{
               x: square.x + square.width / 2,
               y: square.y + square.height / 2,
-              text: square.id,
+              text: square.label.replace(' ', '\n'),
               fontSize: 18,
               fontFamily: 'Arial',
               fill: '#ffffff',
               align: 'center',
               verticalAlign: 'middle',
-              offsetX: square.id.length * 5,
-              offsetY: 7
+              offsetX: square.width / 2 - 10,
+              offsetY: 10
             }"
             @click="(e: any) => handleSquareClick(square.id, e)"
           />
         </v-layer>
       </v-stage>
     </div>
-    <InfoPanel :selectedNodes="selectedSquares" :selectedConnector="selectedConnector" :energyGraph="energyGraph" />
+    <InfoPanel
+      :selectedNodes="selectedSquares"
+      :selectedConnector="selectedConnector"
+      :energyGraph="energyGraph"
+    />
   </div>
 </template>
 
@@ -107,7 +119,6 @@ const stageRef = ref<any>(null)
 const stageWidth = window.innerWidth - 350
 const stageHeight = window.innerHeight
 
-
 const selectedSquareIds = ref<Set<string>>(new Set())
 const selectedConnectorId = ref<string | null>(null)
 const clickedOnElement = ref<boolean>(false)
@@ -121,14 +132,12 @@ onMounted(async () => {
   energyGraph.value = await generateEnergyGraph()
 })
 
-
 const nodes = computed(() => {
   return energyGraph.value?.nodes || []
 })
 
-
 const connectors = computed<Connector[]>(() => {
-  return energyGraph.value?.connectors?.filter(c => c.power) || []
+  return energyGraph.value?.connectors?.filter((c) => c.power) || []
 })
 
 const selectedSquares = computed(() => {
@@ -139,8 +148,6 @@ const selectedConnector = computed((): Connector | null => {
   if (!selectedConnectorId.value) return null
   return connectors.value.find((conn) => conn.id === selectedConnectorId.value) || null
 })
-
-
 
 const stageConfig = computed(() => ({
   width: stageWidth,
@@ -179,7 +186,6 @@ const handleWheel = (e: any) => {
   }
   stage.position(newPos)
 }
-
 
 const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
   console.log(`Clicked on ${squareId}`)
@@ -230,27 +236,27 @@ const handleMouseDown = (event: { evt: MouseEvent }) => {
 
 const handleMouseMove = (event: { evt: MouseEvent }) => {
   if (!isPanning.value || !lastPointerPosition.value) return
-  
+
   // Clear existing timeout
   if (panTimeout.value) {
     return // TODO: clearTimeout(panTimeout.value)
   }
-  
+
   // Throttle panning updates to every 16ms (~60fps)
   panTimeout.value = setTimeout(() => {
     const stage = stageRef.value?.getNode()
     if (!stage || !isPanning.value || !lastPointerPosition.value) return
-    
+
     const pointer = stage.getPointerPosition()
     const dx = pointer.x - lastPointerPosition.value.x
     const dy = pointer.y - lastPointerPosition.value.y
-    
+
     const currentPos = stage.position()
     stage.position({
       x: currentPos.x + dx,
       y: currentPos.y + dy
     })
-    
+
     lastPointerPosition.value = { x: pointer.x, y: pointer.y }
     panTimeout.value = null
   }, FPS_INTERVAL_IN_MS)
@@ -260,7 +266,7 @@ const handleMouseUp = (event: { evt: MouseEvent }) => {
   if (event.evt.button === 1) {
     isPanning.value = false
     lastPointerPosition.value = null
-    
+
     // Clear any pending timeout
     if (panTimeout.value) {
       clearTimeout(panTimeout.value)
