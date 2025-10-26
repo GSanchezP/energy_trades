@@ -3,6 +3,7 @@ export const NodeTypes = [
   'coal',
   'mining',
   'fuels',
+  'thermalElectricity',
   'electricity',
   'manufacture',
   'food',
@@ -20,6 +21,7 @@ export const NodeLevels = [
   'dump',
   'extraction',
   'conversion',
+  'conversionSum',
   'primary',
   'industrial',
   'tertiary'
@@ -76,13 +78,22 @@ export const nodesConfig: NodesConfig = {
       }
     },
     {
-      id: 'electricity',
+      id: 'thermalElectricity',
       label: 'Thermal Electricity',
       level: 'conversion',
       color: '#0d92a3ff',
       inputs: {
         wellBeing: 0.05,
         coal: 2.5
+      }
+    },
+    {
+      id: 'electricity',
+      label: 'Electricity',
+      level: 'conversionSum',
+      color: '#0d92a3ff',
+      inputs: {
+        thermalElectricity: 1
       }
     },
     {
