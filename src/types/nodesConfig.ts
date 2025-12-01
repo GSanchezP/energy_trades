@@ -4,10 +4,12 @@ export const NodeTypes = [
   'mining',
   'fuels',
   'thermal_electricity',
+  'renewable_electricity',
   'electricity',
   'manufacture',
   'food',
   'thermal_transport',
+  'electric_transport',
   'transport',
   'wellBeing',
   'leisure',
@@ -41,11 +43,11 @@ export class NodeConfig {
   ) {}
 
   get netOutputVar() {
-    return `x-${this.id}`
+    return `T:${this.id}`
   }
 
   public inputFactorVarName(inputNodeId: NodeType) {
-    return `x-${inputNodeId}-${this.id}`
+    return `f:${inputNodeId}:${this.id}`
   }
 
   get factors(): Partial<Record<NodeType, number>> {
@@ -113,12 +115,23 @@ export const nodesConfig: NodesConfig = {
       }
     },
     {
+      id: 'renewable_electricity',
+      label: 'R Electricity',
+      level: 'conversion',
+      color: '#0d92a3ff',
+      factors: {
+        wellBeing: 0.1,
+        manufacture: 0.2
+      }
+    },
+    {
       id: 'electricity',
       label: 'Electricity',
       level: 'conversionSum',
       color: '#0d92a3ff',
       addons: {
-        thermal_electricity: 1
+        thermal_electricity: 0.5,
+        renewable_electricity: 0.5
       }
     },
     {
@@ -156,12 +169,24 @@ export const nodesConfig: NodesConfig = {
       }
     },
     {
+      id: 'electric_transport',
+      label: 'E Transport',
+      level: 'industrial',
+      color: '#58b00aff',
+      factors: {
+        wellBeing: 0.05,
+        electricity: 1.3,
+        manufacture: 0.25
+      }
+    },
+    {
       id: 'transport',
       label: 'Transport',
       level: 'industrial_sum',
       color: '#58b00aff',
       addons: {
-        thermal_transport: 1
+        thermal_transport: 0.5,
+        electric_transport: 0.5
       }
     },
     {

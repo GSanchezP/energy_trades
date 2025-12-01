@@ -40,7 +40,7 @@ function solutionToOutputMap(
   for (const node of config.nodes) {
     outputMap[node.id] = iNodeWeights()
     for (const [keyName, value] of Object.entries(vars)) {
-      const key = keyName.split('-')
+      const key = keyName.split(':')
       if (key[1] === node.id && key[2] !== undefined) {
         const target = nodeFromId(key[2])
 
@@ -72,25 +72,32 @@ export async function outputMapSolver(config: NodesConfig) {
 
   const factorConstraint = (varName: string, flowVarName: string, value: number) => {
     return {
-      name: varName + '_le_' + flowVarName,
+      name: varName + '_factor_' + flowVarName,
       vars: [
         { name: varName, coef: 1 },
         { name: flowVarName, coef: -1 / value }
       ],
-      bnds: { type: glpk.GLP_UP, ub: 0, lb: 0 }
+      bnds: { type: glpk.GLP_FX, ub: 0, lb: 0 }
     }
   }
 
-  const netSumConstraint = (
-    varName: string,
-    netVarsOutputVar: string[],
-    input: boolean = false
-  ) => {
+  const proportionConstraint = (varName: string, propVarName: string, value: number) => {
+    return {
+      name: varName + '_prop_' + propVarName,
+      vars: [
+        { name: propVarName, coef: 1 },
+        { name: varName, coef: -1 * value }
+      ],
+      bnds: { type: glpk.GLP_FX, ub: 0, lb: 0 }
+    }
+  }
+
+  const netSumConstraint = (varName: string, netVarsOutputVar: string[]) => {
     const vars: { name: string; coef: number }[] = []
     for (const netVarOutputVar of netVarsOutputVar) {
-      vars.push({ name: netVarOutputVar, coef: input ? -1 : 1 })
+      vars.push({ name: netVarOutputVar, coef: 1 })
     }
-    vars.push({ name: varName, coef: input ? 1 : -1 })
+    vars.push({ name: varName, coef: -1 })
     return {
       name: varName + '_sum',
       vars: vars,
@@ -116,8 +123,15 @@ export async function outputMapSolver(config: NodesConfig) {
   // Addons
   for (const node of config.nodes.filter((n) => Object.keys(n.addons).length > 0)) {
     const sumConstraintsVars: string[] = []
-    for (const [inputNode] of Object.entries(node.addons)) {
+    for (const [inputNode, value] of Object.entries(node.addons)) {
       sumConstraintsVars.push(node.inputFactorVarName(inputNode as NodeType))
+      constraints.push(
+        proportionConstraint(
+          node.netOutputVar,
+          node.inputFactorVarName(inputNode as NodeType),
+          value
+        )
+      )
     }
     constraints.push(netSumConstraint(node.netOutputVar, sumConstraintsVars))
   }
@@ -141,7 +155,7 @@ export async function outputMapSolver(config: NodesConfig) {
   const objective = {
     direction: glpk.GLP_MAX,
     name: 'maximize_leisure',
-    vars: [{ name: 'x-leisure', coef: 1 }]
+    vars: [{ name: 'T:leisure', coef: 1 }]
   }
 
   const lp = {
