@@ -14,7 +14,7 @@ export function generateNodes(
       nodeConfig.label,
       nodeConfig.level,
       nodeConfig.id,
-      nonPartialNodeWeights(nodeConfig.inputs),
+      nonPartialNodeWeights(nodeConfig.factors),
       inputMaps[nodeConfig.id],
       outputMaps[nodeConfig.id],
       nodeConfig.color

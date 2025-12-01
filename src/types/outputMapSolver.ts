@@ -1,5 +1,5 @@
-import GLPK from 'glpk.js'
-import { NodesConfig, NodeType } from './nodesConfig'
+import GLPK, { Result } from 'glpk.js'
+import { NodeType, NodesConfig } from './nodesConfig'
 import { iNodeWeights, nonPartialNodeWeights } from './energyGraphGenerator'
 
 const glpk = await GLPK()
@@ -62,7 +62,7 @@ export async function outputMapSolver(config: NodesConfig) {
     return { name: `${name}`, type: glpk.GLP_DB, lb: 0, ub: 1 }
   }
 
-  const minOneConstraint = (varName: string) => {
+  const maxOneConstraint = (varName: string) => {
     return {
       name: varName + '_le_1',
       vars: [{ name: varName, coef: 1 }],
@@ -70,7 +70,7 @@ export async function outputMapSolver(config: NodesConfig) {
     }
   }
 
-  const minTreConstraint = (varName: string, flowVarName: string, value: number) => {
+  const factorConstraint = (varName: string, flowVarName: string, value: number) => {
     return {
       name: varName + '_le_' + flowVarName,
       vars: [
@@ -81,20 +81,16 @@ export async function outputMapSolver(config: NodesConfig) {
     }
   }
 
-  const fixSourceConstraint = (varName: string) => {
-    return {
-      name: varName + '_fixed',
-      vars: [{ name: varName, coef: 1 }],
-      bnds: { type: glpk.GLP_FX, lb: 1, ub: 1 }
-    }
-  }
-
-  const netSumConstraint = (varName: string, netVarsOutput: string[]) => {
+  const netSumConstraint = (
+    varName: string,
+    netVarsOutputVar: string[],
+    input: boolean = false
+  ) => {
     const vars: { name: string; coef: number }[] = []
-    for (const netVarOuput of netVarsOutput) {
-      vars.push({ name: netVarOuput, coef: 1 })
+    for (const netVarOutputVar of netVarsOutputVar) {
+      vars.push({ name: netVarOutputVar, coef: input ? -1 : 1 })
     }
-    vars.push({ name: varName, coef: -1 })
+    vars.push({ name: varName, coef: input ? 1 : -1 })
     return {
       name: varName + '_sum',
       vars: vars,
@@ -102,44 +98,44 @@ export async function outputMapSolver(config: NodesConfig) {
     }
   }
 
-  // Var Bounds
+  // Max Output Constraint
   for (const node of config.nodes) {
-    const varName = 'x-' + node.id
-    bounds.push(bound(varName))
+    bounds.push(bound(node.netOutputVar))
+    constraints.push(maxOneConstraint(node.netOutputVar))
   }
 
   // TRE Constraints
-  for (const node of config.nodes) {
-    const varName = 'x-' + node.id
-
-    // TODO: This should be removed
-    // if (node.level === 'Extraction') {
-    //   constraints.push(fixSourceConstraint(varName))
-    //   continue
-    // }
-
-    constraints.push(minOneConstraint(varName))
-    for (const [inputNode, treValue] of Object.entries(node.inputs)) {
-      const flowVarName = `x-${inputNode}-${node.id}`
+  for (const node of config.nodes.filter((n) => Object.keys(n.factors).length > 0)) {
+    for (const [inputNode, treValue] of Object.entries(node.factors)) {
+      const flowVarName = node.inputFactorVarName(inputNode as NodeType)
       bounds.push(bound(flowVarName))
-      constraints.push(minTreConstraint(varName, flowVarName, treValue))
+      constraints.push(factorConstraint(node.netOutputVar, flowVarName, treValue))
     }
   }
 
-  // Net sum constraints
+  // Addons
+  for (const node of config.nodes.filter((n) => Object.keys(n.addons).length > 0)) {
+    const sumConstraintsVars: string[] = []
+    for (const [inputNode] of Object.entries(node.addons)) {
+      sumConstraintsVars.push(node.inputFactorVarName(inputNode as NodeType))
+    }
+    constraints.push(netSumConstraint(node.netOutputVar, sumConstraintsVars))
+  }
+
+  // Net output sum constraints
   for (const node of config.nodes) {
-    const varName = 'x-' + node.id
     if (node.id === 'leisure') continue // TODO: Figure out this
-    const sumConstraints: string[] = []
+
+    const sumConstraintsVars: string[] = []
     for (const sourceNode of config.nodes) {
       if (sourceNode.id === node.id) continue
       for (const targetNode of Object.keys(sourceNode.inputs)) {
         if (targetNode === node.id) {
-          sumConstraints.push(`x-${node.id}-${sourceNode.id}`)
+          sumConstraintsVars.push(sourceNode.inputFactorVarName(node.id))
         }
       }
     }
-    constraints.push(netSumConstraint(varName, sumConstraints))
+    constraints.push(netSumConstraint(node.netOutputVar, sumConstraintsVars))
   }
 
   const objective = {
@@ -176,7 +172,7 @@ export async function outputMapSolver(config: NodesConfig) {
   return output
 }
 
-function formatSolverResult(result: any): string {
+function formatSolverResult(result: Result): string {
   const lines: string[] = []
 
   // Header
@@ -189,7 +185,15 @@ function formatSolverResult(result: any): string {
   lines.push(
     `   • Number of Variables: ${result.result?.vars ? Object.keys(result.result.vars).length : 'Unknown'}`
   )
-  lines.push(`   • Number of Constraints: ${Object.keys(result.result.dual).length || 'Unknown'}`)
+  lines.push(
+    `   • Number of Constraints: ${Object.keys(result.result.dual || []).length || 'Unknown'}`
+  )
+  Object.entries(result.result.dual || [])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .forEach((e) => {
+      lines.push(`   • ${e[0]} Lagrange: ${e[1]}`)
+    })
 
   // Solver Status
   lines.push('\n🎯 SOLVER STATUS:')
@@ -290,10 +294,6 @@ function formatSolverResult(result: any): string {
     lines.push('   • Solve Time: Not available')
   }
 
-  if (result.iterations) {
-    lines.push(`   • Iterations: ${result.iterations}`)
-  }
-
   // Variable Summary
   lines.push('\n📈 VARIABLE SUMMARY:')
   if (result.result?.vars) {
@@ -307,15 +307,10 @@ function formatSolverResult(result: any): string {
     lines.push(`   • Non-zero Variables: ${nonZeroVars.length}`)
     lines.push(`   • Zero Variables: ${varCount - nonZeroVars.length}`)
 
-    if (nonZeroVars.length > 0) {
-      lines.push('\n🔍 KEY VARIABLES (Non-zero values):')
-      nonZeroVars.slice(0, 10).forEach(([name, value]) => {
-        lines.push(`   • ${name}: ${(value as number).toFixed(6)}`)
-      })
-      if (nonZeroVars.length > 10) {
-        lines.push(`   • ... and ${nonZeroVars.length - 10} more variables`)
-      }
-    }
+    lines.push('\n🔍 KEY VARIABLES ):')
+    Object.entries(vars).forEach(([name, value]) => {
+      lines.push(`   • ${name}: ${value}`)
+    })
   }
 
   // Footer

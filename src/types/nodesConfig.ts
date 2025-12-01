@@ -3,10 +3,11 @@ export const NodeTypes = [
   'coal',
   'mining',
   'fuels',
-  'thermalElectricity',
+  'thermal_electricity',
   'electricity',
   'manufacture',
   'food',
+  'thermal_transport',
   'transport',
   'wellBeing',
   'leisure',
@@ -24,16 +25,40 @@ export const NodeLevels = [
   'conversionSum',
   'primary',
   'industrial',
+  'industrial_sum',
   'tertiary'
 ] as const
 export type NodeLevel = (typeof NodeLevels)[number]
 
-export interface NodeConfig {
-  id: NodeType
-  label: string
-  level: NodeLevel
-  color: string
-  inputs: Partial<Record<NodeType, number>>
+export class NodeConfig {
+  constructor(
+    readonly id: NodeType,
+    readonly label: string,
+    readonly level: NodeLevel,
+    readonly color: string,
+    readonly _factors?: Partial<Record<NodeType, number>>,
+    readonly _addons?: Partial<Record<NodeType, number>>
+  ) {}
+
+  get netOutputVar() {
+    return `x-${this.id}`
+  }
+
+  public inputFactorVarName(inputNodeId: NodeType) {
+    return `x-${inputNodeId}-${this.id}`
+  }
+
+  get factors(): Partial<Record<NodeType, number>> {
+    return this._factors ?? {}
+  }
+
+  get addons(): Partial<Record<NodeType, number>> {
+    return this._addons ?? {}
+  }
+
+  get inputs(): Partial<Record<NodeType, number>> {
+    return { ...this.factors, ...this.addons }
+  }
 }
 
 export interface NodesConfig {
@@ -47,7 +72,7 @@ export const nodesConfig: NodesConfig = {
       label: 'Petroleum',
       level: 'extraction',
       color: '#442d54ff',
-      inputs: {
+      factors: {
         wellBeing: 0.05,
         fuels: 0.02,
         electricity: 0.02,
@@ -59,7 +84,7 @@ export const nodesConfig: NodesConfig = {
       label: 'Coal',
       level: 'extraction',
       color: '#3d2913ff',
-      inputs: {
+      factors: {
         wellBeing: 0.05,
         fuels: 0.02,
         electricity: 0.02,
@@ -71,18 +96,18 @@ export const nodesConfig: NodesConfig = {
       label: 'Fuel',
       level: 'conversion',
       color: '#610a52ff',
-      inputs: {
+      factors: {
         wellBeing: 0.05,
         petroleum: 1.2,
         electricity: 0.01
       }
     },
     {
-      id: 'thermalElectricity',
-      label: 'Thermal Electricity',
+      id: 'thermal_electricity',
+      label: 'T Electricity',
       level: 'conversion',
       color: '#0d92a3ff',
-      inputs: {
+      factors: {
         wellBeing: 0.05,
         coal: 2.5
       }
@@ -92,8 +117,8 @@ export const nodesConfig: NodesConfig = {
       label: 'Electricity',
       level: 'conversionSum',
       color: '#0d92a3ff',
-      inputs: {
-        thermalElectricity: 1
+      addons: {
+        thermal_electricity: 1
       }
     },
     {
@@ -101,7 +126,7 @@ export const nodesConfig: NodesConfig = {
       label: 'Mining',
       level: 'primary',
       color: '#856350ff',
-      inputs: {
+      factors: {
         wellBeing: 0.05,
         fuels: 1,
         electricity: 0.25
@@ -112,7 +137,7 @@ export const nodesConfig: NodesConfig = {
       label: 'Food',
       level: 'primary',
       color: '#b0b00aff',
-      inputs: {
+      factors: {
         wellBeing: 0.15,
         fuels: 0.65,
         manufacture: 0.25,
@@ -120,14 +145,23 @@ export const nodesConfig: NodesConfig = {
       }
     },
     {
-      id: 'transport',
-      label: 'Transport',
+      id: 'thermal_transport',
+      label: 'T Transport',
       level: 'industrial',
       color: '#58b00aff',
-      inputs: {
+      factors: {
         wellBeing: 0.05,
         fuels: 3,
         manufacture: 0.15
+      }
+    },
+    {
+      id: 'transport',
+      label: 'Transport',
+      level: 'industrial_sum',
+      color: '#58b00aff',
+      addons: {
+        thermal_transport: 1
       }
     },
     {
@@ -135,7 +169,7 @@ export const nodesConfig: NodesConfig = {
       label: 'Manufacture',
       level: 'industrial',
       color: '#976c17ff',
-      inputs: {
+      factors: {
         wellBeing: 0.05,
         mining: 1,
         electricity: 1.6,
@@ -147,7 +181,7 @@ export const nodesConfig: NodesConfig = {
       label: 'Well Being',
       level: 'tertiary',
       color: '#1fbb65ff',
-      inputs: {
+      factors: {
         fuels: 0.25,
         electricity: 0.2,
         manufacture: 0.2,
@@ -160,7 +194,7 @@ export const nodesConfig: NodesConfig = {
       label: 'Leisure',
       level: 'tertiary',
       color: '#c953bdff',
-      inputs: {
+      factors: {
         fuels: 0.15,
         electricity: 0.2,
         manufacture: 0.2,
@@ -169,5 +203,8 @@ export const nodesConfig: NodesConfig = {
         food: 0.4
       }
     }
-  ]
+  ].map(
+    (n) =>
+      new NodeConfig(n.id as NodeType, n.label, n.level as NodeLevel, n.color, n.factors, n.addons)
+  )
 }

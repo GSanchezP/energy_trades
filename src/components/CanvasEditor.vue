@@ -82,7 +82,7 @@
             :config="{
               x: square.x + square.width / 2,
               y: square.y + square.height / 2,
-              text: square.label.replace(' ', '\n'),
+              text: square.label,
               fontSize: 18,
               fontFamily: 'Arial',
               fill: '#ffffff',
