@@ -1,5 +1,11 @@
 import { EnergyNode } from './energyNode'
-import { BASE_NODE_HEIGHT, NodeDrawer, nodeLevelValue, prevLevel } from './nodeDrawer'
+import {
+  BASE_NODE_HEIGHT,
+  BASE_NODE_WIDTH,
+  NodeDrawer,
+  nodeLevelValue,
+  prevLevel
+} from './nodeDrawer'
 import { NodeLevel, NodeLevels } from './nodesConfig'
 
 type ConnectorType = 'above' | 'below' | 'middle'
@@ -155,14 +161,19 @@ export class EnergyGraphDrawer {
     let xOffset = 0
     for (const level of NodeLevels) {
       if (nodeLevelValue(level)) {
-        const value = (this.verticalUsage[prevLevel(level)] ?? 0) * BASE_NODE_HEIGHT
+        let prevVerticalUsage = this.verticalUsage[prevLevel(level)]
+        const value = (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT
         xOffset += value
       }
 
       let i = 0
       for (const node of this.energyNodes.filter((n) => n.level.id === level)) {
+        const nodeSpacing = BASE_NODE_WIDTH * (node.level.value - 1)
+        console.log(
+          `[${level}][${node.id}] Node spacing: ${nodeSpacing}, xOffset: ${xOffset}, x: ${BASE_NODE_HEIGHT + nodeSpacing + xOffset}`
+        )
         node.setPosition = {
-          x: 100 + (node.level.value - 1) * this.NODE_X_SPACING + xOffset,
+          x: BASE_NODE_HEIGHT + nodeSpacing + xOffset,
           y: 200 + i * 200
         }
         i++
