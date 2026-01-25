@@ -193,10 +193,8 @@ export class EnergyGraphDrawer {
       connectorType: ConnectorType
     }> = [
       { reverse: true, levelComparer: 'above-next', connectorType: 'below' },
-      { reverse: false, levelComparer: 'next', connectorType: 'middle' },
-      { reverse: false, levelComparer: 'same', connectorType: 'above' },
-      { reverse: false, levelComparer: 'previous', connectorType: 'above' },
-      { reverse: false, levelComparer: 'before-previous', connectorType: 'above' }
+      { reverse: false, levelComparer: 'before-previous', connectorType: 'above' },
+      { reverse: false, levelComparer: 'next', connectorType: 'middle' }
     ]
 
     let addDump = true
@@ -383,10 +381,10 @@ export class EnergyGraphDrawer {
   }
 
   private posComparer(source: number, target: number): LevelComparerResult {
-    if (target - source === 0) return 'same'
-    if (target - source === -1) return 'previous'
-    if (target - source === 1) return 'next'
     if (target - source < 1) return 'before-previous'
+    if (target - source === -1) return 'previous'
+    if (target - source === 0) return 'same'
+    if (target - source === 1) return 'next'
     if (target - source > 1) return 'above-next'
     return 'same'
   }
