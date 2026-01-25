@@ -22,6 +22,7 @@ export class EnergyNode extends NodeDrawer {
     outputMap: NodeWeights, // which percentage of the produced energy goes into the other nodes,
     color: string
   ) {
+    console.log(`[${nodeLevel}][${nodeLevelPosition}] Creating node ${nodeType}`)
     const inputPower = Object.values(inputMap).reduce((acc, curr) => acc + curr)
     const outputPower = Object.values(outputMap).reduce((acc, curr) => acc + curr)
     super(nodeType, nodeLevel, nodeLevelPosition, color, {

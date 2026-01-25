@@ -77,49 +77,57 @@ export class EnergyGraphDrawer {
     const calculate = () => {
       const verticalUsage: Partial<Record<NodeLevel, number>> = {}
       for (const level of NodeLevels) {
-        console.log(`[${level}] Calculating vertical usage for level ${level}`)
         const nodes = this.energyNodes.filter((n) => n.level.id === level)
 
         // Add output for current level
         for (const node of nodes) {
-          console.log(`[${level}][${level}] Processing node ${node.id}`)
+          // Add losses
+          verticalUsage[level]! = verticalUsage[level]
+            ? verticalUsage[level] + node.losses
+            : node.losses
+          console.log(
+            `[LOSSES][${level}][${level}] Adding losses ${node.losses} from ${node.id} to ${level}`
+          )
+
           for (const [targetNodeId, value] of Object.entries(node.outputMap)) {
             if (!value) continue
             const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
             if (!targetNode) continue
             const relation = this.levelComparer(node, targetNode)
-            if (['next', 'above-next'].includes(relation.interLevel)) {
+
+            if (relation.interLevel === 'above-next') {
               verticalUsage[level] = verticalUsage[level] ? verticalUsage[level] + value : value
               console.log(
-                `[${level}][${level}] Adding output ${value} from ${node.id} to ${targetNodeId}`
+                `[OUTPUT][${level}][${level}] Adding output ${value} from ${node.id} to ${targetNodeId}`
               )
             }
           }
           // Add input for previous level
           const prevLevel = NodeLevels[nodeLevelValue(level) - 1]
-          console.log(`[${level}][${prevLevel}] Calculating vertical usage for level ${prevLevel}`)
           for (const [sourceNodeId, value] of Object.entries(node.inputMap)) {
             if (!value) continue
             const sourceNode = this.energyNodes.find((n) => n.id === sourceNodeId)
             if (!sourceNode) continue
             const relation = this.levelComparer(sourceNode, node)
-            if (['next', 'above-next'].includes(relation.interLevel)) {
+
+            if (
+              ['before-previous', 'previous', 'same', 'above-next'].includes(relation.interLevel) ||
+              (relation.interLevel === 'next' && relation.intraLevel !== 'same')
+            ) {
               verticalUsage[prevLevel] = verticalUsage[prevLevel]
                 ? verticalUsage[prevLevel] + value
                 : value
               console.log(
-                `[${level}][${prevLevel}] Adding input ${value} from ${sourceNodeId} to ${node.id}`
+                `[INPUT][${level}][${prevLevel}] Adding input ${value} from ${sourceNodeId} to ${node.id}. Relation: ${relation.interLevel}, ${relation.intraLevel}`
               )
             }
           }
-
-          // Add losses
-          verticalUsage[level]! = verticalUsage[level]
-            ? verticalUsage[level] + node.losses
-            : node.losses
-          console.log(`[${level}] Adding losses ${node.losses} from ${node.id} to ${level}`)
         }
       }
+
+      // for (const usageKey of Object.keys(verticalUsage) as NodeLevel[]) {
+      //   verticalUsage[usageKey]! += 100
+      // }
 
       return verticalUsage
     }
@@ -225,7 +233,6 @@ export class EnergyGraphDrawer {
             const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
             if (!targetNode || !power) continue
             const relation = this.levelComparer(node, targetNode).interLevel
-            console.log(`[${node.id}][${targetNodeId}] Relation: ${relation}`)
             if (relation === i.levelComparer) {
               const connector = this.createConnector(
                 node,
@@ -381,10 +388,10 @@ export class EnergyGraphDrawer {
   }
 
   private posComparer(source: number, target: number): LevelComparerResult {
-    if (target - source < 1) return 'before-previous'
     if (target - source === -1) return 'previous'
     if (target - source === 0) return 'same'
     if (target - source === 1) return 'next'
+    if (target - source < 1) return 'before-previous'
     if (target - source > 1) return 'above-next'
     return 'same'
   }
