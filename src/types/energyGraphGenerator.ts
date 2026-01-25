@@ -1,6 +1,6 @@
 import { NodeType, NodeTypes, NodeWeights, NodesConfig, nodesConfig } from './nodesConfig'
 
-import { EnergyGraph } from './energyGraph'
+import { EnergyGraphDrawer } from './energyGraphDrawer'
 import { EnergyNode } from './energyNode'
 import { outputMapSolver } from './outputMapSolver'
 
@@ -64,12 +64,12 @@ function inputMapFromOutputMap(outputMap: { [key: string]: Partial<NodeWeights> 
   return inputMap
 }
 
-export async function generateEnergyGraph(): Promise<EnergyGraph> {
+export async function generateEnergyGraph(): Promise<EnergyGraphDrawer> {
   // Load nodes from YAML configuration asynchronously
   const outputMap: { [key: string]: NodeWeights } = await outputMapSolver(nodesConfig)
   const inputMap: { [key: string]: NodeWeights } = inputMapFromOutputMap(outputMap)
 
-  const energyGraph = new EnergyGraph(generateNodes(nodesConfig, outputMap, inputMap))
+  const energyGraph = new EnergyGraphDrawer(generateNodes(nodesConfig, outputMap, inputMap))
 
   return energyGraph
 }

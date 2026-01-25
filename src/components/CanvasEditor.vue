@@ -106,14 +106,14 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Connector, EnergyGraph } from '../types/energyGraph'
+import { Connector, EnergyGraphDrawer } from '../types/energyGraphDrawer'
 import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph from '../types/energyGraphGenerator'
 import { onMounted } from 'vue'
 
 const FPS_INTERVAL_IN_MS = 32
 
-const energyGraph = ref<EnergyGraph | undefined>(undefined)
+const energyGraph = ref<EnergyGraphDrawer | undefined>(undefined)
 const stageRef = ref<any>(null)
 
 const stageWidth = window.innerWidth - 350

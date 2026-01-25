@@ -203,7 +203,7 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'wellBeing',
-      label: 'Well Being',
+      label: 'Basic Needs',
       level: 'tertiary',
       color: '#1fbb65ff',
       factors: {

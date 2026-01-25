@@ -213,7 +213,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { EnergyNode } from '../types/energyNode'
-import type { Connector } from '../types/energyGraph'
+import type { Connector } from '../types/energyGraphDrawer'
 import { NodeDrawer } from '../types/nodeDrawer';
 import {  NodeTypes } from '../types/nodesConfig';
 
