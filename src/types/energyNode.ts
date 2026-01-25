@@ -15,6 +15,7 @@ export class EnergyNode extends NodeDrawer {
   constructor(
     label: string,
     nodeLevel: NodeLevel,
+    nodeLevelPosition: number,
     nodeType: NodeType,
     treDependencies: NodeWeights, // Amount of energy to produce 1 watt
     inputMap: NodeWeights,
@@ -23,7 +24,7 @@ export class EnergyNode extends NodeDrawer {
   ) {
     const inputPower = Object.values(inputMap).reduce((acc, curr) => acc + curr)
     const outputPower = Object.values(outputMap).reduce((acc, curr) => acc + curr)
-    super(nodeType, nodeLevel, color, {
+    super(nodeType, nodeLevel, nodeLevelPosition, color, {
       height: BASE_NODE_HEIGHT * Math.max(inputPower, outputPower)
     })
     this._label = label

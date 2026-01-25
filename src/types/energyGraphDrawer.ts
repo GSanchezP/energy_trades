@@ -14,8 +14,6 @@ export class EnergyGraphDrawer {
   private LOW_AUTOBAHN = 1050
   private UPPER_AUTOBAHN = 180
 
-  private NODE_X_SPACING = 300
-
   private DUMP_NODE_Y = 1250
 
   public energyNodes: EnergyNode[] = []
@@ -66,7 +64,7 @@ export class EnergyGraphDrawer {
         if (!value) continue
         const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
         if (!targetNode) continue
-        if (this.levelComparer(node, targetNode) === 'above-next') {
+        if (this.levelComparer(node, targetNode).interLevel === 'above-next') {
           lowerTotalUsage += value
         }
       }
@@ -76,59 +74,58 @@ export class EnergyGraphDrawer {
   }
 
   calculateVerticalUsage() {
-    const calculate = (dir: 'low' | 'high') => {
+    const calculate = () => {
       const verticalUsage: Partial<Record<NodeLevel, number>> = {}
-      const nodeDir: LevelComparerResult = dir === 'low' ? 'previous' : 'above-next'
       for (const level of NodeLevels) {
-        console.log(`Calculating vertical ${dir} usage for level ${level}`)
+        console.log(`[${level}] Calculating vertical usage for level ${level}`)
         const nodes = this.energyNodes.filter((n) => n.level.id === level)
 
+        // Add output for current level
         for (const node of nodes) {
-          console.log(`Processing node ${node.id}`)
-          // Add low output
+          console.log(`[${level}][${level}] Processing node ${node.id}`)
           for (const [targetNodeId, value] of Object.entries(node.outputMap)) {
             if (!value) continue
             const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
             if (!targetNode) continue
             const relation = this.levelComparer(node, targetNode)
-            if (relation === nodeDir) {
+            if (['next', 'above-next'].includes(relation.interLevel)) {
               verticalUsage[level] = verticalUsage[level] ? verticalUsage[level] + value : value
-              console.log(`[${level}] Adding output ${value} from ${node.id} to ${targetNodeId}`)
+              console.log(
+                `[${level}][${level}] Adding output ${value} from ${node.id} to ${targetNodeId}`
+              )
             }
           }
-
-          // Add low input
+          // Add input for previous level
+          const prevLevel = NodeLevels[nodeLevelValue(level) - 1]
+          console.log(`[${level}][${prevLevel}] Calculating vertical usage for level ${prevLevel}`)
           for (const [sourceNodeId, value] of Object.entries(node.inputMap)) {
             if (!value) continue
             const sourceNode = this.energyNodes.find((n) => n.id === sourceNodeId)
             if (!sourceNode) continue
             const relation = this.levelComparer(sourceNode, node)
-            const prevLevel = NodeLevels[nodeLevelValue(level) - 1]
-            if (relation === nodeDir) {
+            if (['next', 'above-next'].includes(relation.interLevel)) {
               verticalUsage[prevLevel] = verticalUsage[prevLevel]
                 ? verticalUsage[prevLevel] + value
                 : value
-              console.log(`[${prevLevel}] Adding input ${value} from ${sourceNodeId} to ${node.id}`)
+              console.log(
+                `[${level}][${prevLevel}] Adding input ${value} from ${sourceNodeId} to ${node.id}`
+              )
             }
           }
 
-          if (dir === 'low') {
-            // Add losses
-            verticalUsage[level]! = verticalUsage[level]
-              ? verticalUsage[level] + node.losses
-              : node.losses
-            console.log(`[${level}] Adding losses ${node.losses} from ${node.id} to ${level}`)
-          }
+          // Add losses
+          verticalUsage[level]! = verticalUsage[level]
+            ? verticalUsage[level] + node.losses
+            : node.losses
+          console.log(`[${level}] Adding losses ${node.losses} from ${node.id} to ${level}`)
         }
       }
 
       return verticalUsage
     }
 
-    const lowUsage = calculate('low')
-    const highUsage = calculate('high')
+    const lowUsage = calculate()
     console.log(`Vertical low usages: ${JSON.stringify(lowUsage)}`)
-    console.log(`Vertical high usages: ${JSON.stringify(highUsage)}`)
 
     const verticalUsage: Record<NodeLevel, number> = {
       dump: 0,
@@ -142,7 +139,7 @@ export class EnergyGraphDrawer {
     }
 
     for (const level of NodeLevels) {
-      verticalUsage[level] = Math.max(lowUsage[level] ?? 0, highUsage[level] ?? 0)
+      verticalUsage[level] = Math.max(lowUsage[level] ?? 0)
     }
 
     return verticalUsage
@@ -151,7 +148,7 @@ export class EnergyGraphDrawer {
   addDumpNode() {
     const x1 = Math.min(...this.energyNodes.map((n) => n.x))
     const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 120))
-    const dumpNode = new NodeDrawer('heat', 'dump', '#e04c4cff', { width: x2 - x1, height: 100 })
+    const dumpNode = new NodeDrawer('heat', 'dump', 0, '#e04c4cff', { width: x2 - x1, height: 100 })
     dumpNode.setPosition = { x: x1, y: this.DUMP_NODE_Y }
     this.dumpNode = dumpNode
   }
@@ -196,8 +193,8 @@ export class EnergyGraphDrawer {
       levelComparer: LevelComparerResult
       connectorType: ConnectorType
     }> = [
-      { addDump: true, reverse: true, levelComparer: 'previous', connectorType: 'below' },
-      { addDump: false, reverse: false, levelComparer: 'above-next', connectorType: 'above' },
+      { addDump: true, reverse: true, levelComparer: 'above-next', connectorType: 'below' },
+      { addDump: false, reverse: false, levelComparer: 'before-previous', connectorType: 'above' },
       { addDump: false, reverse: false, levelComparer: 'next', connectorType: 'middle' }
     ]
 
@@ -226,7 +223,7 @@ export class EnergyGraphDrawer {
           for (const [targetNodeId, power] of r(Object.entries(node.outputMap), i.reverse)) {
             const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
             if (!targetNode || !power) continue
-            if (this.levelComparer(node, targetNode) === i.levelComparer) {
+            if (this.levelComparer(node, targetNode).interLevel === i.levelComparer) {
               const connector = this.createConnector(
                 node,
                 targetNode,
@@ -379,17 +376,27 @@ export class EnergyGraphDrawer {
     }
   }
 
-  private levelComparer(sourceNode: EnergyNode, targetNode: EnergyNode): LevelComparerResult {
-    const sourceLevel = sourceNode.level.value
-    const targetLevel = targetNode.level.value
-    if (sourceLevel === targetLevel) return 'same'
-    if (targetLevel - sourceLevel === 1) return 'next'
-    if (sourceLevel < targetLevel) return 'previous'
-    return 'above-next'
+  private posComparer(source: number, target: number): LevelComparerResult {
+    if (target - source < 1) return 'before-previous'
+    if (target - source === -1) return 'previous'
+    if (target - source === 0) return 'same'
+    if (target - source === 1) return 'next'
+    if (target - source > 1) return 'above-next'
+    return 'same'
+  }
+
+  private levelComparer(
+    sourceNode: EnergyNode,
+    targetNode: EnergyNode
+  ): { interLevel: LevelComparerResult; intraLevel: LevelComparerResult } {
+    return {
+      interLevel: this.posComparer(sourceNode.level.value, targetNode.level.value),
+      intraLevel: this.posComparer(sourceNode.level.position, targetNode.level.position)
+    }
   }
 }
 
-export type LevelComparerResult = 'previous' | 'same' | 'next' | 'above-next'
+export type LevelComparerResult = 'before-previous' | 'previous' | 'same' | 'next' | 'above-next'
 
 export interface Connector {
   id: string

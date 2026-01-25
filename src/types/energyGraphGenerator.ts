@@ -1,4 +1,12 @@
-import { NodeType, NodeTypes, NodeWeights, NodesConfig, nodesConfig } from './nodesConfig'
+import {
+  NodeLevel,
+  NodeLevels,
+  NodeType,
+  NodeTypes,
+  NodeWeights,
+  NodesConfig,
+  nodesConfig
+} from './nodesConfig'
 
 import { EnergyGraphDrawer } from './energyGraphDrawer'
 import { EnergyNode } from './energyNode'
@@ -7,12 +15,20 @@ import { outputMapSolver } from './outputMapSolver'
 export function generateNodes(
   config: NodesConfig,
   outputMaps: { [key: string]: NodeWeights },
-  inputMaps: { [key: string]: NodeWeights }
+  inputMaps: Record<string, NodeWeights>
 ): EnergyNode[] {
+  const nodeLevelPositions = Object.fromEntries(NodeLevels.map((level) => [level, 0])) as Record<
+    NodeLevel,
+    number
+  >
+
   return config.nodes.map((nodeConfig) => {
+    const nodeLevelPosition = nodeLevelPositions[nodeConfig.level]
+    nodeLevelPositions[nodeConfig.level]++
     return new EnergyNode(
       nodeConfig.label,
       nodeConfig.level,
+      nodeLevelPosition,
       nodeConfig.id,
       nonPartialNodeWeights(nodeConfig.factors),
       inputMaps[nodeConfig.id],
