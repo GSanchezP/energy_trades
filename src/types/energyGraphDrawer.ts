@@ -167,7 +167,7 @@ export class EnergyGraphDrawer {
     for (const level of NodeLevels) {
       if (nodeLevelValue(level)) {
         let prevVerticalUsage = this.verticalUsage[prevLevel(level)]
-        const value = (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT
+        const value = (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT + 30
         xOffset += value
       }
 
