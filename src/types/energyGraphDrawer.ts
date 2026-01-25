@@ -188,15 +188,18 @@ export class EnergyGraphDrawer {
     const xTargetOffsetMap: Partial<Record<NodeLevel, number>> = {}
 
     const iterations: Array<{
-      addDump: boolean
       reverse: boolean
       levelComparer: LevelComparerResult
       connectorType: ConnectorType
     }> = [
-      { addDump: true, reverse: true, levelComparer: 'above-next', connectorType: 'below' },
-      { addDump: false, reverse: false, levelComparer: 'before-previous', connectorType: 'above' },
-      { addDump: false, reverse: false, levelComparer: 'next', connectorType: 'middle' }
+      { reverse: true, levelComparer: 'above-next', connectorType: 'below' },
+      { reverse: false, levelComparer: 'next', connectorType: 'middle' },
+      { reverse: false, levelComparer: 'same', connectorType: 'above' },
+      { reverse: false, levelComparer: 'previous', connectorType: 'above' },
+      { reverse: false, levelComparer: 'before-previous', connectorType: 'above' }
     ]
+
+    let addDump = true
 
     for (const i of iterations) {
       function r<T>(arr: Array<T>, r: boolean) {
@@ -214,7 +217,7 @@ export class EnergyGraphDrawer {
           this.energyNodes.filter((n) => n.level.id === level),
           i.reverse
         )) {
-          if (i.addDump) {
+          if (addDump) {
             const dumpConnector = this.createDumpConnector(node, xSourceOffsetMap[level])
             xSourceOffsetMap[node.level.id]! += dumpConnector.strokeWidth
             this.connectors.push(dumpConnector)
@@ -223,7 +226,9 @@ export class EnergyGraphDrawer {
           for (const [targetNodeId, power] of r(Object.entries(node.outputMap), i.reverse)) {
             const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
             if (!targetNode || !power) continue
-            if (this.levelComparer(node, targetNode).interLevel === i.levelComparer) {
+            const relation = this.levelComparer(node, targetNode).interLevel
+            console.log(`[${node.id}][${targetNodeId}] Relation: ${relation}`)
+            if (relation === i.levelComparer) {
               const connector = this.createConnector(
                 node,
                 targetNode,
@@ -237,6 +242,7 @@ export class EnergyGraphDrawer {
           }
         }
       }
+      addDump = false
     }
   }
 
@@ -314,17 +320,17 @@ export class EnergyGraphDrawer {
         : targetX - targetXOffset + strokeWidth / 2 - 10
 
     let points = [
-      sourceX,
+      sourceX, // Start at source
       sourceY, // Start at source
-      sourceX + sourceXOffset,
+      sourceX + sourceXOffset, // Go right
       sourceY, // Go right
-      sourceX + sourceXOffset,
-      yAutobahn, // Go down to autobahn
-      horizontalX,
+      sourceX + sourceXOffset, // Go vertical to autobahn
+      yAutobahn, // Go vertical to autobahn
+      horizontalX, // Go horizontally to target
       yAutobahn, // Go horizontally to target
-      horizontalX,
-      targetY, // Go down to target
-      targetX,
+      horizontalX, // Go vertical to target
+      targetY, // Go vertical to target
+      targetX, // Final position
       targetY // Final position
     ]
 
@@ -377,10 +383,10 @@ export class EnergyGraphDrawer {
   }
 
   private posComparer(source: number, target: number): LevelComparerResult {
-    if (target - source < 1) return 'before-previous'
-    if (target - source === -1) return 'previous'
     if (target - source === 0) return 'same'
+    if (target - source === -1) return 'previous'
     if (target - source === 1) return 'next'
+    if (target - source < 1) return 'before-previous'
     if (target - source > 1) return 'above-next'
     return 'same'
   }
