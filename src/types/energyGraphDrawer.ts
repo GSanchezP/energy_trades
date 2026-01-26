@@ -76,19 +76,25 @@ export class EnergyGraphDrawer {
   calculateVerticalUsage() {
     const calculate = () => {
       const verticalUsage: Partial<Record<NodeLevel, number>> = {}
+      const verticalUsageDebug: Partial<
+        Record<
+          NodeLevel,
+          { input: Partial<Record<NodeLevel, number>>; output: Partial<Record<NodeLevel, number>> }
+        >
+      > = {}
       for (const level of NodeLevels) {
         const nodes = this.energyNodes.filter((n) => n.level.id === level)
 
-        // Add output for current level
         for (const node of nodes) {
           // Add losses
           verticalUsage[level]! = verticalUsage[level]
             ? verticalUsage[level] + node.losses
             : node.losses
           console.log(
-            `[LOSSES][${level}][${level}] Adding losses ${node.losses} from ${node.id} to ${level}`
+            `[LOSSES][${level}][${level}]:[${node.id}]→[${level}] Adding losses ${node.losses}`
           )
 
+          // Add output for current level
           for (const [targetNodeId, value] of Object.entries(node.outputMap)) {
             if (!value) continue
             const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
@@ -98,11 +104,14 @@ export class EnergyGraphDrawer {
             if (relation.interLevel === 'above-next') {
               verticalUsage[level] = verticalUsage[level] ? verticalUsage[level] + value : value
               console.log(
-                `[OUTPUT][${level}][${level}] Adding output ${value} from ${node.id} to ${targetNodeId}`
+                `[OUTPUT][${level}][${level}]:[${node.id}]→[${targetNodeId}] Adding output ${value}`
               )
+              if (!verticalUsageDebug[level]) verticalUsageDebug[level] = { input: {}, output: {} }
+              verticalUsageDebug![level]!['output']![targetNodeId as NodeLevel]! = value
             }
           }
-          // Add input for previous level
+
+          // Add input for previous levels
           const prevLevel = NodeLevels[nodeLevelValue(level) - 1]
           for (const [sourceNodeId, value] of Object.entries(node.inputMap)) {
             if (!value) continue
@@ -112,28 +121,30 @@ export class EnergyGraphDrawer {
 
             if (
               ['before-previous', 'previous', 'same', 'above-next'].includes(relation.interLevel) ||
-              (relation.interLevel === 'next' && relation.intraLevel !== 'same')
+              relation.interLevel === 'next' //&& relation.intraLevel !== 'same')
             ) {
               verticalUsage[prevLevel] = verticalUsage[prevLevel]
                 ? verticalUsage[prevLevel] + value
                 : value
               console.log(
-                `[INPUT][${level}][${prevLevel}] Adding input ${value} from ${sourceNodeId} to ${node.id}. Relation: ${relation.interLevel}, ${relation.intraLevel}`
+                `[INPUT][${level}][${prevLevel}]:[${sourceNodeId}]→[${node.id}] Adding input ${value}. Relation: ${relation.interLevel}, ${relation.intraLevel}`
               )
+              if (!verticalUsageDebug[prevLevel])
+                verticalUsageDebug[prevLevel] = { input: {}, output: {} }
+              verticalUsageDebug![prevLevel]!['input']![sourceNodeId as NodeLevel]! = value
             }
           }
         }
       }
 
-      // for (const usageKey of Object.keys(verticalUsage) as NodeLevel[]) {
-      //   verticalUsage[usageKey]! += 100
-      // }
+      console.log(verticalUsageDebug)
 
       return verticalUsage
     }
 
     const lowUsage = calculate()
-    console.log(`Vertical low usages: ${JSON.stringify(lowUsage)}`)
+    console.log(`Vertical low usages:`)
+    console.log(lowUsage)
 
     const verticalUsage: Record<NodeLevel, number> = {
       dump: 0,
@@ -197,14 +208,16 @@ export class EnergyGraphDrawer {
 
     const iterations: Array<{
       reverse: boolean
-      levelComparer: LevelComparerResult
+      levelComparer: LevelComparerResult[]
       connectorType: ConnectorType
     }> = [
-      { reverse: true, levelComparer: 'above-next', connectorType: 'below' },
-      { reverse: true, levelComparer: 'next', connectorType: 'middle' },
-      { reverse: false, levelComparer: 'same', connectorType: 'above' },
-      { reverse: false, levelComparer: 'previous', connectorType: 'above' },
-      { reverse: false, levelComparer: 'before-previous', connectorType: 'above' }
+      { reverse: true, levelComparer: ['above-next'], connectorType: 'below' },
+      {
+        reverse: false,
+        levelComparer: ['same', 'previous', 'before-previous'],
+        connectorType: 'above'
+      },
+      { reverse: true, levelComparer: ['next'], connectorType: 'middle' }
     ]
 
     let addDump = true
@@ -235,7 +248,7 @@ export class EnergyGraphDrawer {
             const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
             if (!targetNode || !power) continue
             const relation = this.levelComparer(node, targetNode).interLevel
-            if (relation === i.levelComparer) {
+            if (i.levelComparer.includes(relation)) {
               const connector = this.createConnector(
                 node,
                 targetNode,
