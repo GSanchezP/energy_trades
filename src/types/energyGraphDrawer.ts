@@ -120,8 +120,24 @@ export class EnergyGraphDrawer {
             const relation = this.levelComparer(sourceNode, node)
 
             if (
+              //relation.isNextOutput &&
+              relation.interLevel === 'next' &&
+              relation.intraLevel === 'same'
+            ) {
+              if (
+                Object.entries(sourceNode.outputMap).filter((e) => !!e[1])[0][0] === node.id &&
+                Object.entries(node.inputMap).filter((e) => !!e[1])[0][0] === sourceNode.id
+              ) {
+                console.log(
+                  `[INPUT][${level}][${prevLevel}]:[${sourceNodeId}]→[${node.id}] Next output at same levels, skipping.`
+                )
+                continue
+              }
+            }
+
+            if (
               ['before-previous', 'previous', 'same', 'above-next'].includes(relation.interLevel) ||
-              relation.interLevel === 'next' //&& relation.intraLevel !== 'same')
+              relation.interLevel === 'next'
             ) {
               verticalUsage[prevLevel] = verticalUsage[prevLevel]
                 ? verticalUsage[prevLevel] + value
@@ -414,10 +430,17 @@ export class EnergyGraphDrawer {
   private levelComparer(
     sourceNode: EnergyNode,
     targetNode: EnergyNode
-  ): { interLevel: LevelComparerResult; intraLevel: LevelComparerResult } {
+  ): { interLevel: LevelComparerResult; intraLevel: LevelComparerResult; isNextOutput: boolean } {
     return {
       interLevel: this.posComparer(sourceNode.level.value, targetNode.level.value),
-      intraLevel: this.posComparer(sourceNode.level.position, targetNode.level.position)
+      intraLevel: this.posComparer(sourceNode.level.position, targetNode.level.position),
+      isNextOutput:
+        Object.entries(sourceNode.outputMap)
+          .filter(([, value]) => !!value)
+          .map((e) => e[0])[0] ===
+        Object.entries(targetNode.inputMap)
+          .filter(([, value]) => !!value)
+          .map((e) => e[0])[0]
     }
   }
 }
