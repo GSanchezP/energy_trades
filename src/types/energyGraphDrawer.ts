@@ -23,8 +23,8 @@ export class EnergyGraphDrawer {
 
   public connectors: Connector[] = []
 
-  private lowerCurrentUsage: number
-  private upperCurrentUsage: number
+  private lowBahnCurrentUsage: number
+  private upBahnCurrentUsage: number
 
   constructor(nodes: EnergyNode[]) {
     this.NODES_VERTICAL_SPACING = 40
@@ -32,15 +32,15 @@ export class EnergyGraphDrawer {
     this.energyNodes = nodes
     const verticalUsageByLevel = this.calculateVerticalUsage()
 
-    this.upperCurrentUsage = 0
-    this.lowerCurrentUsage = this.calculateLowBahnUsage()
+    this.upBahnCurrentUsage = 0
+    this.UPPER_AUTOBAHN_BASE = -this.NODES_VERTICAL_SPACING
+    this.lowBahnCurrentUsage = this.calculateLowBahnUsage()
 
     const maxLevel = this.computeNodePositions(verticalUsageByLevel)
 
-    this.UPPER_AUTOBAHN_BASE = 180
     this.LOW_AUTOBAHN_BASE =
-      (1 + maxLevel) * (BASE_NODE_HEIGHT + this.NODES_VERTICAL_SPACING) +
-      this.lowerCurrentUsage * BASE_NODE_HEIGHT
+      maxLevel * (BASE_NODE_HEIGHT + this.NODES_VERTICAL_SPACING) +
+      this.lowBahnCurrentUsage * BASE_NODE_HEIGHT
 
     this.DUMP_NODE_Y = this.LOW_AUTOBAHN_BASE + this.NODES_VERTICAL_SPACING
 
@@ -61,6 +61,29 @@ export class EnergyGraphDrawer {
         .filter((node) => node.level.id === 'extraction')
         .reduce((a, b) => a + b.inputPower, 0)
     )
+  }
+
+  calculateUpBahnUsage(): number {
+    let totalUsage = 0
+    for (const node of this.energyNodes) {
+      // Add upper output
+      for (const [targetNodeId, value] of Object.entries(node.outputMap)) {
+        if (!value) continue
+        const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
+        if (!targetNode) continue
+        if (
+          ['before-previous', 'previous', 'same'].includes(
+            this.levelComparer(node, targetNode).interLevel
+          )
+        ) {
+          totalUsage += value
+        }
+      }
+    }
+
+    console.log(`Upper total usage: ${totalUsage}`)
+
+    return totalUsage
   }
 
   calculateLowBahnUsage(): number {
@@ -211,7 +234,7 @@ export class EnergyGraphDrawer {
         )
         node.setPosition = {
           x: BASE_NODE_HEIGHT + nodeSpacing + xOffset,
-          y: (i + 1) * (BASE_NODE_HEIGHT + this.NODES_VERTICAL_SPACING)
+          y: i * (BASE_NODE_HEIGHT + this.NODES_VERTICAL_SPACING)
         }
         i++
       }
@@ -297,14 +320,14 @@ export class EnergyGraphDrawer {
 
   private calculateAutobahnY(direction: 'above' | 'below', strokeWidth: number): number {
     const baseAutobahn = direction === 'below' ? this.LOW_AUTOBAHN_BASE : this.UPPER_AUTOBAHN_BASE
-    const curr = direction === 'below' ? this.lowerCurrentUsage : this.upperCurrentUsage
+    const curr = direction === 'below' ? this.lowBahnCurrentUsage : this.upBahnCurrentUsage
 
     if (direction === 'below') {
       // Update usage tracking
-      this.lowerCurrentUsage += strokeWidth
+      this.lowBahnCurrentUsage += strokeWidth
     } else {
       // Update usage tracking
-      this.upperCurrentUsage += strokeWidth
+      this.upBahnCurrentUsage += strokeWidth
     }
     return baseAutobahn - strokeWidth / 2 - curr
   }
