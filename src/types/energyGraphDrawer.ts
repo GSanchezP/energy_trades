@@ -201,10 +201,10 @@ export class EnergyGraphDrawer {
       connectorType: ConnectorType
     }> = [
       { reverse: true, levelComparer: 'above-next', connectorType: 'below' },
-      { reverse: false, levelComparer: 'next', connectorType: 'middle' },
+      { reverse: true, levelComparer: 'next', connectorType: 'middle' },
+      { reverse: false, levelComparer: 'same', connectorType: 'above' },
       { reverse: false, levelComparer: 'previous', connectorType: 'above' },
-      { reverse: false, levelComparer: 'before-previous', connectorType: 'above' },
-      { reverse: false, levelComparer: 'same', connectorType: 'above' }
+      { reverse: false, levelComparer: 'before-previous', connectorType: 'above' }
     ]
 
     let addDump = true
