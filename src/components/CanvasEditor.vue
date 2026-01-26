@@ -20,7 +20,7 @@
               strokeWidth: connector.strokeWidth,
               lineCap: 'round',
               lineJoin: 'round',
-              opacity: selectedConnectorId === connector.id ? 0.9 : 0.4
+              opacity: selectedConnectorId === connector.id ? 0.7 : 0.4
             }"
             @click="(e: any) => handleConnectorClick(connector.id, e)"
           />
@@ -33,7 +33,7 @@
               strokeWidth: connector.strokeWidth - 1.2,
               lineCap: 'round',
               lineJoin: 'round',
-              opacity: selectedConnectorId === connector.id ? 0.9 : 0.4
+              opacity: selectedConnectorId === connector.id ? 0.7 : 0.4
             }"
             @click="(e: any) => handleConnectorClick(connector.id, e)"
           />
@@ -48,30 +48,11 @@
               height: square.height,
               fill: square.color,
               stroke: '#1e293b',
-              strokeWidth: 2,
+              strokeWidth: selectedSquareIds.has(square.id) ? 4 : 2,
               shadowBlur: 5,
               shadowColor: 'black',
               shadowOpacity: 0.2,
-              opacity: selectedSquareIds.has(square.id) ? 0.6 : 1
-            }"
-            @click="(e: any) => handleSquareClick(square.id, e)"
-          />
-
-          <v-rect
-            v-for="square in nodes"
-            :key="square.id"
-            :config="{
-              x: square.x,
-              y: square.y,
-              width: square.width,
-              height: square.height,
-              fill: square.color,
-              stroke: '#1e293b',
-              strokeWidth: 2,
-              shadowBlur: 5,
-              shadowColor: 'black',
-              shadowOpacity: 0.2,
-              opacity: selectedSquareIds.has(square.id) ? 0.8 : 1
+              opacity: 1
             }"
             @click="(e: any) => handleSquareClick(square.id, e)"
           />
@@ -111,7 +92,7 @@ import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph from '../types/energyGraphGenerator'
 import { onMounted } from 'vue'
 
-const FPS_INTERVAL_IN_MS = 32
+const FPS_INTERVAL_IN_MS = 16
 
 const energyGraph = ref<EnergyGraphDrawer | undefined>(undefined)
 const stageRef = ref<any>(null)
