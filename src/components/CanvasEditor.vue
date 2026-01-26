@@ -203,22 +203,15 @@ const handleWheel = (e: any) => {
   stage.position(newPos)
 }
 
-const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
+const handleSquareClick = (squareId: string, _event: { evt: MouseEvent }) => {
   console.log(`Clicked on ${squareId}`)
   clickedOnElement.value = true
   // Clear connector selection when clicking on nodes
   selectedConnectorId.value = null
 
-  if (event.evt.shiftKey) {
-    if (selectedSquareIds.value.has(squareId)) {
-      selectedSquareIds.value.delete(squareId)
-    } else {
-      selectedSquareIds.value.add(squareId)
-    }
-  } else {
-    selectedSquareIds.value.clear()
-    selectedSquareIds.value.add(squareId)
-  }
+  // Disable multiple selection - always select only one
+  selectedSquareIds.value.clear()
+  selectedSquareIds.value.add(squareId)
 }
 
 const handleConnectorClick = (connectorId: string, _event: { evt: MouseEvent }) => {
