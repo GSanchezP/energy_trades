@@ -466,13 +466,15 @@ const closeResultsModal = () => {
 
 .modal-body {
   padding: 24px;
-  overflow-y: auto;
+  overflow: hidden;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .solver-result {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
   color: #1f2937;
   background: #f9fafb;
@@ -482,7 +484,7 @@ const closeResultsModal = () => {
   white-space: pre-wrap;
   word-wrap: break-word;
   margin: 0;
-  max-height: calc(90vh - 120px);
+  flex: 1;
   overflow-y: auto;
 }
 
