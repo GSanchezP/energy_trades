@@ -141,7 +141,7 @@ export const nodesConfig: NodesConfig = {
       color: '#856350ff',
       factors: {
         wellBeing: 0.05,
-        fuels: 1,
+        fuels: 2.5,
         electricity: 0.25
       }
     },
@@ -152,7 +152,7 @@ export const nodesConfig: NodesConfig = {
       color: '#b0b00aff',
       factors: {
         wellBeing: 0.15,
-        fuels: 0.65,
+        fuels: 2.5,
         manufacture: 0.25,
         mining: 0.15
       }

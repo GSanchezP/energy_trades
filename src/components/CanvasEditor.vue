@@ -17,23 +17,10 @@
             :config="{
               points: connector.points,
               stroke: connector.color,
-              strokeWidth: connector.strokeWidth,
-              lineCap: 'round',
-              lineJoin: 'round',
-              opacity: selectedConnectorId === connector.id ? 0.7 : 0.4
-            }"
-            @click="(e: any) => handleConnectorClick(connector.id, e)"
-          />
-          <v-line
-            v-for="connector in connectors"
-            :key="connector.id"
-            :config="{
-              points: connector.points,
-              stroke: connector.color,
               strokeWidth: connector.strokeWidth - 1.2,
-              lineCap: 'round',
-              lineJoin: 'round',
-              opacity: selectedConnectorId === connector.id ? 0.7 : 0.4
+              lineCap: 'square',
+              lineJoin: 'square',
+              opacity: selectedConnectorId === connector.id ? 0.8 : 0.6
             }"
             @click="(e: any) => handleConnectorClick(connector.id, e)"
           />
