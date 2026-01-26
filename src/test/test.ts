@@ -1,9 +1,9 @@
 import GLPK from 'glpk.js'
-import { loadNodesFromYaml } from '../types/energyGraphGenerator'
+// import { loadNodesFromYaml } from '../types/energyGraphGenerator'
 
 const glpk = GLPK()
 
-const config = loadNodesFromYaml()
+// const config = loadNodesFromYaml()
 
 const bounds = [
   // Level 1

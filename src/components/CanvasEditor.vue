@@ -173,13 +173,13 @@ const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
   }
 }
 
-const handleConnectorClick = (connectorId: string, event: { evt: MouseEvent }) => {
+const handleConnectorClick = (connectorId: string, _event: { evt: MouseEvent }) => {
   clickedOnElement.value = true
   selectedConnectorId.value = connectorId
   selectedSquareIds.value.clear() // Clear node selection
 }
 
-const handleStageClick = (event: { evt: MouseEvent }) => {
+const handleStageClick = (_event: { evt: MouseEvent }) => {
   // Only clear if we didn't click on a square or connector
   if (!clickedOnElement.value) {
     selectedSquareIds.value.clear()
@@ -202,7 +202,7 @@ const handleMouseDown = (event: { evt: MouseEvent }) => {
   }
 }
 
-const handleMouseMove = (event: { evt: MouseEvent }) => {
+const handleMouseMove = (_event: { evt: MouseEvent }) => {
   if (!isPanning.value || !lastPointerPosition.value) return
 
   // Clear existing timeout

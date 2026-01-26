@@ -28,7 +28,7 @@
                 <div 
                   class="bar-fill" 
                   :style="{ 
-                    width: `${Math.min(100, (item.eroi / Math.max(...eroiData.map((d: { eroi: any; }) => d.eroi))) * 100)}%`,
+                    width: getBarWidth(item.eroi),
                     backgroundColor: item.color
                   }"
                 ></div>
@@ -133,14 +133,14 @@
                         <div v-if="(node.treDependencies[nodeType] || 0) > 0" class="satisfaction-bar">
                           <div 
                             class="satisfaction-fill" 
-                            :style="{ width: `${(node.inputRelativeUsage(nodeType) * 100).toFixed(0)}%` }"
+                            :style="{ width: getSatisfactionPercentage(node, nodeType as NodeType) }"
                             :class="{
-                              'satisfied': (node.inputRelativeUsage(nodeType) >= 0.98),
-                              'partial': node.inputRelativeUsage(nodeType) < 0.98,
+                              'satisfied': (node.inputRelativeUsage(nodeType as NodeType) >= 0.98),
+                              'partial': node.inputRelativeUsage(nodeType as NodeType) < 0.98,
                             }"
                           ></div>
                           <span class="satisfaction-text">
-                            {{ (node.inputRelativeUsage(nodeType) * 100).toFixed(0) }}%
+                            {{ (node.inputRelativeUsage(nodeType as NodeType) * 100).toFixed(0) }}%
                           </span>
                         </div>
                         <span v-else class="no-requirement">-</span>
@@ -173,7 +173,7 @@
                         <div v-if="(node.outputMap[nodeType] || 0) > 0" class="output-bar">
                           <div 
                             class="output-fill" 
-                            :style="{ width: `${(node.outputMap[nodeType] || 0) * 100}%` }"
+                            :style="{ width: getOutputPercentage(node.outputMap[nodeType] || 0) }"
                           ></div>
                         </div>
                         <span v-else class="no-output">-</span>
@@ -215,7 +215,7 @@ import { computed } from 'vue'
 import type { EnergyNode } from '../types/energyNode'
 import type { Connector } from '../types/energyGraphDrawer'
 import { NodeDrawer } from '../types/nodeDrawer';
-import {  NodeTypes } from '../types/nodesConfig';
+import { NodeTypes, type NodeType } from '../types/nodesConfig';
 
 const props = defineProps<{
   selectedNodes: any[]
@@ -274,6 +274,29 @@ const eroiData = computed(() => {
     color: node.color
   })).sort((a: { eroi: number; }, b: { eroi: number; }) => b.eroi - a.eroi)
 })
+
+// Max EROI for percentage calculations
+const maxEroi = computed(() => {
+  if (eroiData.value.length === 0) return 1
+  return Math.max(...eroiData.value.map((d: { eroi: number }) => d.eroi))
+})
+
+// Helper function to calculate bar width percentage
+const getBarWidth = (eroi: number): string => {
+  const percentage = Math.min(100, (eroi / maxEroi.value) * 100)
+  return `${percentage}%`
+}
+
+// Helper function to calculate satisfaction percentage
+const getSatisfactionPercentage = (node: EnergyNode, nodeType: NodeType): string => {
+  const percentage = node.inputRelativeUsage(nodeType) * 100
+  return `${percentage.toFixed(0)}%`
+}
+
+// Helper function to calculate output percentage
+const getOutputPercentage = (value: number): string => {
+  return `${(value * 100).toFixed(0)}%`
+}
 
 const graphEroi = computed(() => {
   return props.energyGraph?.graphEroi || 0
