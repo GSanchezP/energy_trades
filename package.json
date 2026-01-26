@@ -7,7 +7,9 @@
     "test": "tsx ./src/test/test.ts",
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "build:gh-pages": "GITHUB_PAGES=true pnpm run build",
+    "preview": "vite preview",
+    "preview:gh-pages": "GITHUB_PAGES=true pnpm run build && vite preview --base /energy_trades/"
   },
   "dependencies": {
     "glpk.js": "^4.0.2",
