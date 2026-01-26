@@ -1,0 +1,340 @@
+import GLPK, { Result } from 'glpk.js'
+import { NodeType, NodesConfig } from './nodesConfig'
+import { iNodeWeights, nonPartialNodeWeights } from './energyGraphGenerator'
+
+const glpk = await GLPK()
+
+type Bound = {
+  name: string
+  type: number
+  lb: number
+  ub: number
+}
+
+type Constraint = {
+  name: string
+  vars: {
+    name: string
+    coef: number
+  }[]
+  bnds: {
+    type: number
+    lb: number
+    ub: number
+  }
+}
+
+function solutionToOutputMap(
+  config: NodesConfig,
+  vars: { [key: string]: number }
+): {
+  [key: string]: { [key in NodeType]: number }
+} {
+  const nodeFromId = (nodeId: string) => {
+    return config.nodes.find((n) => n.id === nodeId)!
+  }
+  const outputMap: {
+    [key: string]: { [key in NodeType]: number }
+  } = {}
+
+  for (const node of config.nodes) {
+    outputMap[node.id] = iNodeWeights()
+    for (const [keyName, value] of Object.entries(vars)) {
+      const key = keyName.split(':')
+      if (key[1] === node.id && key[2] !== undefined) {
+        const target = nodeFromId(key[2])
+
+        outputMap[node.id][target.id as NodeType] = value
+      }
+    }
+    outputMap[node.id] = nonPartialNodeWeights(outputMap[node.id])
+  }
+
+  return outputMap
+}
+
+export async function outputMapSolver(config: NodesConfig) {
+  const bounds: Bound[] = []
+
+  const constraints: Constraint[] = []
+
+  const bound = (name: string) => {
+    return { name: `${name}`, type: glpk.GLP_DB, lb: 0, ub: 1 }
+  }
+
+  const maxOneConstraint = (varName: string) => {
+    return {
+      name: varName + '_le_1',
+      vars: [{ name: varName, coef: 1 }],
+      bnds: { type: glpk.GLP_UP, ub: 1, lb: 0 }
+    }
+  }
+
+  const factorConstraint = (varName: string, flowVarName: string, value: number) => {
+    return {
+      name: varName + '_factor_' + flowVarName,
+      vars: [
+        { name: varName, coef: 1 },
+        { name: flowVarName, coef: -1 / value }
+      ],
+      bnds: { type: glpk.GLP_FX, ub: 0, lb: 0 }
+    }
+  }
+
+  const proportionConstraint = (varName: string, propVarName: string, value: number) => {
+    return {
+      name: varName + '_prop_' + propVarName,
+      vars: [
+        { name: propVarName, coef: 1 },
+        { name: varName, coef: -1 * value }
+      ],
+      bnds: { type: glpk.GLP_FX, ub: 0, lb: 0 }
+    }
+  }
+
+  const netSumConstraint = (varName: string, netVarsOutputVar: string[]) => {
+    const vars: { name: string; coef: number }[] = []
+    for (const netVarOutputVar of netVarsOutputVar) {
+      vars.push({ name: netVarOutputVar, coef: 1 })
+    }
+    vars.push({ name: varName, coef: -1 })
+    return {
+      name: varName + '_sum',
+      vars: vars,
+      bnds: { type: glpk.GLP_FX, lb: 0, ub: 0 }
+    }
+  }
+
+  // Max Output Constraint
+  for (const node of config.nodes) {
+    bounds.push(bound(node.netOutputVar))
+    constraints.push(maxOneConstraint(node.netOutputVar))
+  }
+
+  // TRE Constraints
+  for (const node of config.nodes.filter((n) => Object.keys(n.factors).length > 0)) {
+    for (const [inputNode, treValue] of Object.entries(node.factors)) {
+      const flowVarName = node.inputFactorVarName(inputNode as NodeType)
+      bounds.push(bound(flowVarName))
+      constraints.push(factorConstraint(node.netOutputVar, flowVarName, treValue))
+    }
+  }
+
+  // Addons
+  for (const node of config.nodes.filter((n) => Object.keys(n.addons).length > 0)) {
+    const sumConstraintsVars: string[] = []
+    for (const [inputNode, value] of Object.entries(node.addons)) {
+      sumConstraintsVars.push(node.inputFactorVarName(inputNode as NodeType))
+      if (!value) {
+        console.log(`Skipping addon ${inputNode} for node ${node.id} because value is null`)
+        continue
+      }
+      constraints.push(
+        proportionConstraint(
+          node.netOutputVar,
+          node.inputFactorVarName(inputNode as NodeType),
+          value
+        )
+      )
+    }
+    constraints.push(netSumConstraint(node.netOutputVar, sumConstraintsVars))
+  }
+
+  // Net output sum constraints
+  for (const node of config.nodes) {
+    if (node.id === 'leisure') continue // TODO: Figure out this
+
+    const sumConstraintsVars: string[] = []
+    for (const sourceNode of config.nodes) {
+      if (sourceNode.id === node.id) continue
+      for (const targetNode of Object.keys(sourceNode.inputs)) {
+        if (targetNode === node.id) {
+          sumConstraintsVars.push(sourceNode.inputFactorVarName(node.id))
+        }
+      }
+    }
+    constraints.push(netSumConstraint(node.netOutputVar, sumConstraintsVars))
+  }
+
+  const objective = {
+    direction: glpk.GLP_MAX,
+    name: 'maximize_leisure',
+    vars: [{ name: 'T:leisure', coef: 1 }]
+  }
+
+  const lp = {
+    name: 'EnergyFlowOptimization2',
+    objective,
+    subjectTo: constraints,
+    bounds: bounds
+  }
+
+  const result = await glpk.solve(lp)
+
+  // Convert result to readable format
+  const readableResult = formatSolverResult(result)
+  console.log(readableResult)
+
+  const outputMap: {
+    [key: string]: number
+  } = {}
+
+  for (const [key, value] of Object.entries(result.result.vars).sort((a, b) =>
+    a[0].localeCompare(b[0])
+  )) {
+    outputMap[key] = value
+  }
+
+  const output = solutionToOutputMap(config, outputMap)
+
+  return output
+}
+
+function formatSolverResult(result: Result): string {
+  const lines: string[] = []
+
+  // Header
+  lines.push('='.repeat(60))
+  lines.push('🔧 LINEAR PROGRAMMING SOLVER RESULTS')
+  lines.push('='.repeat(60))
+
+  // Problem Statistics
+  lines.push('\n📊 PROBLEM STATISTICS:')
+  lines.push(
+    `   • Number of Variables: ${result.result?.vars ? Object.keys(result.result.vars).length : 'Unknown'}`
+  )
+  lines.push(
+    `   • Number of Constraints: ${Object.keys(result.result.dual || []).length || 'Unknown'}`
+  )
+  Object.entries(result.result.dual || [])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .forEach((e) => {
+      lines.push(`   • ${e[0]} Lagrange: ${e[1]}`)
+    })
+
+  // Solver Status
+  lines.push('\n🎯 SOLVER STATUS:')
+  const status = result.result.status
+  let statusText = 'Unknown'
+  let statusEmoji = '❓'
+
+  switch (status) {
+    case 1:
+      statusText = 'Optimal solution found'
+      statusEmoji = '✅'
+      break
+    case 2:
+      statusText = 'Feasible solution found'
+      statusEmoji = '⚠️'
+      break
+    case 3:
+      statusText = 'Infeasible problem'
+      statusEmoji = '❌'
+      break
+    case 4:
+      statusText = 'No feasible solution exists'
+      statusEmoji = '❌'
+      break
+    case 5:
+      statusText = 'Unbounded problem'
+      statusEmoji = '⚠️'
+      break
+    case 6:
+      statusText = 'Undefined solution'
+      statusEmoji = '❓'
+      break
+    case 7:
+      statusText = 'Iteration limit exceeded'
+      statusEmoji = '⏰'
+      break
+    case 8:
+      statusText = 'Time limit exceeded'
+      statusEmoji = '⏰'
+      break
+    case 9:
+      statusText = 'No primal feasible solution'
+      statusEmoji = '❌'
+      break
+    case 10:
+      statusText = 'Numerical instability'
+      statusEmoji = '⚠️'
+      break
+    case 11:
+      statusText = 'Primal infeasible'
+      statusEmoji = '❌'
+      break
+    case 12:
+      statusText = 'Primal unbounded'
+      statusEmoji = '⚠️'
+      break
+    case 13:
+      statusText = 'Primal undefined'
+      statusEmoji = '❓'
+      break
+    case 14:
+      statusText = 'Dual infeasible'
+      statusEmoji = '❌'
+      break
+    case 15:
+      statusText = 'Dual unbounded'
+      statusEmoji = '⚠️'
+      break
+    case 16:
+      statusText = 'Dual undefined'
+      statusEmoji = '❓'
+      break
+  }
+
+  lines.push(`   ${statusEmoji} Status Code: ${status} - ${statusText}`)
+
+  // Objective Value (Z value)
+  lines.push('\n🎯 OBJECTIVE VALUE (Z):')
+  const zValue = result.result?.z
+  if (zValue !== undefined) {
+    lines.push(`   • Z Value: ${zValue.toFixed(6)}`)
+    lines.push(`   • Meaning: Maximum achievable Leisure output`)
+    lines.push(
+      `   • Interpretation: ${zValue > 0 ? '✅ Feasible solution' : '❌ No feasible solution'}`
+    )
+    if (zValue > 0) {
+      lines.push(`   • Efficiency: ${(zValue * 100).toFixed(2)}% of maximum possible leisure`)
+    }
+  } else {
+    lines.push('   • Z Value: Not available')
+  }
+
+  // Timing Information
+  lines.push('\n⏱️ PERFORMANCE:')
+  if (result.time) {
+    lines.push(`   • Solve Time: ${result.time.toFixed(3)} seconds`)
+  } else {
+    lines.push('   • Solve Time: Not available')
+  }
+
+  // Variable Summary
+  lines.push('\n📈 VARIABLE SUMMARY:')
+  if (result.result?.vars) {
+    const vars = result.result.vars
+    const varCount = Object.keys(vars).length
+    const nonZeroVars = Object.entries(vars).filter(
+      ([_, value]) => Math.abs(value as number) > 1e-6
+    )
+
+    lines.push(`   • Total Variables: ${varCount}`)
+    lines.push(`   • Non-zero Variables: ${nonZeroVars.length}`)
+    lines.push(`   • Zero Variables: ${varCount - nonZeroVars.length}`)
+
+    lines.push('\n🔍 KEY VARIABLES ):')
+    Object.entries(vars).forEach(([name, value]) => {
+      lines.push(`   • ${name}: ${value}`)
+    })
+  }
+
+  // Footer
+  lines.push('\n' + '='.repeat(60))
+  lines.push('📝 END OF SOLVER REPORT')
+  lines.push('='.repeat(60))
+
+  return lines.join('\n')
+}
