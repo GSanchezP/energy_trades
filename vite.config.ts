@@ -9,4 +9,7 @@ export default defineConfig({
   // For project pages: use '/repository-name/'
   // For user/organization pages: use '/'
   base: process.env.GITHUB_PAGES === 'true' ? '/energy-trades/' : '/',
+  build: {
+    target: 'es2022', // Support top-level await
+  },
 })
