@@ -11,34 +11,41 @@ import { NodeLevel, NodeLevels } from './nodesConfig'
 type ConnectorType = 'above' | 'below' | 'middle'
 
 export class EnergyGraphDrawer {
-  private LOW_AUTOBAHN = 1050
-  private UPPER_AUTOBAHN = 180
+  private NODES_VERTICAL_SPACING: number
 
-  private DUMP_NODE_Y = 1250
+  private UPPER_AUTOBAHN_BASE: number
+  private LOW_AUTOBAHN_BASE: number
+
+  private DUMP_NODE_Y: number
 
   public energyNodes: EnergyNode[] = []
-  public dumpNode?: NodeDrawer
+  public dumpNode: NodeDrawer
 
   public connectors: Connector[] = []
 
-  private upperUsage: number[] = []
-  private lowerTotalUsage: number = 0
   private lowerCurrentUsage: number
-  private upperCurrentUsage: number = 0
-
-  private verticalUsage: Record<NodeLevel, number>
+  private upperCurrentUsage: number
 
   constructor(nodes: EnergyNode[]) {
-    this.energyNodes = nodes
-    this.verticalUsage = this.calculateVerticalUsage()
-    this.lowerCurrentUsage = this.calculateLowBahnUsage()
-    this.computeNodePositions()
-    this.addDumpNode()
-    this.generateFlowConnectors()
-  }
+    this.NODES_VERTICAL_SPACING = 40
 
-  get upperUsageLevel(): number {
-    return this.upperUsage.reduce((a, b) => a + b, 0)
+    this.energyNodes = nodes
+    const verticalUsageByLevel = this.calculateVerticalUsage()
+
+    this.upperCurrentUsage = 0
+    this.lowerCurrentUsage = this.calculateLowBahnUsage()
+
+    const maxLevel = this.computeNodePositions(verticalUsageByLevel)
+
+    this.UPPER_AUTOBAHN_BASE = 180
+    this.LOW_AUTOBAHN_BASE =
+      (1 + maxLevel) * (BASE_NODE_HEIGHT + this.NODES_VERTICAL_SPACING) +
+      this.lowerCurrentUsage * BASE_NODE_HEIGHT
+
+    this.DUMP_NODE_Y = this.LOW_AUTOBAHN_BASE + this.NODES_VERTICAL_SPACING
+
+    this.dumpNode = this.addDumpNode()
+    this.generateFlowConnectors()
   }
 
   get nodes(): NodeDrawer[] {
@@ -69,6 +76,8 @@ export class EnergyGraphDrawer {
         }
       }
     }
+
+    console.log(`Lower total usage: ${lowerTotalUsage}`)
 
     return lowerTotalUsage
   }
@@ -119,11 +128,7 @@ export class EnergyGraphDrawer {
             if (!sourceNode) continue
             const relation = this.levelComparer(sourceNode, node)
 
-            if (
-              //relation.isNextOutput &&
-              relation.interLevel === 'next' &&
-              relation.intraLevel === 'same'
-            ) {
+            if (relation.interLevel === 'next' && relation.intraLevel === 'same') {
               if (
                 Object.entries(sourceNode.outputMap).filter((e) => !!e[1])[0][0] === node.id &&
                 Object.entries(node.inputMap).filter((e) => !!e[1])[0][0] === sourceNode.id
@@ -180,20 +185,20 @@ export class EnergyGraphDrawer {
     return verticalUsage
   }
 
-  addDumpNode() {
+  addDumpNode(): NodeDrawer {
     const x1 = Math.min(...this.energyNodes.map((n) => n.x))
     const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 120))
     const dumpNode = new NodeDrawer('heat', 'dump', 0, '#e04c4cff', { width: x2 - x1, height: 100 })
     dumpNode.setPosition = { x: x1, y: this.DUMP_NODE_Y }
-    this.dumpNode = dumpNode
+    return dumpNode
   }
 
-  computeNodePositions() {
+  computeNodePositions(verticalUsageByLevel: Record<NodeLevel, number>) {
     let maxLevel = 0
     let xOffset = 0
     for (const level of NodeLevels) {
       if (nodeLevelValue(level)) {
-        let prevVerticalUsage = this.verticalUsage[prevLevel(level)]
+        let prevVerticalUsage = verticalUsageByLevel[prevLevel(level)]
         const value = (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT + 30
         xOffset += value
       }
@@ -206,19 +211,17 @@ export class EnergyGraphDrawer {
         )
         node.setPosition = {
           x: BASE_NODE_HEIGHT + nodeSpacing + xOffset,
-          y: 200 + i * 200
+          y: (i + 1) * (BASE_NODE_HEIGHT + this.NODES_VERTICAL_SPACING)
         }
         i++
       }
       maxLevel = Math.max(maxLevel, i)
     }
 
-    this.LOW_AUTOBAHN = (maxLevel + 1) * 200 + 300
+    return maxLevel
   }
 
   generateFlowConnectors() {
-    this.upperUsage = []
-
     let xSourceOffsetMap: Partial<Record<NodeLevel, number>> = {}
     const xTargetOffsetMap: Partial<Record<NodeLevel, number>> = {}
 
@@ -293,9 +296,9 @@ export class EnergyGraphDrawer {
   }
 
   private calculateAutobahnY(direction: 'above' | 'below', strokeWidth: number): number {
-    const baseAutobahn = direction === 'below' ? this.LOW_AUTOBAHN : this.UPPER_AUTOBAHN
+    const baseAutobahn = direction === 'below' ? this.LOW_AUTOBAHN_BASE : this.UPPER_AUTOBAHN_BASE
     const curr = direction === 'below' ? this.lowerCurrentUsage : this.upperCurrentUsage
-    const total = direction === 'below' ? this.lowerTotalUsage : 0
+
     if (direction === 'below') {
       // Update usage tracking
       this.lowerCurrentUsage += strokeWidth
@@ -303,7 +306,7 @@ export class EnergyGraphDrawer {
       // Update usage tracking
       this.upperCurrentUsage += strokeWidth
     }
-    return baseAutobahn + total * BASE_NODE_HEIGHT - strokeWidth / 2 - curr
+    return baseAutobahn - strokeWidth / 2 - curr
   }
 
   private createConnector(
@@ -430,17 +433,10 @@ export class EnergyGraphDrawer {
   private levelComparer(
     sourceNode: EnergyNode,
     targetNode: EnergyNode
-  ): { interLevel: LevelComparerResult; intraLevel: LevelComparerResult; isNextOutput: boolean } {
+  ): { interLevel: LevelComparerResult; intraLevel: LevelComparerResult } {
     return {
       interLevel: this.posComparer(sourceNode.level.value, targetNode.level.value),
-      intraLevel: this.posComparer(sourceNode.level.position, targetNode.level.position),
-      isNextOutput:
-        Object.entries(sourceNode.outputMap)
-          .filter(([, value]) => !!value)
-          .map((e) => e[0])[0] ===
-        Object.entries(targetNode.inputMap)
-          .filter(([, value]) => !!value)
-          .map((e) => e[0])[0]
+      intraLevel: this.posComparer(sourceNode.level.position, targetNode.level.position)
     }
   }
 }
