@@ -1,6 +1,16 @@
 <template>
   <div class="canvas-container">
     <div class="canvas-wrapper">
+      <!-- Control Buttons -->
+      <div class="control-buttons">
+        <button class="control-button" @click="handleSettingsClick" title="Settings">
+          <i class="mdi mdi-cog button-icon"></i>
+        </button>
+        <button class="control-button" @click="handleResultsClick" title="Results">
+          <i class="mdi mdi-notebook button-icon"></i>
+        </button>
+      </div>
+      
       <v-stage
         ref="stageRef"
         :config="stageConfig"
@@ -65,7 +75,7 @@
       </v-stage>
     </div>
     <InfoPanel
-      v-if="selectedSquares.length > 0 || selectedConnector"
+      v-if="isInfoPanelVisible"
       :selectedNodes="selectedSquares"
       :selectedConnector="selectedConnector"
       :energyGraph="energyGraph"
@@ -78,27 +88,41 @@ import { ref, computed } from 'vue'
 import { Connector, EnergyGraphDrawer } from '../types/energyGraphDrawer'
 import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph from '../types/energyGraphGenerator'
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 
 const FPS_INTERVAL_IN_MS = 16
 
 const energyGraph = ref<EnergyGraphDrawer | undefined>(undefined)
 const stageRef = ref<any>(null)
 
-const stageWidth = window.innerWidth - 350
-const stageHeight = window.innerHeight
-
 const selectedSquareIds = ref<Set<string>>(new Set())
 const selectedConnectorId = ref<string | null>(null)
 const clickedOnElement = ref<boolean>(false)
+
+// Window dimensions
+const windowWidth = ref(window.innerWidth)
+const windowHeight = ref(window.innerHeight)
 
 // Pan state
 const isPanning = ref<boolean>(false)
 const lastPointerPosition = ref<{ x: number; y: number } | null>(null)
 const panTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
+// Handle window resize
+const handleResize = () => {
+  windowWidth.value = window.innerWidth
+  windowHeight.value = window.innerHeight
+}
+
 onMounted(async () => {
   energyGraph.value = await generateEnergyGraph()
+  
+  // Add resize listener
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 
 const nodes = computed(() => {
@@ -118,9 +142,15 @@ const selectedConnector = computed((): Connector | null => {
   return connectors.value.find((conn) => conn.id === selectedConnectorId.value) || null
 })
 
+// Check if InfoPanel should be visible
+const isInfoPanelVisible = computed(() => {
+  return selectedSquares.value.length > 0 || selectedConnector.value !== null
+})
+
+// Calculate canvas dimensions - full width when panel is hidden, reduced when visible
 const stageConfig = computed(() => ({
-  width: stageWidth,
-  height: stageHeight
+  width: isInfoPanelVisible.value ? windowWidth.value - 350 : windowWidth.value,
+  height: windowHeight.value
 }))
 
 const handleWheel = (e: any) => {
@@ -243,6 +273,16 @@ const handleMouseUp = (event: { evt: MouseEvent }) => {
     }
   }
 }
+
+const handleSettingsClick = () => {
+  console.log('Settings clicked')
+  // TODO: Implement settings functionality
+}
+
+const handleResultsClick = () => {
+  console.log('Results clicked')
+  // TODO: Implement results functionality
+}
 </script>
 
 <style scoped>
@@ -250,11 +290,65 @@ const handleMouseUp = (event: { evt: MouseEvent }) => {
   display: flex;
   height: 100vh;
   width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .canvas-wrapper {
   flex: 1;
   background: #f1f5f9;
   overflow: hidden;
+  min-width: 0; /* Allows flex item to shrink below content size */
+  position: relative;
+}
+
+.control-buttons {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  color: #334155;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.control-button:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.control-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.button-icon {
+  font-size: 24px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.control-button:hover .button-icon {
+  transform: scale(1.1);
 }
 </style>
