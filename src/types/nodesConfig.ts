@@ -39,7 +39,7 @@ export class NodeConfig {
     readonly level: NodeLevel,
     readonly color: string,
     readonly _factors?: Partial<Record<NodeType, number>>,
-    readonly _addons?: Partial<Record<NodeType, number>>
+    readonly _addons?: Partial<Record<NodeType, number | null>>
   ) {}
 
   get netOutputVar() {
@@ -54,11 +54,11 @@ export class NodeConfig {
     return this._factors ?? {}
   }
 
-  get addons(): Partial<Record<NodeType, number>> {
+  get addons(): Partial<Record<NodeType, number | null>> {
     return this._addons ?? {}
   }
 
-  get inputs(): Partial<Record<NodeType, number>> {
+  get inputs(): Partial<Record<NodeType, number | null>> {
     return { ...this.factors, ...this.addons }
   }
 }
@@ -130,8 +130,8 @@ export const nodesConfig: NodesConfig = {
       level: 'conversionSum',
       color: '#0d92a3ff',
       addons: {
-        thermal_electricity: 0.5,
-        renewable_electricity: 0.5
+        thermal_electricity: null,
+        renewable_electricity: null
       }
     },
     {
@@ -185,8 +185,8 @@ export const nodesConfig: NodesConfig = {
       level: 'industrial_sum',
       color: '#58b00aff',
       addons: {
-        thermal_transport: 0.5,
-        electric_transport: 0.5
+        thermal_transport: null,
+        electric_transport: null
       }
     },
     {
