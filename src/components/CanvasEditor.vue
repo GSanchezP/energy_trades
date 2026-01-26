@@ -80,6 +80,22 @@
       :selectedConnector="selectedConnector"
       :energyGraph="energyGraph"
     />
+    
+    <!-- Results Modal -->
+    <div v-if="showResultsModal" class="modal-overlay" @click="closeResultsModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Solver Results</h2>
+          <button class="modal-close" @click="closeResultsModal">
+            <i class="mdi mdi-close"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <pre v-if="solverResultText" class="solver-result">{{ solverResultText }}</pre>
+          <div v-else class="loading">Loading solver results...</div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -89,6 +105,7 @@ import { Connector, EnergyGraphDrawer } from '../types/energyGraphDrawer'
 import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph from '../types/energyGraphGenerator'
 import { onMounted, onUnmounted } from 'vue'
+import { getStoredSolverResult, formatSolverResult } from '../types/outputMapSolver'
 
 const FPS_INTERVAL_IN_MS = 16
 
@@ -279,9 +296,22 @@ const handleSettingsClick = () => {
   // TODO: Implement settings functionality
 }
 
+const showResultsModal = ref(false)
+const solverResultText = ref<string>('')
+
 const handleResultsClick = () => {
-  console.log('Results clicked')
-  // TODO: Implement results functionality
+  showResultsModal.value = true
+  
+  const result = getStoredSolverResult()
+  if (result) {
+    solverResultText.value = formatSolverResult(result)
+  } else {
+    solverResultText.value = 'Solver result not available. Please wait for the graph to load.'
+  }
+}
+
+const closeResultsModal = () => {
+  showResultsModal.value = false
 }
 </script>
 
@@ -350,5 +380,116 @@ const handleResultsClick = () => {
 
 .control-button:hover .button-icon {
   transform: scale(1.1);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 24px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.solver-result {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #1f2937;
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  max-height: calc(90vh - 120px);
+  overflow-y: auto;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 14px;
 }
 </style>

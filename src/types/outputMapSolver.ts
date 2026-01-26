@@ -53,6 +53,13 @@ function solutionToOutputMap(
   return outputMap
 }
 
+// Store the solver result globally
+let storedSolverResult: Result | null = null
+
+export function getStoredSolverResult(): Result | null {
+  return storedSolverResult
+}
+
 export async function outputMapSolver(config: NodesConfig) {
   const bounds: Bound[] = []
 
@@ -170,6 +177,9 @@ export async function outputMapSolver(config: NodesConfig) {
   }
 
   const result = await glpk.solve(lp)
+  
+  // Store the result
+  storedSolverResult = result
 
   // Convert result to readable format
   const readableResult = formatSolverResult(result)
@@ -190,28 +200,13 @@ export async function outputMapSolver(config: NodesConfig) {
   return output
 }
 
-function formatSolverResult(result: Result): string {
+export function formatSolverResult(result: Result): string {
   const lines: string[] = []
 
   // Header
   lines.push('='.repeat(60))
   lines.push('🔧 LINEAR PROGRAMMING SOLVER RESULTS')
   lines.push('='.repeat(60))
-
-  // Problem Statistics
-  lines.push('\n📊 PROBLEM STATISTICS:')
-  lines.push(
-    `   • Number of Variables: ${result.result?.vars ? Object.keys(result.result.vars).length : 'Unknown'}`
-  )
-  lines.push(
-    `   • Number of Constraints: ${Object.keys(result.result.dual || []).length || 'Unknown'}`
-  )
-  Object.entries(result.result.dual || [])
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .forEach((e) => {
-      lines.push(`   • ${e[0]} Lagrange: ${e[1]}`)
-    })
 
   // Solver Status
   lines.push('\n🎯 SOLVER STATUS:')
@@ -312,6 +307,20 @@ function formatSolverResult(result: Result): string {
     lines.push('   • Solve Time: Not available')
   }
 
+  // Problem Statistics
+  lines.push('\n📊 PROBLEM STATISTICS:')
+  lines.push(
+    `   • Number of Variables: ${result.result?.vars ? Object.keys(result.result.vars).length : 'Unknown'}`
+  )
+  lines.push(
+    `   • Number of Constraints: ${Object.keys(result.result.dual || []).length || 'Unknown'}`
+  )
+  Object.entries(result.result.dual || [])
+    .sort((a, b) => b[1] - a[1])
+    .forEach((e) => {
+      lines.push(`   • ${e[0]} Lagrange: ${e[1]}`)
+    })
+
   // Variable Summary
   lines.push('\n📈 VARIABLE SUMMARY:')
   if (result.result?.vars) {
@@ -325,7 +334,7 @@ function formatSolverResult(result: Result): string {
     lines.push(`   • Non-zero Variables: ${nonZeroVars.length}`)
     lines.push(`   • Zero Variables: ${varCount - nonZeroVars.length}`)
 
-    lines.push('\n🔍 KEY VARIABLES ):')
+    lines.push('\n🔍 KEY VARIABLES:')
     Object.entries(vars).forEach(([name, value]) => {
       lines.push(`   • ${name}: ${value}`)
     })
