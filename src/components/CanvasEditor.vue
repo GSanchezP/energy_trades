@@ -65,6 +65,7 @@
       </v-stage>
     </div>
     <InfoPanel
+      v-if="selectedSquares.length > 0 || selectedConnector"
       :selectedNodes="selectedSquares"
       :selectedConnector="selectedConnector"
       :energyGraph="energyGraph"

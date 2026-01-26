@@ -121,7 +121,7 @@ export const nodesConfig: NodesConfig = {
       color: '#0d92a3ff',
       factors: {
         wellBeing: 0.1,
-        manufacture: 0.2
+        manufacture: 0.15
       }
     },
     {
