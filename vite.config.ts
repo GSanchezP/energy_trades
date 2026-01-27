@@ -8,7 +8,7 @@ export default defineConfig({
   // Base path for GitHub Pages deployment
   // For project pages: use '/repository-name/'
   // For user/organization pages: use '/'
-  base: process.env.GITHUB_PAGES === 'true' ? '/energy-trades/' : '/',
+  base: process.env.GITHUB_PAGES === 'true' ? '/energy_trades/' : '/',
   build: {
     target: 'es2022', // Support top-level await
   },

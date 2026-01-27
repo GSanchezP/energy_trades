@@ -1,68 +1,26 @@
 <template>
   <div class="info-panel">
     <div class="panel-content">
-      <div v-if="selectionCount === 0 && !selectedConnector" class="empty-state">
-        <div class="empty-icon">📊</div>
-        <h3>Energy System Overview</h3>
-        
-        <!-- Overall Graph EROI -->
-        <div v-if="energyGraph" class="overall-eroi">
-          <div class="metric-card Extraction">
-            <div class="metric-label">Overall Graph EROI</div>
-            <div class="metric-value">{{ formatNumber(graphEroi) }}</div>
-            <div class="metric-description">System-wide Energy Return on Investment</div>
-          </div>
-        </div>
-        
-        <!-- EROI Chart -->
-        <div v-if="eroiData.length > 0" class="eroi-chart">
-          <h4>Node EROI Comparison</h4>
-          <div class="chart-container">
-            <div 
-              v-for="item in eroiData" 
-              :key="item.nodeType"
-              class="chart-bar"
-            >
-              <div class="bar-label">{{ item.nodeType }}</div> 
-              <div class="bar-container">
-                <div 
-                  class="bar-fill" 
-                  :style="{ 
-                    width: getBarWidth(item.eroi),
-                    backgroundColor: item.color
-                  }"
-                ></div>
-                <div class="bar-value">{{ formatNumber(item.eroi) }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="hint">
-          <p>• Click a node to view detailed characteristics</p>
-          <p>• Hold Shift to select multiple nodes</p>
-          <p>• Click a connector to see flow details</p>
-        </div>
-      </div>
-
-      <div v-else class="selection-info">
+      <div class="selection-info">
         <!-- Connector Information -->
         <div v-if="selectedConnector" class="connector-info">
           <div class="section-header">
             <h2>🔗 Energy Flow</h2>
           </div>
-          
+
           <div class="metrics-grid">
             <div class="metric-card Extraction">
               <div class="metric-label">Flow Direction</div>
-              <div class="metric-value">{{ selectedConnector.from }} → {{ selectedConnector.to }}</div>
+              <div class="metric-value">
+                {{ selectedConnector.from }} → {{ selectedConnector.to }}
+              </div>
             </div>
-            
+
             <div class="metric-card">
               <div class="metric-label">Power Flow</div>
               <div class="metric-value">{{ formatNumber(selectedConnector.power) }}</div>
             </div>
-            
+
             <div class="metric-card">
               <div class="metric-label">Visual Weight</div>
               <div class="metric-value">{{ selectedConnector.strokeWidth.toFixed(1) }}px</div>
@@ -73,41 +31,11 @@
         <!-- Energy Node Details -->
         <div v-if="energyNodes.length > 0" class="energy-details">
           <div v-for="node in energyNodes" :key="node.id" class="node-section">
-            <!-- Node Header with Key Metrics -->
+            <!-- Node Header -->
             <div class="node-header">
               <div class="node-title">
                 <h2>{{ node.id }}</h2>
-                <div  >
-                  {{ node.level.id }}
-                </div>
-              </div>
-              
-              <div class="key-metrics">
-                <div class="metric-card" :class="getEfficiencyClass(node.eroi)">
-                  <div class="metric-label">EROI</div>
-                  <div class="metric-value">{{ formatNumber(node.eroi) }}</div>
-                  <div class="metric-description">Energy Return on Investment</div>
-                </div>
-                
-              </div>
-            </div>
-
-            <!-- Power Flow Summary -->
-            <div class="power-summary">
-              <div class="power-flow">
-                <div class="power-input">
-                  <div class="power-label">Input Power</div>
-                  <div class="power-value">{{ formatNumber(node.inputPower) }}</div>
-                </div>
-                <div class="power-arrow">→</div>
-                <div class="power-output">
-                  <div class="power-label">Output Power</div>
-                  <div class="power-value">{{ formatNumber(node.outputPower) }}</div>
-                </div>
-                <div class="power-losses">
-                  <div class="power-label">Losses</div>
-                  <div class="power-value">{{ formatNumber(node.losses) }}</div>
-                </div>
+                <div>{{ node.level.id }}</div>
               </div>
             </div>
 
@@ -119,31 +47,38 @@
                   <thead>
                     <tr>
                       <th>Resource Type</th>
-                      <th>EROI Required</th>
-                      <th>Available</th>
-                      <th>Fulfillment</th>
+                      <th>Needed</th>
+                      <th>Actual</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="nodeType in NodeTypes" :key="`input-${nodeType}`">
-                      <td class="node-type">{{ nodeType }}</td>
-                      <td class="numeric">{{ formatNumber(node.treDependencies[nodeType] || 0) }}</td>
-                      <td class="numeric">{{ formatNumber(node.inputMap[nodeType] || 0) }}</td>
+                    <tr v-for="input in getNonZeroInputs(node)" :key="`input-${input.nodeType}`">
+                      <td class="node-type">
+                        {{ input.nodeType }}
+                        <span v-if="input.isAddon" class="addon-badge">(addon)</span>
+                      </td>
                       <td class="numeric">
-                        <div v-if="(node.treDependencies[nodeType] || 0) > 0" class="satisfaction-bar">
-                          <div 
-                            class="satisfaction-fill" 
-                            :style="{ width: getSatisfactionPercentage(node, nodeType as NodeType) }"
-                            :class="{
-                              'satisfied': (node.inputRelativeUsage(nodeType as NodeType) >= 0.98),
-                              'partial': node.inputRelativeUsage(nodeType as NodeType) < 0.98,
-                            }"
-                          ></div>
-                          <span class="satisfaction-text">
-                            {{ (node.inputRelativeUsage(nodeType as NodeType) * 100).toFixed(0) }}%
-                          </span>
-                        </div>
-                        <span v-else class="no-requirement">-</span>
+                        <button
+                          class="edit-button"
+                          @click="openSlider(node, input.nodeType, input.isAddon)"
+                          :title="input.isAddon ? 'Edit addon' : 'Edit factor'"
+                        >
+                          <i class="mdi mdi-pencil"></i>
+                        </button>
+                        <span class="value-display">
+                          {{
+                            input.isAddon
+                              ? (node.eroiAddons[input.nodeType] === null
+                                  ? 'null'
+                                  : node.eroiAddons[input.nodeType] === undefined
+                                    ? ''
+                                    : formatNumber(node.eroiAddons[input.nodeType] || 0))
+                              : formatNumber(node.eroiFactors[input.nodeType] || 0)
+                          }}
+                        </span>
+                      </td>
+                      <td class="numeric">
+                        {{ formatNumber(node.inputMap[input.nodeType] || 0) }}
                       </td>
                     </tr>
                   </tbody>
@@ -161,23 +96,13 @@
                       <th>Resource Type</th>
                       <th>Percentage</th>
                       <th>Actual Output</th>
-                      <th>Visual</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="nodeType in NodeTypes" :key="`output-${nodeType}`">
+                    <tr v-for="nodeType in getNonZeroOutputs(node)" :key="`output-${nodeType}`">
                       <td class="node-type">{{ nodeType }}</td>
                       <td class="numeric">{{ formatPercentage(node.outputMap[nodeType] || 0) }}</td>
                       <td class="numeric">{{ formatNumber(node.outputMap[nodeType] || 0) }}</td>
-                      <td class="visual">
-                        <div v-if="(node.outputMap[nodeType] || 0) > 0" class="output-bar">
-                          <div 
-                            class="output-fill" 
-                            :style="{ width: getOutputPercentage(node.outputMap[nodeType] || 0) }"
-                          ></div>
-                        </div>
-                        <span v-else class="no-output">-</span>
-                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -191,15 +116,13 @@
           <div class="section-header">
             <h2>📦 Other Selected Items</h2>
           </div>
-          <div
-            v-for="node in basicNodes"
-            :key="node.id"
-            class="basic-node-item"
-          >
+          <div v-for="node in basicNodes" :key="node.id" class="basic-node-item">
             <div class="basic-node-header">
               <h3>{{ node.id }}</h3>
               <div class="basic-node-meta">
-                <span class="position">Position: ({{ Math.round(node.x) }}, {{ Math.round(node.y) }})</span>
+                <span class="position"
+                  >Position: ({{ Math.round(node.x) }}, {{ Math.round(node.y) }})</span
+                >
                 <span class="size">Size: {{ node.width }}×{{ node.height }}</span>
               </div>
             </div>
@@ -214,8 +137,8 @@
 import { computed } from 'vue'
 import type { EnergyNode } from '../types/energyNode'
 import type { Connector } from '../types/energyGraphDrawer'
-import { NodeDrawer } from '../types/nodeDrawer';
-import { NodeTypes, type NodeType } from '../types/nodesConfig';
+import { NodeDrawer } from '../types/nodeDrawer'
+import { NodeTypes, type NodeType } from '../types/nodesConfig'
 
 const props = defineProps<{
   selectedNodes: any[]
@@ -223,7 +146,14 @@ const props = defineProps<{
   energyGraph?: any
 }>()
 
-const selectionCount = computed(() => props.selectedNodes.length)
+const emit = defineEmits<{
+  updateConfig: []
+  openSlider: [node: EnergyNode, nodeType: NodeType, isAddon: boolean]
+}>()
+
+const openSlider = (node: EnergyNode, nodeType: NodeType, isAddon: boolean) => {
+  emit('openSlider', node, nodeType, isAddon)
+}
 
 // Filter to only show EnergyNodes (not BasicNodes like dump)
 const energyNodes = computed(() => {
@@ -231,7 +161,6 @@ const energyNodes = computed(() => {
     (node): node is EnergyNode => 'inputMap' in node && 'outputMap' in node
   )
 })
-
 
 // Helper function to format numbers
 const formatNumber = (value: number): string => {
@@ -245,62 +174,47 @@ const formatPercentage = (value: number): string => {
   return `${(value * 100).toFixed(1)}%`
 }
 
-
-// Helper function to get efficiency color class
-const getEfficiencyClass = (eroi: number): string => {
-  if (eroi >= 10) return 'excellent'
-  if (eroi >= 5) return 'good'
-  if (eroi >= 0.5) return 'moderate'
-  if (eroi >= 0.3) return 'poor'
-  return 'critical'
-}
-
-
 // Get non-energy nodes (BasicNodes like dump)
 const basicNodes = computed(() => {
   return props.selectedNodes.filter(
-    (node): node is NodeDrawer => !('nodeType' in node && 'inputMap' in node && 'outputMap' in node)
+    (node): node is NodeDrawer => !('inputMap' in node && 'outputMap' in node)
   )
 })
 
-// EROI data for the graph
-const eroiData = computed(() => {
-  if (!props.energyGraph) return []
-  
-  return props.energyGraph.energyNodes.map((node: { nodeType: any; eroi: any; nodeLevel: any; color: any; }) => ({
-    nodeType: node.nodeType,
-    eroi: node.eroi,
-    nodeLevel: node.nodeLevel,
-    color: node.color
-  })).sort((a: { eroi: number; }, b: { eroi: number; }) => b.eroi - a.eroi)
-})
+// Get non-zero input requirements (both factors and addons)
+const getNonZeroInputs = (node: EnergyNode): Array<{ nodeType: NodeType; isAddon: boolean }> => {
+  const inputs: Array<{ nodeType: NodeType; isAddon: boolean }> = []
 
-// Max EROI for percentage calculations
-const maxEroi = computed(() => {
-  if (eroiData.value.length === 0) return 1
-  return Math.max(...eroiData.value.map((d: { eroi: number }) => d.eroi))
-})
+  // Add factors (from eroiFactors)
+  for (const nodeType of NodeTypes) {
+    const needed = node.eroiFactors[nodeType] || 0
+    if (needed > 0) {
+      inputs.push({ nodeType, isAddon: false })
+    }
+  }
 
-// Helper function to calculate bar width percentage
-const getBarWidth = (eroi: number): string => {
-  const percentage = Math.min(100, (eroi / maxEroi.value) * 100)
-  return `${percentage}%`
+  // Add addons (from eroiAddons) - show if number or null, skip if undefined
+  for (const nodeType of NodeTypes) {
+    const addonValue = node.eroiAddons[nodeType]
+    if (addonValue !== undefined) {
+      // Only add if not already in factors
+      if (!inputs.some((input) => input.nodeType === nodeType && !input.isAddon)) {
+        inputs.push({ nodeType, isAddon: true })
+      }
+    }
+  }
+
+  return inputs
 }
 
-// Helper function to calculate satisfaction percentage
-const getSatisfactionPercentage = (node: EnergyNode, nodeType: NodeType): string => {
-  const percentage = node.inputRelativeUsage(nodeType) * 100
-  return `${percentage.toFixed(0)}%`
+// Get non-zero outputs
+const getNonZeroOutputs = (node: EnergyNode): NodeType[] => {
+  return NodeTypes.filter((nodeType) => {
+    const output = node.outputMap[nodeType] || 0
+    return output > 0
+  })
 }
 
-// Helper function to calculate output percentage
-const getOutputPercentage = (value: number): string => {
-  return `${(value * 100).toFixed(0)}%`
-}
-
-const graphEroi = computed(() => {
-  return props.energyGraph?.graphEroi || 0
-})
 </script>
 
 <style scoped>
@@ -505,12 +419,24 @@ const graphEroi = computed(() => {
   color: white;
 }
 
-.level-0 { background: #6b7280; }
-.level-1 { background: #694908; }
-.level-2 { background: #a226dc; }
-.level-3 { background: #6d9029; }
-.level-4 { background: #1ba90e; }
-.level-5 { background: #c953bdff; }
+.level-0 {
+  background: #6b7280;
+}
+.level-1 {
+  background: #694908;
+}
+.level-2 {
+  background: #a226dc;
+}
+.level-3 {
+  background: #6d9029;
+}
+.level-4 {
+  background: #1ba90e;
+}
+.level-5 {
+  background: #c953bdff;
+}
 
 .key-metrics {
   display: flex;
@@ -538,11 +464,26 @@ const graphEroi = computed(() => {
 }
 
 /* Efficiency Classes */
-.metric-card.excellent { border-color: #10b981; background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); }
-.metric-card.good { border-color: #3b82f6; background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%); }
-.metric-card.moderate { border-color: #f59e0b; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); }
-.metric-card.poor { border-color: #ef4444; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); }
-.metric-card.critical { border-color: #dc2626; background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); }
+.metric-card.excellent {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+}
+.metric-card.good {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+}
+.metric-card.moderate {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+}
+.metric-card.poor {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+.metric-card.critical {
+  border-color: #dc2626;
+  background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+}
 
 /* Power Summary */
 .power-summary {
@@ -559,7 +500,9 @@ const graphEroi = computed(() => {
   gap: 16px;
 }
 
-.power-input, .power-output, .power-losses {
+.power-input,
+.power-output,
+.power-losses {
   text-align: center;
   flex: 1;
 }
@@ -726,9 +669,40 @@ const graphEroi = computed(() => {
   color: white;
 }
 
-.no-requirement, .no-output {
+.no-requirement,
+.no-output {
   color: #9ca3af;
   font-style: italic;
+}
+
+.addon-badge {
+  font-size: 10px;
+  color: #6b7280;
+  font-weight: normal;
+  font-style: italic;
+  margin-left: 4px;
+}
+
+.edit-button {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #3b82f6;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+
+.edit-button:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+}
+
+.value-display {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
 }
 
 /* Output Bar */
@@ -783,7 +757,8 @@ const graphEroi = computed(() => {
   color: #64748b;
 }
 
-.position, .size {
+.position,
+.size {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
@@ -792,20 +767,20 @@ const graphEroi = computed(() => {
   .info-panel {
     width: 100%;
   }
-  
+
   .metrics-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .key-metrics {
     flex-direction: column;
   }
-  
+
   .power-flow {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .power-arrow {
     transform: rotate(90deg);
   }

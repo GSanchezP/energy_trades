@@ -121,7 +121,7 @@ export const nodesConfig: NodesConfig = {
       color: '#0d92a3ff',
       factors: {
         wellBeing: 0.1,
-        manufacture: 0.2
+        manufacture: 0.15
       }
     },
     {
@@ -131,7 +131,7 @@ export const nodesConfig: NodesConfig = {
       color: '#0d92a3ff',
       addons: {
         thermal_electricity: null,
-        renewable_electricity: null
+        renewable_electricity: 0.2
       }
     },
     {
@@ -185,7 +185,7 @@ export const nodesConfig: NodesConfig = {
       level: 'industrial_sum',
       color: '#58b00aff',
       addons: {
-        thermal_transport: null,
+        thermal_transport: 0.5,
         electric_transport: null
       }
     },

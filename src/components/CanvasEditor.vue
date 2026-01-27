@@ -1,6 +1,51 @@
 <template>
   <div class="canvas-container">
     <div class="canvas-wrapper">
+      <!-- Control Buttons -->
+      <div class="control-buttons">
+        <button class="control-button" @click="handleSettingsClick" title="Settings">
+          <i class="mdi mdi-cog button-icon"></i>
+        </button>
+        <button class="control-button" @click="handleResultsClick" title="Results">
+          <i class="mdi mdi-notebook button-icon"></i>
+        </button>
+      </div>
+
+      <!-- Value Slider -->
+      <div v-if="sliderState" class="value-slider-container">
+        <div class="slider-header">
+          <span class="slider-label">
+            {{ sliderState.node?.id }} - {{ sliderState.nodeType }}
+            <span v-if="sliderState.isAddon" class="addon-badge">(addon)</span>
+          </span>
+          <button class="slider-close" @click="closeSlider">
+            <i class="mdi mdi-close"></i>
+          </button>
+        </div>
+        <div class="slider-wrapper">
+          <input
+            type="range"
+            class="vertical-slider"
+            :min="sliderState.isAddon ? 0 : 0"
+            :max="sliderState.isAddon ? 1 : 3"
+            :step="0.001"
+            :value="getSliderValue"
+            @input="handleSliderChange"
+            orient="vertical"
+          />
+          <div class="slider-value-display">
+            <div class="slider-value">{{ getSliderDisplayValue }}</div>
+            <div class="slider-min-max">
+              <span>0</span>
+              <span>{{ sliderState.isAddon ? 1 : 3 }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="sliderState.isAddon" class="slider-actions">
+          <button class="set-null-button" @click="setAddonToNull">Set to null</button>
+        </div>
+      </div>
+
       <v-stage
         ref="stageRef"
         :config="stageConfig"
@@ -65,10 +110,29 @@
       </v-stage>
     </div>
     <InfoPanel
+      v-if="isInfoPanelVisible"
       :selectedNodes="selectedSquares"
       :selectedConnector="selectedConnector"
       :energyGraph="energyGraph"
+      @update-config="handleConfigUpdate"
+      @open-slider="handleOpenSlider"
     />
+
+    <!-- Results Modal -->
+    <div v-if="showResultsModal" class="modal-overlay" @click="closeResultsModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Solver Results</h2>
+          <button class="modal-close" @click="closeResultsModal">
+            <i class="mdi mdi-close"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <pre v-if="solverResultText" class="solver-result">{{ solverResultText }}</pre>
+          <div v-else class="loading">Loading solver results...</div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -77,27 +141,196 @@ import { ref, computed } from 'vue'
 import { Connector, EnergyGraphDrawer } from '../types/energyGraphDrawer'
 import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph from '../types/energyGraphGenerator'
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
+import { getStoredSolverResult, formatSolverResult } from '../types/outputMapSolver'
+import type { EnergyNode } from '../types/energyNode'
+import { NodeType, nodesConfig, NodeConfig } from '../types/nodesConfig'
 
 const FPS_INTERVAL_IN_MS = 16
 
 const energyGraph = ref<EnergyGraphDrawer | undefined>(undefined)
 const stageRef = ref<any>(null)
 
-const stageWidth = window.innerWidth - 350
-const stageHeight = window.innerHeight
-
 const selectedSquareIds = ref<Set<string>>(new Set())
 const selectedConnectorId = ref<string | null>(null)
 const clickedOnElement = ref<boolean>(false)
+
+// Window dimensions
+const windowWidth = ref(window.innerWidth)
+const windowHeight = ref(window.innerHeight)
 
 // Pan state
 const isPanning = ref<boolean>(false)
 const lastPointerPosition = ref<{ x: number; y: number } | null>(null)
 const panTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
-onMounted(async () => {
+// Handle window resize
+const handleResize = () => {
+  windowWidth.value = window.innerWidth
+  windowHeight.value = window.innerHeight
+}
+
+const regenerateGraph = async () => {
   energyGraph.value = await generateEnergyGraph()
+  // Clear selection after regeneration
+  selectedSquareIds.value.clear()
+  selectedConnectorId.value = null
+}
+
+onMounted(async () => {
+  await regenerateGraph()
+
+  // Add resize listener
+  window.addEventListener('resize', handleResize)
+})
+
+const handleConfigUpdate = async () => {
+  await regenerateGraph()
+}
+
+// Slider state
+const sliderState = ref<{
+  node: EnergyNode
+  nodeType: NodeType
+  isAddon: boolean
+} | null>(null)
+
+const handleOpenSlider = (node: EnergyNode, nodeType: NodeType, isAddon: boolean) => {
+  sliderState.value = { node, nodeType, isAddon }
+}
+
+const closeSlider = () => {
+  sliderState.value = null
+}
+
+const getSliderValue = computed(() => {
+  if (!sliderState.value) return 0
+  const { node, nodeType, isAddon } = sliderState.value
+  // Get current node from energyGraph to ensure we have the latest values
+  const currentNode = energyGraph.value?.energyNodes.find((n) => n.id === node.id) || node
+  if (isAddon) {
+    const value = currentNode.eroiAddons[nodeType]
+    if (value === null || value === undefined) return 0
+    return value
+  } else {
+    return currentNode.eroiFactors[nodeType] || 0
+  }
+})
+
+const getSliderDisplayValue = computed(() => {
+  if (!sliderState.value) return '0'
+  const { node, nodeType, isAddon } = sliderState.value
+  // Get current node from energyGraph to ensure we have the latest values
+  const currentNode = energyGraph.value?.energyNodes.find((n) => n.id === node.id) || node
+  if (isAddon) {
+    const value = currentNode.eroiAddons[nodeType]
+    if (value === null) return 'null'
+    if (value === undefined) return '0'
+    return value.toFixed(3)
+  } else {
+    return (currentNode.eroiFactors[nodeType] || 0).toFixed(3)
+  }
+})
+
+// Debounce for slider updates
+let sliderUpdateTimeout: ReturnType<typeof setTimeout> | null = null
+
+const handleSliderChange = async (event: Event) => {
+  if (!sliderState.value) return
+  const target = event.target as HTMLInputElement
+  const value = parseFloat(target.value) || 0
+
+  const { node, nodeType, isAddon } = sliderState.value
+  const nodeConfig = nodesConfig.nodes.find((n) => n.id === node.id)
+  if (!nodeConfig) return
+
+  if (isAddon) {
+    // Update addon
+    const newAddons = { ...nodeConfig.addons }
+    newAddons[nodeType] = value
+    const index = nodesConfig.nodes.findIndex((n) => n.id === node.id)
+    if (index !== -1) {
+      nodesConfig.nodes[index] = new NodeConfig(
+        nodeConfig.id,
+        nodeConfig.label,
+        nodeConfig.level,
+        nodeConfig.color,
+        nodeConfig.factors,
+        newAddons
+      )
+    }
+  } else {
+    // Update factor
+    const newFactors = { ...nodeConfig.factors }
+    if (value === 0) {
+      delete newFactors[nodeType]
+    } else {
+      newFactors[nodeType] = value
+    }
+    const index = nodesConfig.nodes.findIndex((n) => n.id === node.id)
+    if (index !== -1) {
+      nodesConfig.nodes[index] = new NodeConfig(
+        nodeConfig.id,
+        nodeConfig.label,
+        nodeConfig.level,
+        nodeConfig.color,
+        newFactors,
+        nodeConfig.addons
+      )
+    }
+  }
+
+  // Update slider state to reflect new value
+  if (sliderState.value.node) {
+    // The node will be updated when graph regenerates, but we need to update the slider state
+    // For now, just update the display value by regenerating
+  }
+
+  // Debounce graph regeneration to avoid too many updates
+  if (sliderUpdateTimeout) {
+    clearTimeout(sliderUpdateTimeout)
+  }
+  sliderUpdateTimeout = setTimeout(async () => {
+    await regenerateGraph()
+    // Update slider state with new node reference
+    if (sliderState.value && energyGraph.value) {
+      const updatedNode = energyGraph.value.energyNodes.find(
+        (n) => n.id === sliderState.value!.node.id
+      )
+      if (updatedNode) {
+        sliderState.value.node = updatedNode
+      }
+    }
+  }, 50)
+}
+
+const setAddonToNull = async () => {
+  if (!sliderState.value || !sliderState.value.isAddon) return
+
+  const { node, nodeType } = sliderState.value
+  const nodeConfig = nodesConfig.nodes.find((n) => n.id === node.id)
+  if (!nodeConfig) return
+
+  const newAddons = { ...nodeConfig.addons }
+  newAddons[nodeType] = null
+
+  const index = nodesConfig.nodes.findIndex((n) => n.id === node.id)
+  if (index !== -1) {
+    nodesConfig.nodes[index] = new NodeConfig(
+      nodeConfig.id,
+      nodeConfig.label,
+      nodeConfig.level,
+      nodeConfig.color,
+      nodeConfig.factors,
+      newAddons
+    )
+  }
+
+  await regenerateGraph()
+}
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
 })
 
 const nodes = computed(() => {
@@ -117,9 +350,15 @@ const selectedConnector = computed((): Connector | null => {
   return connectors.value.find((conn) => conn.id === selectedConnectorId.value) || null
 })
 
+// Check if InfoPanel should be visible
+const isInfoPanelVisible = computed(() => {
+  return selectedSquares.value.length > 0 || selectedConnector.value !== null
+})
+
+// Calculate canvas dimensions - full width when panel is hidden, reduced when visible
 const stageConfig = computed(() => ({
-  width: stageWidth,
-  height: stageHeight
+  width: isInfoPanelVisible.value ? windowWidth.value - 350 : windowWidth.value,
+  height: windowHeight.value
 }))
 
 const handleWheel = (e: any) => {
@@ -155,22 +394,15 @@ const handleWheel = (e: any) => {
   stage.position(newPos)
 }
 
-const handleSquareClick = (squareId: string, event: { evt: MouseEvent }) => {
+const handleSquareClick = (squareId: string, _event: { evt: MouseEvent }) => {
   console.log(`Clicked on ${squareId}`)
   clickedOnElement.value = true
   // Clear connector selection when clicking on nodes
   selectedConnectorId.value = null
 
-  if (event.evt.shiftKey) {
-    if (selectedSquareIds.value.has(squareId)) {
-      selectedSquareIds.value.delete(squareId)
-    } else {
-      selectedSquareIds.value.add(squareId)
-    }
-  } else {
-    selectedSquareIds.value.clear()
-    selectedSquareIds.value.add(squareId)
-  }
+  // Disable multiple selection - always select only one
+  selectedSquareIds.value.clear()
+  selectedSquareIds.value.add(squareId)
 }
 
 const handleConnectorClick = (connectorId: string, _event: { evt: MouseEvent }) => {
@@ -242,6 +474,29 @@ const handleMouseUp = (event: { evt: MouseEvent }) => {
     }
   }
 }
+
+const handleSettingsClick = () => {
+  console.log('Settings clicked')
+  // TODO: Implement settings functionality
+}
+
+const showResultsModal = ref(false)
+const solverResultText = ref<string>('')
+
+const handleResultsClick = () => {
+  showResultsModal.value = true
+
+  const result = getStoredSolverResult()
+  if (result) {
+    solverResultText.value = formatSolverResult(result)
+  } else {
+    solverResultText.value = 'Solver result not available. Please wait for the graph to load.'
+  }
+}
+
+const closeResultsModal = () => {
+  showResultsModal.value = false
+}
 </script>
 
 <style scoped>
@@ -249,11 +504,313 @@ const handleMouseUp = (event: { evt: MouseEvent }) => {
   display: flex;
   height: 100vh;
   width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }
 
 .canvas-wrapper {
   flex: 1;
   background: #f1f5f9;
   overflow: hidden;
+  min-width: 0; /* Allows flex item to shrink below content size */
+  position: relative;
+}
+
+.control-buttons {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.control-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  color: #334155;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.control-button:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.control-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.button-icon {
+  font-size: 24px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.control-button:hover .button-icon {
+  transform: scale(1.1);
+}
+
+/* Value Slider */
+.value-slider-container {
+  position: absolute;
+  top: 80px;
+  left: 16px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  min-width: 120px;
+}
+
+.slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.slider-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+  flex: 1;
+}
+
+.slider-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 18px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.slider-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.vertical-slider {
+  writing-mode: bt-lr; /* IE */
+  -webkit-appearance: slider-vertical; /* WebKit */
+  appearance: slider-vertical; /* Standard */
+  width: 8px;
+  height: 200px;
+  padding: 0 5px;
+  cursor: pointer;
+}
+
+.vertical-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.vertical-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.slider-value-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 60px;
+}
+
+.slider-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.slider-min-max {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.slider-actions {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.set-null-button {
+  width: 100%;
+  padding: 8px 12px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  transition: all 0.2s ease;
+}
+
+.set-null-button:hover {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 900px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 24px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.solver-result {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1f2937;
+  background: #f9fafb;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 14px;
 }
 </style>

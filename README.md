@@ -20,7 +20,7 @@ This project is configured for automatic deployment to GitHub Pages.
    - You can also manually trigger the deployment from the **Actions** tab
 
 3. **Access your deployed app:**
-   - Your app will be available at: `https://<username>.github.io/energy-trades/`
+   - Your app will be available at: `https://<username>.github.io/energy_trades/`
    - If you're using a custom domain or different repository name, update the `base` path in `vite.config.ts`
 
 ### Manual Build
@@ -28,7 +28,26 @@ This project is configured for automatic deployment to GitHub Pages.
 To build the project locally for GitHub Pages:
 
 ```bash
-GITHUB_PAGES=true pnpm run build
+pnpm run build:gh-pages
 ```
 
 The built files will be in the `dist` directory.
+
+### Local Testing
+
+**Important:** You cannot open `dist/index.html` directly in a browser because the assets use absolute paths that require a web server.
+
+To test the build locally:
+
+1. **For regular build (base `/`):**
+   ```bash
+   pnpm run build
+   pnpm run preview
+   ```
+
+2. **For GitHub Pages build (base `/energy_trades/`):**
+   ```bash
+   pnpm run preview:gh-pages
+   ```
+
+This will start a local server where you can preview your built app.
