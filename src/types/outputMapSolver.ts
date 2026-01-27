@@ -132,7 +132,7 @@ export async function outputMapSolver(config: NodesConfig) {
     const sumConstraintsVars: string[] = []
     for (const [inputNode, value] of Object.entries(node.addons)) {
       sumConstraintsVars.push(node.inputFactorVarName(inputNode as NodeType))
-      if (!value) {
+      if (value === null) {
         console.log(`Skipping addon ${inputNode} for node ${node.id} because value is null`)
         continue
       }
@@ -177,7 +177,7 @@ export async function outputMapSolver(config: NodesConfig) {
   }
 
   const result = await glpk.solve(lp)
-  
+
   // Store the result
   storedSolverResult = result
 

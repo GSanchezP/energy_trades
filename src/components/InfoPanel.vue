@@ -58,13 +58,24 @@
                         <span v-if="input.isAddon" class="addon-badge">(addon)</span>
                       </td>
                       <td class="numeric">
-                        {{
-                          input.isAddon
-                            ? (node.eroiAddons[input.nodeType] === null || node.eroiAddons[input.nodeType] === undefined
-                                ? 'null'
-                                : formatNumber(node.eroiAddons[input.nodeType] || 0))
-                            : formatNumber(node.eroiFactors[input.nodeType] || 0)
-                        }}
+                        <button
+                          class="edit-button"
+                          @click="openSlider(node, input.nodeType, input.isAddon)"
+                          :title="input.isAddon ? 'Edit addon' : 'Edit factor'"
+                        >
+                          <i class="mdi mdi-pencil"></i>
+                        </button>
+                        <span class="value-display">
+                          {{
+                            input.isAddon
+                              ? (node.eroiAddons[input.nodeType] === null
+                                  ? 'null'
+                                  : node.eroiAddons[input.nodeType] === undefined
+                                    ? ''
+                                    : formatNumber(node.eroiAddons[input.nodeType] || 0))
+                              : formatNumber(node.eroiFactors[input.nodeType] || 0)
+                          }}
+                        </span>
                       </td>
                       <td class="numeric">
                         {{ formatNumber(node.inputMap[input.nodeType] || 0) }}
@@ -127,13 +138,22 @@ import { computed } from 'vue'
 import type { EnergyNode } from '../types/energyNode'
 import type { Connector } from '../types/energyGraphDrawer'
 import { NodeDrawer } from '../types/nodeDrawer'
-import { NodeTypes, type NodeType, nodesConfig } from '../types/nodesConfig'
+import { NodeTypes, type NodeType } from '../types/nodesConfig'
 
 const props = defineProps<{
   selectedNodes: any[]
   selectedConnector: Connector | null
   energyGraph?: any
 }>()
+
+const emit = defineEmits<{
+  updateConfig: []
+  openSlider: [node: EnergyNode, nodeType: NodeType, isAddon: boolean]
+}>()
+
+const openSlider = (node: EnergyNode, nodeType: NodeType, isAddon: boolean) => {
+  emit('openSlider', node, nodeType, isAddon)
+}
 
 // Filter to only show EnergyNodes (not BasicNodes like dump)
 const energyNodes = computed(() => {
@@ -160,11 +180,6 @@ const basicNodes = computed(() => {
     (node): node is NodeDrawer => !('inputMap' in node && 'outputMap' in node)
   )
 })
-
-// Get nodeConfig for a given node
-const getNodeConfig = (node: EnergyNode) => {
-  return nodesConfig.nodes.find((n) => n.id === node.id)
-}
 
 // Get non-zero input requirements (both factors and addons)
 const getNonZeroInputs = (node: EnergyNode): Array<{ nodeType: NodeType; isAddon: boolean }> => {
@@ -199,6 +214,7 @@ const getNonZeroOutputs = (node: EnergyNode): NodeType[] => {
     return output > 0
   })
 }
+
 </script>
 
 <style scoped>
@@ -665,6 +681,28 @@ const getNonZeroOutputs = (node: EnergyNode): NodeType[] => {
   font-weight: normal;
   font-style: italic;
   margin-left: 4px;
+}
+
+.edit-button {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #3b82f6;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  margin-right: 8px;
+}
+
+.edit-button:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+}
+
+.value-display {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
 }
 
 /* Output Bar */
