@@ -27,20 +27,20 @@ export class EnergyGraphDrawer {
   private upBahnCurrentUsage: number
 
   constructor(nodes: EnergyNode[]) {
-    this.NODES_VERTICAL_SPACING = 40
+    this.NODES_VERTICAL_SPACING = 8
 
     this.energyNodes = nodes
     const verticalUsageByLevel = this.calculateVerticalUsage()
 
     this.upBahnCurrentUsage = 0
     this.UPPER_AUTOBAHN_BASE = -this.NODES_VERTICAL_SPACING
-    this.lowBahnCurrentUsage = this.calculateLowBahnUsage()
+    const belowBahnHeight = this.calculateLowBahnUsage() * BASE_NODE_HEIGHT
+    this.lowBahnCurrentUsage = 0
 
-    const maxLevel = this.computeNodePositions(verticalUsageByLevel)
+    const maxNodeBottom = this.computeNodePositions(verticalUsageByLevel)
 
-    this.LOW_AUTOBAHN_BASE =
-      maxLevel * (BASE_NODE_HEIGHT + this.NODES_VERTICAL_SPACING) +
-      this.lowBahnCurrentUsage * BASE_NODE_HEIGHT
+    // Stack below-autobahn lanes just under the tallest column, then the heat dump.
+    this.LOW_AUTOBAHN_BASE = maxNodeBottom + this.NODES_VERTICAL_SPACING + belowBahnHeight
 
     this.DUMP_NODE_Y = this.LOW_AUTOBAHN_BASE + this.NODES_VERTICAL_SPACING
 
@@ -196,8 +196,6 @@ export class EnergyGraphDrawer {
       conversion: 0,
       conversionSum: 0,
       primary: 0,
-      industrial: 0,
-      industrial_sum: 0,
       tertiary: 0
     }
 
@@ -216,8 +214,18 @@ export class EnergyGraphDrawer {
     return dumpNode
   }
 
+  private gapAfterNode(node: EnergyNode, nextNode?: EnergyNode) {
+    if (!nextNode) return this.NODES_VERTICAL_SPACING
+    const maxGap = 40
+    const fraction = 0.2
+    return Math.min(
+      maxGap,
+      Math.max(this.NODES_VERTICAL_SPACING, fraction * Math.min(node.height, nextNode.height))
+    )
+  }
+
   computeNodePositions(verticalUsageByLevel: Record<NodeLevel, number>) {
-    let maxLevel = 0
+    let maxNodeBottom = 0
     let xOffset = 0
     for (const level of NodeLevels) {
       if (nodeLevelValue(level)) {
@@ -226,22 +234,46 @@ export class EnergyGraphDrawer {
         xOffset += value
       }
 
-      let i = 0
-      for (const node of this.energyNodes.filter((n) => n.level.id === level)) {
+      const nodesInLevel = this.energyNodes.filter((n) => n.level.id === level)
+      const previousLevel = nodeLevelValue(level) > 0 ? prevLevel(level) : undefined
+      for (let i = 0; i < nodesInLevel.length; i++) {
+        const node = nodesInLevel[i]
+        const prevSibling = i > 0 ? nodesInLevel[i - 1] : undefined
         const nodeSpacing = BASE_NODE_WIDTH * (node.level.value - 1)
+        // Align with the same-index node in the previous column when possible
+        // (e.g. Coal ↔ T Electricity), without overlapping the sibling above.
+        const peer = previousLevel
+          ? this.energyNodes.find(
+              (n) => n.level.id === previousLevel && n.level.position === node.level.position
+            )
+          : undefined
+
+        let nodeY: number
+        if (peer && prevSibling) {
+          nodeY = Math.max(
+            prevSibling.y + prevSibling.height + this.NODES_VERTICAL_SPACING,
+            peer.y
+          )
+        } else if (peer) {
+          nodeY = peer.y
+        } else if (prevSibling) {
+          nodeY = prevSibling.y + prevSibling.height + this.gapAfterNode(prevSibling, node)
+        } else {
+          nodeY = 0
+        }
+
         console.log(
           `[${level}][${node.id}] Node spacing: ${nodeSpacing}, xOffset: ${xOffset}, x: ${BASE_NODE_HEIGHT + nodeSpacing + xOffset}`
         )
         node.setPosition = {
           x: BASE_NODE_HEIGHT + nodeSpacing + xOffset,
-          y: i * (BASE_NODE_HEIGHT + this.NODES_VERTICAL_SPACING)
+          y: nodeY
         }
-        i++
+        maxNodeBottom = Math.max(maxNodeBottom, node.y + node.height)
       }
-      maxLevel = Math.max(maxLevel, i)
     }
 
-    return maxLevel
+    return maxNodeBottom
   }
 
   generateFlowConnectors() {
