@@ -518,11 +518,6 @@ export class EnergyGraphDrawer {
     if (!xSourceOffsetMap[sourceLaneLevel]) xSourceOffsetMap[sourceLaneLevel] = 0
     const sourceXOffset = 10 + (xSourceOffsetMap[sourceLaneLevel]! ?? 0) + strokeWidth / 2
 
-    xTargetOffsetMap[target.level.id]! = targetXOffset
-    // Always advance source lanes — including middle — so multi-target exits diverge.
-    const laneGap = connectorType === 'middle' ? 8 : 0
-    xSourceOffsetMap[sourceLaneLevel]! += strokeWidth + laneGap
-
     const sourceX = source.x + source.width
     const sourceY = source.y + sourceYOffset + strokeWidth / 2
     const targetX = target.x
@@ -531,12 +526,24 @@ export class EnergyGraphDrawer {
     let points: number[]
 
     if (connectorType === 'middle') {
-      // Vertical-first: reach target Y on the exit lane, then run horizontal.
-      // Horizontal-first lets one connector's drop cut through another's run.
-      const laneX = sourceX + sourceXOffset
-      const approachX = Math.max(laneX, targetX - targetXOffset + strokeWidth / 2 - 10)
-      points = [sourceX, sourceY, laneX, sourceY, laneX, targetY, approachX, targetY, targetX, targetY]
+      // Aligned next-column links (Coal→Thermal, Petroleum→Fuel) should cross
+      // the gap directly. Consuming the shared lane pool makes the next
+      // connector overshoot past the target and fold back.
+      const needsVertical = Math.abs(sourceY - targetY) > 1
+      if (!needsVertical) {
+        points = [sourceX, sourceY, targetX, targetY]
+      } else {
+        xTargetOffsetMap[target.level.id]! = targetXOffset
+        xSourceOffsetMap[sourceLaneLevel]! += strokeWidth + 8
+        // Stay in the source→target gap; never run past the destination.
+        const laneX = Math.min(sourceX + sourceXOffset, targetX - 10)
+        const approachX = Math.max(laneX, Math.min(targetX - 10, targetX - targetXOffset + strokeWidth / 2 - 10))
+        points = [sourceX, sourceY, laneX, sourceY, laneX, targetY, approachX, targetY, targetX, targetY]
+      }
     } else {
+      xTargetOffsetMap[target.level.id]! = targetXOffset
+      xSourceOffsetMap[sourceLaneLevel]! += strokeWidth
+
       const yAutobahn = this.calculateAutobahnY(connectorType, strokeWidth)
       const horizontalX = targetX - targetXOffset + strokeWidth / 2 - 10
       points = [
