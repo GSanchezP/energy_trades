@@ -1,5 +1,8 @@
 <template>
   <div class="info-panel">
+    <button class="panel-close" type="button" title="Close" @click="emit('close')">
+      <i class="mdi mdi-close"></i>
+    </button>
     <div class="panel-content">
       <div class="selection-info">
         <!-- Connector Information -->
@@ -149,6 +152,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   updateConfig: []
   openSlider: [node: EnergyNode, nodeType: NodeType, isAddon: boolean]
+  close: []
 }>()
 
 const openSlider = (node: EnergyNode, nodeType: NodeType, isAddon: boolean) => {
@@ -226,12 +230,38 @@ const getNonZeroOutputs = (node: EnergyNode): NodeType[] => {
   flex-direction: column;
   overflow: hidden;
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.panel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.panel-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 .panel-content {
   flex: 1;
   overflow-y: auto;
   padding: 24px;
+  padding-top: 48px;
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 #f1f5f9;
 }

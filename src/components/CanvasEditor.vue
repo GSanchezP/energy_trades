@@ -105,6 +105,7 @@
       :energyGraph="energyGraph"
       @update-config="handleConfigUpdate"
       @open-slider="handleOpenSlider"
+      @close="closeInfoPanel"
     />
 
     <!-- Results Modal -->
@@ -513,6 +514,11 @@ const selectedConnector = computed((): Connector | null => {
 const isInfoPanelVisible = computed(() => {
   return selectedSquares.value.length > 0 || selectedConnector.value !== null
 })
+
+const closeInfoPanel = () => {
+  selectedSquareIds.value.clear()
+  selectedConnectorId.value = null
+}
 
 // Calculate canvas dimensions - full width when panel is hidden, reduced when visible
 const stageConfig = computed(() => ({
