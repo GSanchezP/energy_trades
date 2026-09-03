@@ -23,7 +23,6 @@ export const NodeLevels = [
   'dump',
   'extraction',
   'conversion',
-  'conversionSum',
   'primary',
   'tertiary'
 ] as const
@@ -124,7 +123,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'electricity',
       label: 'Electricity',
-      level: 'conversionSum',
+      level: 'conversion',
       color: '#0d92a3ff',
       addons: {
         thermal_electricity: null,
@@ -179,7 +178,7 @@ export const nodesConfig: NodesConfig = {
     {
       id: 'transport',
       label: 'Transport',
-      level: 'conversionSum',
+      level: 'conversion',
       color: '#58b00aff',
       addons: {
         thermal_transport: 0.5,

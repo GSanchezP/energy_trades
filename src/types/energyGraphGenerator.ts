@@ -23,8 +23,9 @@ export function generateNodes(
   >
 
   return config.nodes.map((nodeConfig) => {
-    const nodeLevelPosition = nodeLevelPositions[nodeConfig.level]
-    nodeLevelPositions[nodeConfig.level]++
+    const isSum = Object.keys(nodeConfig.addons).length > 0
+    // Sum nodes are laid out beside their addons; keep level positions for regular nodes only.
+    const nodeLevelPosition = isSum ? 0 : nodeLevelPositions[nodeConfig.level]++
     return new EnergyNode(
       nodeConfig.label,
       nodeConfig.level,

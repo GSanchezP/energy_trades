@@ -196,7 +196,6 @@ export class EnergyGraphDrawer {
       dump: 0,
       extraction: 0,
       conversion: 0,
-      conversionSum: 0,
       primary: 0,
       tertiary: 0
     }
@@ -289,24 +288,14 @@ export class EnergyGraphDrawer {
   computeNodePositions(verticalUsageByLevel: Record<NodeLevel, number>) {
     let maxNodeBottom = 0
     let xOffset = 0
-    // When a level is inlined (sum beside addons), keep its exit-lane gap for the next real column.
-    let deferredGap = 0
     for (const level of NodeLevels) {
       const nodesInLevel = this.energyNodes.filter((n) => n.level.id === level)
-      const inlineSums = nodesInLevel.filter((n) => n.isSumNode && this.getSumGroups().some((g) => g.sum === n))
-      const regularNodes = nodesInLevel.filter((n) => !inlineSums.includes(n))
+      const inlineSums = nodesInLevel.filter((n) => n.isSumNode)
+      const regularNodes = nodesInLevel.filter((n) => !n.isSumNode)
 
       if (nodeLevelValue(level)) {
         const prevVerticalUsage = verticalUsageByLevel[prevLevel(level)]
-        const gap = (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT + 30
-        const onlyInlineSums =
-          nodesInLevel.length > 0 && regularNodes.length === 0 && inlineSums.length > 0
-        if (onlyInlineSums) {
-          deferredGap += gap
-        } else {
-          xOffset += deferredGap + gap
-          deferredGap = 0
-        }
+        xOffset += (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT + 30
       }
 
       const previousLevel = nodeLevelValue(level) > 0 ? prevLevel(level) : undefined
@@ -314,14 +303,15 @@ export class EnergyGraphDrawer {
         const node = regularNodes[i]
         const prevSibling = i > 0 ? regularNodes[i - 1] : undefined
         const nodeSpacing = BASE_NODE_WIDTH * (node.level.value - 1)
-        const peer = previousLevel
-          ? this.energyNodes.find(
-              (n) =>
-                n.level.id === previousLevel &&
-                n.level.position === node.level.position &&
-                !n.isSumNode
-            )
-          : undefined
+        const peer =
+          previousLevel === 'extraction'
+            ? this.energyNodes.find(
+                (n) =>
+                  n.level.id === previousLevel &&
+                  n.level.position === node.level.position &&
+                  !n.isSumNode
+              )
+            : undefined
 
         let nodeY: number
         if (prevSibling && this.sameSumGroup(prevSibling, node)) {
@@ -349,7 +339,7 @@ export class EnergyGraphDrawer {
         maxNodeBottom = Math.max(maxNodeBottom, node.y + node.height)
       }
 
-      // Place sum nodes directly after their addon stack (ignore configured level column).
+      // Place sum nodes directly after their addon stack.
       for (const sum of inlineSums) {
         const group = this.getSumGroups().find((g) => g.sum === sum)
         if (!group) continue
