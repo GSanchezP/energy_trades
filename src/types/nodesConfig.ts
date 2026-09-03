@@ -102,7 +102,7 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'thermal_electricity',
-      label: 'T Elec',
+      label: 'Thermal',
       level: 'conversion',
       color: '#0d92a3ff',
       factors: {
@@ -112,7 +112,7 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'renewable_electricity',
-      label: 'R Elec',
+      label: 'Renewable',
       level: 'conversion',
       color: '#0d92a3ff',
       factors: {
@@ -122,7 +122,7 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'electricity',
-      label: 'Electricity',
+      label: 'Elec',
       level: 'conversion',
       color: '#0d92a3ff',
       addons: {
@@ -155,8 +155,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'thermal_transport',
-      label: 'T Trans',
-      level: 'conversion',
+      label: 'Thermal',
+      level: 'primary',
       color: '#58b00aff',
       factors: {
         wellBeing: 0.05,
@@ -166,8 +166,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'electric_transport',
-      label: 'E Trans',
-      level: 'conversion',
+      label: 'Electric',
+      level: 'primary',
       color: '#58b00aff',
       factors: {
         wellBeing: 0.05,
@@ -177,8 +177,8 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'transport',
-      label: 'Transport',
-      level: 'conversion',
+      label: 'Transp',
+      level: 'primary',
       color: '#58b00aff',
       addons: {
         thermal_transport: 0.5,

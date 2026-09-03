@@ -336,55 +336,110 @@ function colorLuminance(color: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
-function buildNodeLabelConfig(square: NodeDrawer) {
+function buildNodeLabelConfig(square: NodeDrawer, allNodes: NodeDrawer[]) {
   const padX = 4
   const padY = 2
-  const textWidth = Math.max(4, square.width - padX * 2)
-  const textHeight = Math.max(4, square.height - padY * 2)
-
-  // Too small to read — skip in-node label
-  if (square.height < 16 || square.width < 22) return null
-
   const label = square.label
+  const lightFill = colorLuminance(square.color) > 0.5
+
   const longestWord = label
     .split(/[\s\n]+/)
     .filter(Boolean)
     .reduce((a, b) => (a.length >= b.length ? a : b), '')
-  // ~0.56em average bold glyph width — keep whole words on one line when possible
+
+  const textWidth = Math.max(4, square.width - padX * 2)
+  const textHeight = Math.max(4, square.height - padY * 2)
   const maxFromWidth = Math.floor(textWidth / Math.max(1, longestWord.length * 0.56))
   const maxFromHeight = Math.floor(textHeight * 0.42)
-  const fontSize = Math.max(8, Math.min(16, maxFromWidth, maxFromHeight))
-  if (square.height < fontSize * 1.35) return null
+  const inNodeFontSize = Math.max(8, Math.min(16, maxFromWidth, maxFromHeight))
+  const fitsInside =
+    square.height >= 16 &&
+    square.width >= 22 &&
+    square.height >= inNodeFontSize * 1.35 &&
+    maxFromWidth >= 8
 
-  const light = colorLuminance(square.color) > 0.5
+  if (fitsInside) {
+    return {
+      id: square.id,
+      config: {
+        x: square.x + padX,
+        y: square.y + padY,
+        width: textWidth,
+        height: textHeight,
+        text: label,
+        fontSize: inNodeFontSize,
+        fontFamily: 'Arial',
+        fontStyle: 'bold',
+        fill: lightFill ? '#1a1a1a' : '#ffffff',
+        stroke: lightFill ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.45)',
+        strokeWidth: 0.75,
+        fillAfterStrokeEnabled: true,
+        align: 'center',
+        verticalAlign: 'middle',
+        wrap: 'word',
+        ellipsis: true,
+        lineHeight: 1.05,
+        listening: true
+      }
+    }
+  }
+
+  // Tiny node: label outside the box (below when free, otherwise to the left)
+  const externalFontSize = 11
+  const externalWidth = Math.max(square.width, longestWord.length * externalFontSize * 0.62, 28)
+  const externalHeight = externalFontSize + 4
+  const belowY = square.y + square.height + 3
+  const belowBlocked = allNodes.some(
+    (n) =>
+      n.id !== square.id &&
+      n.y < belowY + externalHeight &&
+      n.y + n.height > belowY &&
+      n.x < square.x + square.width &&
+      n.x + n.width > square.x
+  )
+
+  const externalConfig = {
+    width: externalWidth,
+    height: externalHeight,
+    text: label.replace(/\n/g, ' '),
+    fontSize: externalFontSize,
+    fontFamily: 'Arial',
+    fontStyle: 'bold',
+    fill: '#1e293b',
+    stroke: 'rgba(255,255,255,0.85)',
+    strokeWidth: 0.75,
+    fillAfterStrokeEnabled: true,
+    align: 'center' as const,
+    verticalAlign: 'middle' as const,
+    wrap: 'none' as const,
+    ellipsis: true,
+    listening: true
+  }
+
+  if (!belowBlocked) {
+    return {
+      id: square.id,
+      config: {
+        ...externalConfig,
+        x: square.x + square.width / 2 - externalWidth / 2,
+        y: belowY
+      }
+    }
+  }
 
   return {
     id: square.id,
     config: {
-      x: square.x + padX,
-      y: square.y + padY,
-      width: textWidth,
-      height: textHeight,
-      text: label,
-      fontSize,
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-      fill: light ? '#1a1a1a' : '#ffffff',
-      stroke: light ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.45)',
-      strokeWidth: 0.75,
-      fillAfterStrokeEnabled: true,
-      align: 'center',
-      verticalAlign: 'middle',
-      wrap: 'word',
-      ellipsis: true,
-      lineHeight: 1.05,
-      listening: true
+      ...externalConfig,
+      x: square.x - externalWidth - 4,
+      y: square.y + square.height / 2 - externalHeight / 2
     }
   }
 }
 
 const nodeLabels = computed(() => {
-  return nodes.value.map(buildNodeLabelConfig).filter((l): l is NonNullable<typeof l> => l !== null)
+  const all = nodes.value
+  return all.map((n) => buildNodeLabelConfig(n, all))
 })
 
 const connectors = computed<Connector[]>(() => {
