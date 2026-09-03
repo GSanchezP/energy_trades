@@ -6,7 +6,6 @@ export const NodeTypes = [
   'thermal_electricity',
   'renewable_electricity',
   'electricity',
-  'manufacture',
   'food',
   'thermal_transport',
   'electric_transport',
@@ -26,8 +25,6 @@ export const NodeLevels = [
   'conversion',
   'conversionSum',
   'primary',
-  'industrial',
-  'industrial_sum',
   'tertiary'
 ] as const
 export type NodeLevel = (typeof NodeLevels)[number]
@@ -78,7 +75,7 @@ export const nodesConfig: NodesConfig = {
         wellBeing: 0.05,
         fuels: 0.02,
         electricity: 0.02,
-        manufacture: 0.02
+        mining: 0.02
       }
     },
     {
@@ -90,7 +87,7 @@ export const nodesConfig: NodesConfig = {
         wellBeing: 0.05,
         fuels: 0.02,
         electricity: 0.02,
-        manufacture: 0.02
+        mining: 0.02
       }
     },
     {
@@ -121,7 +118,7 @@ export const nodesConfig: NodesConfig = {
       color: '#0d92a3ff',
       factors: {
         wellBeing: 0.1,
-        manufacture: 0.15
+        mining: 0.15
       }
     },
     {
@@ -136,13 +133,14 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'mining',
-      label: 'Mining',
+      label: 'Mining & \n Manufacturing',
       level: 'primary',
       color: '#856350ff',
       factors: {
-        wellBeing: 0.05,
+        wellBeing: 0.1,
         fuels: 2.5,
-        electricity: 0.25
+        electricity: 1.85,
+        transport: 0.1
       }
     },
     {
@@ -153,52 +151,39 @@ export const nodesConfig: NodesConfig = {
       factors: {
         wellBeing: 0.15,
         fuels: 2.5,
-        manufacture: 0.25,
-        mining: 0.15
+        mining: 0.4
       }
     },
     {
       id: 'thermal_transport',
       label: 'T Transport',
-      level: 'industrial',
+      level: 'conversion',
       color: '#58b00aff',
       factors: {
         wellBeing: 0.05,
         fuels: 3,
-        manufacture: 0.15
+        mining: 0.15
       }
     },
     {
       id: 'electric_transport',
       label: 'E Transport',
-      level: 'industrial',
+      level: 'conversion',
       color: '#58b00aff',
       factors: {
         wellBeing: 0.05,
         electricity: 1.3,
-        manufacture: 0.25
+        mining: 0.25
       }
     },
     {
       id: 'transport',
       label: 'Transport',
-      level: 'industrial_sum',
+      level: 'conversionSum',
       color: '#58b00aff',
       addons: {
         thermal_transport: 0.5,
         electric_transport: null
-      }
-    },
-    {
-      id: 'manufacture',
-      label: 'Manufacture',
-      level: 'industrial',
-      color: '#976c17ff',
-      factors: {
-        wellBeing: 0.05,
-        mining: 1,
-        electricity: 1.6,
-        transport: 0.1
       }
     },
     {
@@ -209,7 +194,7 @@ export const nodesConfig: NodesConfig = {
       factors: {
         fuels: 0.25,
         electricity: 0.2,
-        manufacture: 0.2,
+        mining: 0.2,
         transport: 0.4,
         food: 0.4
       }
@@ -222,7 +207,7 @@ export const nodesConfig: NodesConfig = {
       factors: {
         fuels: 0.15,
         electricity: 0.2,
-        manufacture: 0.2,
+        mining: 0.2,
         transport: 0.4,
         wellBeing: 0.6,
         food: 0.4
