@@ -389,39 +389,66 @@ export class EnergyGraphDrawer {
       reverse: boolean
       levelComparer: LevelComparerResult[]
       connectorType: ConnectorType
+      lanePool: 'down' | 'up'
     }> = [
-      { reverse: true, levelComparer: ['above-next'], connectorType: 'below' },
+      { reverse: true, levelComparer: ['above-next'], connectorType: 'below', lanePool: 'down' },
       {
         reverse: false,
         levelComparer: ['same', 'previous', 'before-previous'],
-        connectorType: 'above'
+        connectorType: 'above',
+        lanePool: 'up'
       },
-      { reverse: true, levelComparer: ['next'], connectorType: 'middle' }
+      { reverse: false, levelComparer: ['next'], connectorType: 'middle', lanePool: 'down' }
     ]
 
+    // Below + middle share one downward exit-lane pool (starts after heat dumps).
+    const downLaneOffsets: Partial<Record<NodeLevel, number>> = {}
+    for (const level of NodeLevels) {
+      downLaneOffsets[level] = dumpReservedWidth[level] ?? 0
+    }
+
     for (const i of iterations) {
-      function r<T>(arr: Array<T>, r: boolean) {
-        if (r) return arr.reverse()
-        return arr
+      function r<T>(arr: Array<T>, rev: boolean) {
+        return rev ? arr.reverse() : arr
       }
-      // Energy lanes start after the heat-dump block for each visual column.
-      xSourceOffsetMap = {}
-      for (const level of NodeLevels) {
-        xSourceOffsetMap[level] = dumpReservedWidth[level] ?? 0
+
+      if (i.lanePool === 'up') {
+        xSourceOffsetMap = {}
+        for (const level of NodeLevels) {
+          xSourceOffsetMap[level] = dumpReservedWidth[level] ?? 0
+        }
+      } else {
+        xSourceOffsetMap = downLaneOffsets
       }
+
       for (const level of NodeLevels) {
         for (const node of r(
           this.energyNodes.filter((n) => n.level.id === level),
           i.reverse
         )) {
-          for (const [targetNodeId, power] of r(Object.entries(node.outputMap), i.reverse)) {
-            const targetNode = this.energyNodes.find((node) => node.id === targetNodeId)
-            if (!targetNode || !power) continue
-            // Addon→sum is implied by adjacency; skip the short middle link.
-            if (this.addonToSum.get(node.id) === targetNode) continue
-            const relation = this.levelComparer(node, targetNode).interLevel
-            if (i.levelComparer.includes(relation)) {
-              const connector = this.createConnector(
+          let outputs = Object.entries(node.outputMap).filter(([id, power]) => {
+            if (!power) return false
+            const targetNode = this.energyNodes.find((n) => n.id === id)
+            if (!targetNode) return false
+            if (this.addonToSum.get(node.id) === targetNode) return false
+            return i.levelComparer.includes(this.levelComparer(node, targetNode).interLevel)
+          })
+
+          if (i.connectorType === 'middle') {
+            // Lower targets first → inner lanes (needed for vertical-first, non-crossing).
+            outputs = outputs.sort((a, b) => {
+              const ta = this.energyNodes.find((n) => n.id === a[0])!
+              const tb = this.energyNodes.find((n) => n.id === b[0])!
+              return tb.y + tb.height / 2 - (ta.y + ta.height / 2)
+            })
+          } else {
+            outputs = r(outputs, i.reverse)
+          }
+
+          for (const [targetNodeId, power] of outputs) {
+            const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)!
+            this.connectors.push(
+              this.createConnector(
                 node,
                 targetNode,
                 power,
@@ -429,8 +456,7 @@ export class EnergyGraphDrawer {
                 xTargetOffsetMap,
                 i.connectorType
               )
-              this.connectors.push(connector)
-            }
+            )
           }
         }
       }
@@ -471,61 +497,54 @@ export class EnergyGraphDrawer {
   ): Connector {
     const strokeWidth = power * BASE_NODE_HEIGHT
 
-    // Initialize target offset map if needed
     if (!xTargetOffsetMap[target.level.id]) {
       xTargetOffsetMap[target.level.id] = 0
     }
 
-    // Calculate offsets
     const sourceYOffset = this.calculateYOffset(source, target.id, false)
     const targetYOffset = this.calculateYOffset(target, source.id, true)
     const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
 
-    // Calculate X offsets based on direction
     const sourceLaneLevel = this.visualSourceLevel(source)
     if (!xSourceOffsetMap[sourceLaneLevel]) xSourceOffsetMap[sourceLaneLevel] = 0
-    let sourceXOffset = 10 + (xSourceOffsetMap[sourceLaneLevel]! ?? 0) + strokeWidth / 2
+    const sourceXOffset = 10 + (xSourceOffsetMap[sourceLaneLevel]! ?? 0) + strokeWidth / 2
 
-    // Update offset maps
     xTargetOffsetMap[target.level.id]! = targetXOffset
-    if (connectorType !== 'middle') {
-      xSourceOffsetMap[sourceLaneLevel]! += strokeWidth
-    }
+    // Always advance source lanes — including middle — so multi-target exits diverge.
+    const laneGap = connectorType === 'middle' ? 8 : 0
+    xSourceOffsetMap[sourceLaneLevel]! += strokeWidth + laneGap
 
-    // Calculate positions
     const sourceX = source.x + source.width
     const sourceY = source.y + sourceYOffset + strokeWidth / 2
     const targetX = target.x
     const targetY = target.y + strokeWidth / 2 + targetYOffset
 
-    // Calculate autobahn Y based on direction
-    let yAutobahn: number
+    let points: number[]
+
     if (connectorType === 'middle') {
-      yAutobahn = sourceY // Direct horizontal connection
+      // Vertical-first: reach target Y on the exit lane, then run horizontal.
+      // Horizontal-first lets one connector's drop cut through another's run.
+      const laneX = sourceX + sourceXOffset
+      const approachX = Math.max(laneX, targetX - targetXOffset + strokeWidth / 2 - 10)
+      points = [sourceX, sourceY, laneX, sourceY, laneX, targetY, approachX, targetY, targetX, targetY]
     } else {
-      yAutobahn = this.calculateAutobahnY(connectorType, strokeWidth)
+      const yAutobahn = this.calculateAutobahnY(connectorType, strokeWidth)
+      const horizontalX = targetX - targetXOffset + strokeWidth / 2 - 10
+      points = [
+        sourceX,
+        sourceY,
+        sourceX + sourceXOffset,
+        sourceY,
+        sourceX + sourceXOffset,
+        yAutobahn,
+        horizontalX,
+        yAutobahn,
+        horizontalX,
+        targetY,
+        targetX,
+        targetY
+      ]
     }
-
-    // Calculate points based on direction
-    const horizontalX =
-      connectorType === 'middle'
-        ? Math.max(sourceX + sourceXOffset, targetX - targetXOffset + strokeWidth / 2 - 10)
-        : targetX - targetXOffset + strokeWidth / 2 - 10
-
-    let points = [
-      sourceX, // Start at source
-      sourceY, // Start at source
-      sourceX + sourceXOffset, // Go right
-      sourceY, // Go right
-      sourceX + sourceXOffset, // Go vertical to autobahn
-      yAutobahn, // Go vertical to autobahn
-      horizontalX, // Go horizontally to target
-      yAutobahn, // Go horizontally to target
-      horizontalX, // Go vertical to target
-      targetY, // Go vertical to target
-      targetX, // Final position
-      targetY // Final position
-    ]
 
     return {
       id: `${source.id}-${target.id}`,
