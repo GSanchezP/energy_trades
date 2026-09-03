@@ -435,11 +435,20 @@ export class EnergyGraphDrawer {
           })
 
           if (i.connectorType === 'middle') {
-            // Lower targets first → inner lanes (needed for vertical-first, non-crossing).
+            // Vertical-first nesting: the connector that travels farther vertically
+            // must turn on the inner lane. Upward → highest target first; downward →
+            // lowest first. Otherwise the outer vertical cuts the inner horizontal
+            // (e.g. Electricity→Mining over Electricity→Electric transport).
+            const sourceMidY = node.y + node.height / 2
             outputs = outputs.sort((a, b) => {
               const ta = this.energyNodes.find((n) => n.id === a[0])!
               const tb = this.energyNodes.find((n) => n.id === b[0])!
-              return tb.y + tb.height / 2 - (ta.y + ta.height / 2)
+              const aY = ta.y + ta.height / 2
+              const bY = tb.y + tb.height / 2
+              const aUp = aY < sourceMidY
+              const bUp = bY < sourceMidY
+              if (aUp !== bUp) return aUp ? -1 : 1
+              return aUp ? aY - bY : bY - aY
             })
           } else {
             outputs = r(outputs, i.reverse)
