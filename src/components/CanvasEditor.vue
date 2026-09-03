@@ -90,21 +90,10 @@
           />
 
           <v-text
-            v-for="square in nodes"
-            :key="`text-${square.id}`"
-            :config="{
-              x: square.x + square.width / 2,
-              y: square.y + square.height / 2,
-              text: square.label,
-              fontSize: 18,
-              fontFamily: 'Arial',
-              fill: '#ffffff',
-              align: 'center',
-              verticalAlign: 'middle',
-              offsetX: square.width / 2 - 10,
-              offsetY: 10
-            }"
-            @click="(e: any) => handleSquareClick(square.id, e)"
+            v-for="label in nodeLabels"
+            :key="`text-${label.id}`"
+            :config="label.config"
+            @click="(e: any) => handleSquareClick(label.id, e)"
           />
         </v-layer>
       </v-stage>
@@ -145,6 +134,7 @@ import { onMounted, onUnmounted } from 'vue'
 import { getStoredSolverResult, formatSolverResult } from '../types/outputMapSolver'
 import type { EnergyNode } from '../types/energyNode'
 import { NodeType, nodesConfig, NodeConfig } from '../types/nodesConfig'
+import type { NodeDrawer } from '../types/nodeDrawer'
 
 const FPS_INTERVAL_IN_MS = 16
 
@@ -335,6 +325,66 @@ onUnmounted(() => {
 
 const nodes = computed(() => {
   return energyGraph.value?.nodes || []
+})
+
+function colorLuminance(color: string): number {
+  const hex = color.replace('#', '').slice(0, 6)
+  if (hex.length < 6) return 0
+  const r = parseInt(hex.slice(0, 2), 16) / 255
+  const g = parseInt(hex.slice(2, 4), 16) / 255
+  const b = parseInt(hex.slice(4, 6), 16) / 255
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+function buildNodeLabelConfig(square: NodeDrawer) {
+  const padX = 4
+  const padY = 2
+  const textWidth = Math.max(4, square.width - padX * 2)
+  const textHeight = Math.max(4, square.height - padY * 2)
+
+  // Too small to read — skip in-node label
+  if (square.height < 16 || square.width < 22) return null
+
+  const label = square.label
+  const longestWord = label
+    .split(/[\s\n]+/)
+    .filter(Boolean)
+    .reduce((a, b) => (a.length >= b.length ? a : b), '')
+  // ~0.56em average bold glyph width — keep whole words on one line when possible
+  const maxFromWidth = Math.floor(textWidth / Math.max(1, longestWord.length * 0.56))
+  const maxFromHeight = Math.floor(textHeight * 0.42)
+  const fontSize = Math.max(8, Math.min(16, maxFromWidth, maxFromHeight))
+  if (square.height < fontSize * 1.35) return null
+
+  const light = colorLuminance(square.color) > 0.5
+
+  return {
+    id: square.id,
+    config: {
+      x: square.x + padX,
+      y: square.y + padY,
+      width: textWidth,
+      height: textHeight,
+      text: label,
+      fontSize,
+      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fill: light ? '#1a1a1a' : '#ffffff',
+      stroke: light ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.45)',
+      strokeWidth: 0.75,
+      fillAfterStrokeEnabled: true,
+      align: 'center',
+      verticalAlign: 'middle',
+      wrap: 'word',
+      ellipsis: true,
+      lineHeight: 1.05,
+      listening: true
+    }
+  }
+}
+
+const nodeLabels = computed(() => {
+  return nodes.value.map(buildNodeLabelConfig).filter((l): l is NonNullable<typeof l> => l !== null)
 })
 
 const connectors = computed<Connector[]>(() => {

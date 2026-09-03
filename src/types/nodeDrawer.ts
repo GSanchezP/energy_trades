@@ -22,6 +22,7 @@ export function prevLevel(nodeLevel: NodeLevel) {
 
 export class NodeDrawer {
   private _id: NodeType
+  private _label: string
   private _level: { id: NodeLevel; value: number; position: number }
   private _position: Position = { x: 0, y: 0 }
   private _size: { height: number; width: number }
@@ -32,9 +33,11 @@ export class NodeDrawer {
     nodeLevel: NodeLevel,
     nodeLevelPosition: number,
     color: string,
-    size?: { height?: number; width?: number }
+    size?: { height?: number; width?: number },
+    label?: string
   ) {
     this._id = id
+    this._label = label ?? id
     this._level = { id: nodeLevel, value: nodeLevelValue(nodeLevel), position: nodeLevelPosition }
     this._color = color
     this._size = { height: size?.height ?? BASE_NODE_HEIGHT, width: size?.width ?? BASE_NODE_WIDTH }
@@ -45,7 +48,7 @@ export class NodeDrawer {
   }
 
   get label(): string {
-    return this._id
+    return this._label
   }
 
   get level(): { id: NodeLevel; value: number; position: number } {

@@ -102,7 +102,7 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'thermal_electricity',
-      label: 'T Electricity',
+      label: 'T Elec',
       level: 'conversion',
       color: '#0d92a3ff',
       factors: {
@@ -112,7 +112,7 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'renewable_electricity',
-      label: 'R Electricity',
+      label: 'R Elec',
       level: 'conversion',
       color: '#0d92a3ff',
       factors: {
@@ -132,13 +132,13 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'mining',
-      label: 'Mining & \n Manufacturing',
+      label: 'Mining &\nManufacturing',
       level: 'primary',
       color: '#856350ff',
       factors: {
         wellBeing: 0.1,
-        fuels: 2.5,
-        electricity: 1.85,
+        fuels: 2,
+        electricity: 1,
         transport: 0.1
       }
     },
@@ -155,7 +155,7 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'thermal_transport',
-      label: 'T Transport',
+      label: 'T Trans',
       level: 'conversion',
       color: '#58b00aff',
       factors: {
@@ -166,7 +166,7 @@ export const nodesConfig: NodesConfig = {
     },
     {
       id: 'electric_transport',
-      label: 'E Transport',
+      label: 'E Trans',
       level: 'conversion',
       color: '#58b00aff',
       factors: {
