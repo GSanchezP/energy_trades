@@ -12,6 +12,9 @@ export const NodeTypes = [
   'thermal_transport',
   'electric_transport',
   'transport',
+  'thermal_heating',
+  'electric_heating',
+  'heating',
   'wellBeing',
   'leisure',
   'heat'

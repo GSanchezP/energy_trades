@@ -2,7 +2,7 @@
   "nodes": [
     {
       "id": "petroleum",
-      "label": "Petroleum",
+      "label": "Petroleum \nExtraction",
       "level": "extraction",
       "color": "#442d54ff",
       "factors": {
@@ -14,7 +14,7 @@
     },
     {
       "id": "coal",
-      "label": "Coal",
+      "label": "Coal \nExtraction",
       "level": "extraction",
       "color": "#3d2913ff",
       "factors": {
@@ -26,7 +26,7 @@
     },
     {
       "id": "fuels",
-      "label": "Fuel",
+      "label": "Fuel \nConversion",
       "level": "conversion",
       "color": "#610a52ff",
       "factors": {
@@ -52,7 +52,7 @@
       "color": "#0d92a3ff",
       "factors": {
         "wellBeing": 0.1,
-        "mining": 0.15
+        "mining": 0.18
       }
     },
     {
@@ -61,8 +61,8 @@
       "level": "conversion",
       "color": "#0d92a3ff",
       "addons": {
-        "thermal_electricity": null,
-        "renewable_electricity": 0.2
+        "thermal_electricity": 0.4,
+        "renewable_electricity": null
       }
     },
     {
@@ -121,12 +121,44 @@
       }
     },
     {
+      "id": "thermal_heating",
+      "label": "Thermal",
+      "level": "primary",
+      "color": "#d97706ff",
+      "factors": {
+        "wellBeing": 0.05,
+        "fuels": 3.333,
+        "mining": 0.15
+      }
+    },
+    {
+      "id": "electric_heating",
+      "label": "Electric",
+      "level": "primary",
+      "color": "#d97706ff",
+      "factors": {
+        "wellBeing": 0.05,
+        "electricity": 1,
+        "mining": 0.15
+      }
+    },
+    {
+      "id": "heating",
+      "label": "Heating",
+      "level": "primary",
+      "color": "#d97706ff",
+      "addons": {
+        "thermal_heating": 0.5,
+        "electric_heating": null
+      }
+    },
+    {
       "id": "wellBeing",
       "label": "Basic Needs",
       "level": "tertiary",
       "color": "#1fbb65ff",
       "factors": {
-        "fuels": 0.25,
+        "heating": 0.25,
         "electricity": 0.2,
         "mining": 0.2,
         "transport": 0.4,
@@ -139,7 +171,7 @@
       "level": "tertiary",
       "color": "#c953bdff",
       "factors": {
-        "fuels": 0.15,
+        "heating": 0.15,
         "electricity": 0.2,
         "mining": 0.2,
         "transport": 0.4,
