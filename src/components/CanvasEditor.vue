@@ -126,11 +126,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { Connector, EnergyGraphDrawer } from '../types/energyGraphDrawer'
 import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph from '../types/energyGraphGenerator'
-import { onMounted, onUnmounted } from 'vue'
 import { getStoredSolverResult, formatSolverResult } from '../types/outputMapSolver'
 import type { EnergyNode } from '../types/energyNode'
 import { NodeType, nodesConfig, NodeConfig } from '../types/nodesConfig'
@@ -154,10 +153,62 @@ const isPanning = ref<boolean>(false)
 const lastPointerPosition = ref<{ x: number; y: number } | null>(null)
 const panTimeout = ref<ReturnType<typeof setTimeout> | null>(null)
 
+/** Axis-aligned bounds of nodes + connector ribbons (includes upper/lower buses). */
+function getGraphBounds() {
+  const graph = energyGraph.value
+  if (!graph) return null
+
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const n of graph.nodes) {
+    minX = Math.min(minX, n.x)
+    minY = Math.min(minY, n.y)
+    maxX = Math.max(maxX, n.x + n.width)
+    maxY = Math.max(maxY, n.y + n.height)
+  }
+
+  for (const c of graph.connectors) {
+    const half = c.strokeWidth / 2
+    for (let i = 0; i < c.points.length; i += 2) {
+      minX = Math.min(minX, c.points[i] - half)
+      maxX = Math.max(maxX, c.points[i] + half)
+      minY = Math.min(minY, c.points[i + 1] - half)
+      maxY = Math.max(maxY, c.points[i + 1] + half)
+    }
+  }
+
+  if (!Number.isFinite(minX)) return null
+  return { minX, minY, width: maxX - minX, height: maxY - minY }
+}
+
+/** Scale + pan so the full diagram fits and is centered in the stage. */
+function fitGraphToView() {
+  const stage = stageRef.value?.getNode()
+  if (!stage || !energyGraph.value) return
+
+  const bounds = getGraphBounds()
+  if (!bounds || bounds.width <= 0 || bounds.height <= 0) return
+
+  const padding = 48
+  const viewW = stage.width()
+  const viewH = stage.height()
+  const scale = Math.min((viewW - padding * 2) / bounds.width, (viewH - padding * 2) / bounds.height)
+
+  stage.scale({ x: scale, y: scale })
+  stage.position({
+    x: viewW / 2 - (bounds.minX + bounds.width / 2) * scale,
+    y: viewH / 2 - (bounds.minY + bounds.height / 2) * scale
+  })
+}
+
 // Handle window resize
 const handleResize = () => {
   windowWidth.value = window.innerWidth
   windowHeight.value = window.innerHeight
+  nextTick(() => fitGraphToView())
 }
 
 const regenerateGraph = async () => {
@@ -165,6 +216,9 @@ const regenerateGraph = async () => {
   // Clear selection after regeneration
   selectedSquareIds.value.clear()
   selectedConnectorId.value = null
+  await nextTick()
+  // Konva stage may need a paint before getNode()/size are ready.
+  requestAnimationFrame(() => fitGraphToView())
 }
 
 onMounted(async () => {
