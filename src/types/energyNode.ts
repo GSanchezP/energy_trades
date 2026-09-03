@@ -39,6 +39,15 @@ export class EnergyNode extends NodeDrawer {
     this._eroi = this._outputPower / (this._inputPower + Number.MIN_VALUE)
   }
 
+  /** True when this node aggregates other nodes via addons (e.g. Electricity, Transport). */
+  get isSumNode(): boolean {
+    return Object.keys(this._eroiAddons).length > 0
+  }
+
+  get addonIds(): NodeType[] {
+    return Object.keys(this._eroiAddons) as NodeType[]
+  }
+
   get label() {
     return this._label
   }
