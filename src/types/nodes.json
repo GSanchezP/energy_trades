@@ -4,7 +4,7 @@
       "id": "petroleum",
       "label": "Petroleum \nExtraction",
       "level": "extraction",
-      "color": "#442d54ff",
+      "color": "#523866ff",
       "co2": true,
       "factors": {
         "wellBeing": 0.05,
@@ -17,7 +17,7 @@
       "id": "coal",
       "label": "Coal \nExtraction",
       "level": "extraction",
-      "color": "#3d2913ff",
+      "color": "#4a341cff",
       "co2": true,
       "factors": {
         "wellBeing": 0.05,
@@ -30,13 +30,13 @@
       "id": "sun",
       "label": "Sun",
       "level": "extraction",
-      "color": "#eab308ff"
+      "color": "#c9850aff"
     },
     {
       "id": "fuels",
       "label": "Fuel \nConversion",
       "level": "conversion",
-      "color": "#610a52ff",
+      "color": "#720c61ff",
       "factors": {
         "wellBeing": 0.05,
         "petroleum": 1.2,
@@ -47,7 +47,7 @@
       "id": "electricity",
       "label": "Elec",
       "level": "conversion",
-      "color": "#0d92a3ff",
+      "color": "#0c8090ff",
       "addons": {
         "thermal_electricity": {
           "weight": null,
@@ -73,7 +73,7 @@
       "id": "mining",
       "label": "Mining &\nManufacturing\n(Industrial\nOutput)",
       "level": "primary",
-      "color": "#856350ff",
+      "color": "#6f5243ff",
       "factors": {
         "wellBeing": 0.1,
         "electricity": 1,
@@ -84,7 +84,7 @@
       "id": "food",
       "label": "Food",
       "level": "primary",
-      "color": "#b0b00aff",
+      "color": "#8a8a08ff",
       "factors": {
         "wellBeing": 0.1,
         "heavy_transport": 0.8,
@@ -95,7 +95,7 @@
       "id": "transport",
       "label": "Transp",
       "level": "primary",
-      "color": "#58b00aff",
+      "color": "#3f7a08ff",
       "addons": {
         "thermal_transport": {
           "weight": null,
@@ -121,7 +121,7 @@
       "id": "heavy_transport",
       "label": "Heavy\nTransp",
       "level": "primary",
-      "color": "#3d7a08ff",
+      "color": "#2d5a06ff",
       "addons": {
         "heavy_thermal_transport": {
           "weight": null,
@@ -147,7 +147,7 @@
       "id": "heating",
       "label": "Heating",
       "level": "primary",
-      "color": "#d97706ff",
+      "color": "#b86505ff",
       "addons": {
         "thermal_heating": {
           "weight": null,
@@ -171,7 +171,7 @@
       "id": "wellBeing",
       "label": "Basic Needs\n(Human labor)",
       "level": "tertiary",
-      "color": "#1fbb65ff",
+      "color": "#1a9a4eff",
       "minOutput": 0.2,
       "factors": {
         "heating": 0.25,
@@ -185,7 +185,7 @@
       "id": "leisure",
       "label": "Leisure",
       "level": "tertiary",
-      "color": "#c953bdff",
+      "color": "#b344a6ff",
       "factors": {
         "heating": 0.15,
         "electricity": 0.2,

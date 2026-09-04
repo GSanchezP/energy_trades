@@ -188,7 +188,21 @@ export class EnergyGraphDrawer {
   addDumpNode(): NodeDrawer {
     const x1 = Math.min(...this.energyNodes.map((n) => n.x))
     const x2 = Math.max(...this.energyNodes.map((n) => n.x + n.width + 120))
-    const dumpNode = new NodeDrawer('heat', 'dump', 0, '#e04c4cff', { width: x2 - x1, height: 40 }, 'Heat')
+    // At least half the thickest dump ribbon so Heat doesn't look like a hairline.
+    let maxDumpStroke = 0
+    for (const node of this.energyNodes) {
+      if (this.addonToSum.has(node.id)) continue
+      if (node.isSumNode) {
+        const group = this.getSumGroups().find((g) => g.sum === node)
+        for (const addon of group?.addons ?? []) {
+          maxDumpStroke = Math.max(maxDumpStroke, addon.losses * BASE_NODE_HEIGHT)
+        }
+      } else {
+        maxDumpStroke = Math.max(maxDumpStroke, node.losses * BASE_NODE_HEIGHT)
+      }
+    }
+    const height = Math.max(40, maxDumpStroke / 2)
+    const dumpNode = new NodeDrawer('heat', 'dump', 0, '#c93030ff', { width: x2 - x1, height }, 'Heat')
     dumpNode.setPosition = { x: x1, y: this.DUMP_NODE_Y }
     return dumpNode
   }

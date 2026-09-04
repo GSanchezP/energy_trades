@@ -34,6 +34,9 @@
           Minimize CO₂
         </label>
       </fieldset>
+      <button class="header-results-button" @click="handleResultsClick" title="Compute results">
+        <i class="mdi mdi-cpu-64-bit button-icon"></i>
+      </button>
     </header>
 
     <div v-if="factorSumWarnings.length" class="factor-warning" role="alert">
@@ -46,16 +49,6 @@
 
     <div class="canvas-body">
       <div class="canvas-wrapper">
-        <!-- Control Buttons -->
-        <div class="control-buttons">
-          <button class="control-button" @click="handleSettingsClick" title="Settings">
-            <i class="mdi mdi-cog button-icon"></i>
-          </button>
-          <button class="control-button" @click="handleResultsClick" title="Results">
-            <i class="mdi mdi-notebook button-icon"></i>
-          </button>
-        </div>
-
         <!-- Value Slider -->
         <div v-if="sliderState" class="value-slider-container">
           <div class="slider-header">
@@ -125,7 +118,7 @@
                 height: square.height,
                 fill: square.color,
                 stroke: '#1e293b',
-                strokeWidth: selectedSquareIds.has(square.id) ? 4 : 2,
+                strokeWidth: selectedSquareIds.has(square.id) ? 2 : 1,
                 shadowBlur: 5,
                 shadowColor: 'black',
                 shadowOpacity: 0.2,
@@ -446,20 +439,10 @@ const nodes = computed(() => {
   return energyGraph.value?.nodes || []
 })
 
-function colorLuminance(color: string): number {
-  const hex = color.replace('#', '').slice(0, 6)
-  if (hex.length < 6) return 0
-  const r = parseInt(hex.slice(0, 2), 16) / 255
-  const g = parseInt(hex.slice(2, 4), 16) / 255
-  const b = parseInt(hex.slice(4, 6), 16) / 255
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b
-}
-
 function buildNodeLabelConfig(square: NodeDrawer) {
   const padX = Math.min(4, Math.max(1, square.width * 0.05))
   const padY = Math.min(2, Math.max(0.5, square.height * 0.05))
   const label = square.label
-  const lightFill = colorLuminance(square.color) > 0.5
 
   const longestWord = label
     .split(/[\s\n]+/)
@@ -483,11 +466,7 @@ function buildNodeLabelConfig(square: NodeDrawer) {
       text: label,
       fontSize,
       fontFamily: 'Arial',
-      fontStyle: 'bold',
-      fill: lightFill ? '#1a1a1a' : '#ffffff',
-      stroke: lightFill ? 'rgba(255,255,255,0.65)' : 'rgba(0,0,0,0.45)',
-      strokeWidth: fontSize < 7 ? 0 : 0.75,
-      fillAfterStrokeEnabled: true,
+      fill: '#ffffff',
       align: 'center',
       verticalAlign: 'middle',
       wrap: 'word',
@@ -672,11 +651,6 @@ const handleMouseUp = (event: { evt: MouseEvent }) => {
   }
 }
 
-const handleSettingsClick = () => {
-  console.log('Settings clicked')
-  // TODO: Implement settings functionality
-}
-
 const showResultsModal = ref(false)
 const solverResultText = ref<string>('')
 
@@ -820,6 +794,32 @@ const closeResultsModal = () => {
   color: #e879f9;
 }
 
+.header-results-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-left: 1px solid #1e293b;
+  background: transparent;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.header-results-button:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.header-results-button .button-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
 .canvas-body {
   flex: 1;
   min-height: 0;
@@ -835,59 +835,9 @@ const closeResultsModal = () => {
   position: relative;
 }
 
-.control-buttons {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.control-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  padding: 0;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  color: #334155;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-  user-select: none;
-}
-
-.control-button:hover {
-  background: rgba(255, 255, 255, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-.control-button:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.button-icon {
-  font-size: 24px;
-  line-height: 1;
-  transition: transform 0.2s ease;
-}
-
-.control-button:hover .button-icon {
-  transform: scale(1.1);
-}
-
-/* Value Slider */
 .value-slider-container {
   position: absolute;
-  top: 80px;
+  top: 16px;
   left: 16px;
   z-index: 10;
   background: rgba(255, 255, 255, 0.95);
