@@ -46,7 +46,9 @@ export class NodeConfig {
     readonly _factors?: Partial<Record<NodeType, number>>,
     readonly _addons?: Partial<Record<NodeType, number | null>>,
     /** Bare-minimum net output required for feasibility (optional). */
-    readonly minOutput?: number
+    readonly minOutput?: number,
+    /** When true, this node's net output counts toward the CO₂ aggregate. */
+    readonly co2?: boolean
   ) {}
 
   get netOutputVar() {
@@ -91,6 +93,8 @@ export interface NodeConfigJson {
   addons?: Partial<Record<NodeType, AddonConfigJson | number | null>>
   /** Bare-minimum net output required for feasibility. */
   minOutput?: number
+  /** When true, this node's net output counts toward the CO₂ aggregate. */
+  co2?: boolean
 }
 
 function isAddonConfig(value: unknown): value is AddonConfigJson {
@@ -103,27 +107,28 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
 
   for (const n of jsonNodes) {
     if (!n.addons || Object.keys(n.addons).length === 0) {
-      result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors, undefined, n.minOutput))
+      result.push(
+        new NodeConfig(n.id, n.label, n.level, n.color, n.factors, undefined, n.minOutput, n.co2)
+      )
       continue
     }
 
     const weightMap: Partial<Record<NodeType, number | null>> = {}
-    let hasNested = false
 
     for (const [addonId, addon] of Object.entries(n.addons)) {
       const id = addonId as NodeType
       if (isAddonConfig(addon)) {
-        hasNested = true
         weightMap[id] = addon.weight
-        // Addon nodes inherit the sum node's level and color.
+        // Addon nodes inherit the sum node's level and color (not co2/min).
         result.push(new NodeConfig(id, addon.label, n.level, n.color, addon.factors))
       } else {
-        // Legacy flat weight map: { thermal_transport: 0.5, ... }
         weightMap[id] = addon as number | null
       }
     }
 
-    result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors, weightMap, n.minOutput))
+    result.push(
+      new NodeConfig(n.id, n.label, n.level, n.color, n.factors, weightMap, n.minOutput, n.co2)
+    )
   }
 
   return result

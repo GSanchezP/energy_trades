@@ -1,112 +1,129 @@
 <template>
   <div class="canvas-container">
-    <div class="canvas-wrapper">
-      <!-- Control Buttons -->
-      <div class="control-buttons">
-        <button class="control-button" @click="handleSettingsClick" title="Settings">
-          <i class="mdi mdi-cog button-icon"></i>
-        </button>
-        <button class="control-button" @click="handleResultsClick" title="Results">
-          <i class="mdi mdi-notebook button-icon"></i>
-        </button>
+    <header class="summary-header">
+      <div class="summary-metric summary-co2">
+        <span class="summary-label">CO₂</span>
+        <span class="summary-value">{{ formatSummary(summaryTotals.co2) }}</span>
       </div>
+      <div class="summary-metric summary-needs">
+        <span class="summary-label">Basic Needs</span>
+        <span class="summary-value">{{ formatSummary(summaryTotals.wellBeing) }}</span>
+      </div>
+      <div class="summary-metric summary-leisure">
+        <span class="summary-label">Leisure</span>
+        <span class="summary-value">{{ formatSummary(summaryTotals.leisure) }}</span>
+      </div>
+    </header>
 
-      <!-- Value Slider -->
-      <div v-if="sliderState" class="value-slider-container">
-        <div class="slider-header">
-          <span class="slider-label">
-            {{ sliderState.node?.id }} - {{ sliderState.nodeType }}
-            <span v-if="sliderState.isAddon" class="addon-badge">(addon)</span>
-          </span>
-          <button class="slider-close" @click="closeSlider">
-            <i class="mdi mdi-close"></i>
+    <div class="canvas-body">
+      <div class="canvas-wrapper">
+        <!-- Control Buttons -->
+        <div class="control-buttons">
+          <button class="control-button" @click="handleSettingsClick" title="Settings">
+            <i class="mdi mdi-cog button-icon"></i>
+          </button>
+          <button class="control-button" @click="handleResultsClick" title="Results">
+            <i class="mdi mdi-notebook button-icon"></i>
           </button>
         </div>
-        <div class="slider-wrapper">
-          <input
-            type="range"
-            class="vertical-slider"
-            :min="sliderState.isAddon ? 0 : 0"
-            :max="sliderState.isAddon ? 1 : 3"
-            :step="0.001"
-            :value="getSliderValue"
-            @input="handleSliderChange"
-            orient="vertical"
-          />
-          <div class="slider-value-display">
-            <div class="slider-value">{{ getSliderDisplayValue }}</div>
-            <div class="slider-min-max">
-              <span>0</span>
-              <span>{{ sliderState.isAddon ? 1 : 3 }}</span>
+
+        <!-- Value Slider -->
+        <div v-if="sliderState" class="value-slider-container">
+          <div class="slider-header">
+            <span class="slider-label">
+              {{ sliderState.node?.id }} - {{ sliderState.nodeType }}
+              <span v-if="sliderState.isAddon" class="addon-badge">(addon)</span>
+            </span>
+            <button class="slider-close" @click="closeSlider">
+              <i class="mdi mdi-close"></i>
+            </button>
+          </div>
+          <div class="slider-wrapper">
+            <input
+              type="range"
+              class="vertical-slider"
+              :min="sliderState.isAddon ? 0 : 0"
+              :max="sliderState.isAddon ? 1 : 3"
+              :step="0.001"
+              :value="getSliderValue"
+              @input="handleSliderChange"
+              orient="vertical"
+            />
+            <div class="slider-value-display">
+              <div class="slider-value">{{ getSliderDisplayValue }}</div>
+              <div class="slider-min-max">
+                <span>0</span>
+                <span>{{ sliderState.isAddon ? 1 : 3 }}</span>
+              </div>
             </div>
           </div>
+          <div v-if="sliderState.isAddon" class="slider-actions">
+            <button class="set-null-button" @click="setAddonToNull">Set to null</button>
+          </div>
         </div>
-        <div v-if="sliderState.isAddon" class="slider-actions">
-          <button class="set-null-button" @click="setAddonToNull">Set to null</button>
-        </div>
+
+        <v-stage
+          ref="stageRef"
+          :config="stageConfig"
+          @wheel="handleWheel"
+          @click="handleStageClick"
+          @mousedown="handleMouseDown"
+          @mousemove="handleMouseMove"
+          @mouseup="handleMouseUp"
+        >
+          <v-layer>
+            <v-line
+              v-for="connector in connectors"
+              :key="connector.id"
+              :config="{
+                points: connector.points,
+                stroke: connector.color,
+                strokeWidth: connector.strokeWidth - 1.2,
+                lineCap: 'square',
+                lineJoin: 'square',
+                opacity: selectedConnectorId === connector.id ? 0.8 : 0.6
+              }"
+              @click="(e: any) => handleConnectorClick(connector.id, e)"
+            />
+
+            <v-rect
+              v-for="square in nodes"
+              :key="square.id"
+              :config="{
+                x: square.x,
+                y: square.y,
+                width: square.width,
+                height: square.height,
+                fill: square.color,
+                stroke: '#1e293b',
+                strokeWidth: selectedSquareIds.has(square.id) ? 4 : 2,
+                shadowBlur: 5,
+                shadowColor: 'black',
+                shadowOpacity: 0.2,
+                opacity: 1
+              }"
+              @click="(e: any) => handleSquareClick(square.id, e)"
+            />
+
+            <v-text
+              v-for="label in nodeLabels"
+              :key="`text-${label.id}`"
+              :config="label.config"
+              @click="(e: any) => handleSquareClick(label.id, e)"
+            />
+          </v-layer>
+        </v-stage>
       </div>
-
-      <v-stage
-        ref="stageRef"
-        :config="stageConfig"
-        @wheel="handleWheel"
-        @click="handleStageClick"
-        @mousedown="handleMouseDown"
-        @mousemove="handleMouseMove"
-        @mouseup="handleMouseUp"
-      >
-        <v-layer>
-          <v-line
-            v-for="connector in connectors"
-            :key="connector.id"
-            :config="{
-              points: connector.points,
-              stroke: connector.color,
-              strokeWidth: connector.strokeWidth - 1.2,
-              lineCap: 'square',
-              lineJoin: 'square',
-              opacity: selectedConnectorId === connector.id ? 0.8 : 0.6
-            }"
-            @click="(e: any) => handleConnectorClick(connector.id, e)"
-          />
-
-          <v-rect
-            v-for="square in nodes"
-            :key="square.id"
-            :config="{
-              x: square.x,
-              y: square.y,
-              width: square.width,
-              height: square.height,
-              fill: square.color,
-              stroke: '#1e293b',
-              strokeWidth: selectedSquareIds.has(square.id) ? 4 : 2,
-              shadowBlur: 5,
-              shadowColor: 'black',
-              shadowOpacity: 0.2,
-              opacity: 1
-            }"
-            @click="(e: any) => handleSquareClick(square.id, e)"
-          />
-
-          <v-text
-            v-for="label in nodeLabels"
-            :key="`text-${label.id}`"
-            :config="label.config"
-            @click="(e: any) => handleSquareClick(label.id, e)"
-          />
-        </v-layer>
-      </v-stage>
+      <InfoPanel
+        v-if="isInfoPanelVisible"
+        :selectedNodes="selectedSquares"
+        :selectedConnector="selectedConnector"
+        :energyGraph="energyGraph"
+        @update-config="handleConfigUpdate"
+        @open-slider="handleOpenSlider"
+        @close="closeInfoPanel"
+      />
     </div>
-    <InfoPanel
-      v-if="isInfoPanelVisible"
-      :selectedNodes="selectedSquares"
-      :selectedConnector="selectedConnector"
-      :energyGraph="energyGraph"
-      @update-config="handleConfigUpdate"
-      @open-slider="handleOpenSlider"
-      @close="closeInfoPanel"
-    />
 
     <!-- Results Modal -->
     <div v-if="showResultsModal" class="modal-overlay" @click="closeResultsModal">
@@ -137,6 +154,7 @@ import { NodeType, nodesConfig, NodeConfig } from '../types/nodesConfig'
 import type { NodeDrawer } from '../types/nodeDrawer'
 
 const FPS_INTERVAL_IN_MS = 16
+const SUMMARY_HEADER_HEIGHT = 56
 
 const energyGraph = ref<EnergyGraphDrawer | undefined>(undefined)
 const stageRef = ref<any>(null)
@@ -302,7 +320,8 @@ const handleSliderChange = async (event: Event) => {
         nodeConfig.color,
         nodeConfig.factors,
         newAddons,
-        nodeConfig.minOutput
+        nodeConfig.minOutput,
+        nodeConfig.co2
       )
     }
   } else {
@@ -322,7 +341,8 @@ const handleSliderChange = async (event: Event) => {
         nodeConfig.color,
         newFactors,
         nodeConfig.addons,
-        nodeConfig.minOutput
+        nodeConfig.minOutput,
+        nodeConfig.co2
       )
     }
   }
@@ -370,7 +390,8 @@ const setAddonToNull = async () => {
       nodeConfig.color,
       nodeConfig.factors,
       newAddons,
-      nodeConfig.minOutput
+      nodeConfig.minOutput,
+      nodeConfig.co2
     )
   }
 
@@ -467,8 +488,26 @@ const closeInfoPanel = () => {
 // Calculate canvas dimensions - full width when panel is hidden, reduced when visible
 const stageConfig = computed(() => ({
   width: isInfoPanelVisible.value ? windowWidth.value - 350 : windowWidth.value,
-  height: windowHeight.value
+  height: windowHeight.value - SUMMARY_HEADER_HEIGHT
 }))
+
+function formatSummary(value: number): string {
+  if (!Number.isFinite(value)) return '—'
+  if (value === 0) return '0'
+  if (value < 0.001) return value.toExponential(2)
+  return value.toFixed(3)
+}
+
+const summaryTotals = computed(() => {
+  // Depend on energyGraph so values refresh after each solve.
+  void energyGraph.value
+  const vars = getStoredSolverResult()?.result?.vars
+  return {
+    co2: vars?.['T:co2'] ?? 0,
+    wellBeing: vars?.['T:wellBeing'] ?? 0,
+    leisure: vars?.['T:leisure'] ?? 0
+  }
+})
 
 const handleWheel = (e: any) => {
   e.evt.preventDefault()
@@ -611,10 +650,73 @@ const closeResultsModal = () => {
 <style scoped>
 .canvas-container {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   width: 100vw;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+}
+
+.summary-header {
+  height: 56px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  z-index: 20;
+}
+
+.summary-metric {
+  flex: 1;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px 16px;
+  border-right: 1px solid #1e293b;
+}
+
+.summary-metric:last-child {
+  border-right: none;
+}
+
+.summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #f8fafc;
+}
+
+.summary-co2 .summary-value {
+  color: #fb923c;
+}
+
+.summary-needs .summary-value {
+  color: #4ade80;
+}
+
+.summary-leisure .summary-value {
+  color: #e879f9;
+}
+
+.canvas-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
   overflow: hidden;
 }
 

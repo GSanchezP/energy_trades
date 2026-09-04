@@ -175,6 +175,21 @@ export async function outputMapSolver(config: NodesConfig) {
     constraints.push(netSumConstraint(node.netOutputVar, sumConstraintsVars))
   }
 
+  // Unconstrained CO₂ aggregate: T:co2 = Σ T:node for nodes with co2: true
+  const CO2_VAR = 'T:co2'
+  const co2Nodes = config.nodes.filter((n) => n.co2)
+  bounds.push({ name: CO2_VAR, type: glpk.GLP_FR, lb: 0, ub: 0 })
+  if (co2Nodes.length > 0) {
+    constraints.push({
+      name: 'T:co2_sum',
+      vars: [
+        ...co2Nodes.map((n) => ({ name: n.netOutputVar, coef: 1 })),
+        { name: CO2_VAR, coef: -1 }
+      ],
+      bnds: { type: glpk.GLP_FX, lb: 0, ub: 0 }
+    })
+  }
+
   const objective = {
     direction: glpk.GLP_MAX,
     name: 'maximize_leisure',

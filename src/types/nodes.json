@@ -5,6 +5,7 @@
       "label": "Petroleum \nExtraction",
       "level": "extraction",
       "color": "#442d54ff",
+      "co2": true,
       "factors": {
         "wellBeing": 0.05,
         "fuels": 0.02,
@@ -17,6 +18,7 @@
       "label": "Coal \nExtraction",
       "level": "extraction",
       "color": "#3d2913ff",
+      "co2": true,
       "factors": {
         "wellBeing": 0.05,
         "fuels": 0.02,
