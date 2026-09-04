@@ -99,6 +99,18 @@
         >
           <v-layer>
             <v-line
+              v-for="divider in levelBandDividers"
+              :key="divider.id"
+              :config="divider.config"
+              :listening="false"
+            />
+            <v-text
+              v-for="title in levelBandTitles"
+              :key="title.id"
+              :config="title.config"
+              :listening="false"
+            />
+            <v-line
               v-for="connector in connectors"
               :key="connector.id"
               :config="{
@@ -229,6 +241,12 @@ function getGraphBounds() {
       minY = Math.min(minY, c.points[i + 1] - half)
       maxY = Math.max(maxY, c.points[i + 1] + half)
     }
+  }
+
+  // Keep level-band titles in view when fitting.
+  const bands = levelBandLayout.value
+  if (bands) {
+    minY = Math.min(minY, bands.titleY)
   }
 
   if (!Number.isFinite(minX)) return null
@@ -446,6 +464,84 @@ onUnmounted(() => {
 const nodes = computed(() => {
   return energyGraph.value?.nodes || []
 })
+
+/** Visual bands from nodes.json (`levelBands`). */
+const LEVEL_TITLE_GAP = 36
+
+const levelBandLayout = computed(() => {
+  const graph = energyGraph.value
+  if (!graph) return null
+
+  const bands = nodesConfig.levelBands
+    .map((band) => {
+      const bandNodes = graph.energyNodes.filter((n) => band.levels.includes(n.level.id))
+      if (!bandNodes.length) return null
+      return {
+        id: band.id,
+        label: band.label,
+        minX: Math.min(...bandNodes.map((n) => n.x)),
+        maxX: Math.max(...bandNodes.map((n) => n.x + n.width))
+      }
+    })
+    .filter((b): b is NonNullable<typeof b> => b !== null)
+
+  if (bands.length < 2) return null
+
+  const allNodes = graph.nodes
+  let contentTop = Math.min(...allNodes.map((n) => n.y))
+  const maxY = Math.max(...allNodes.map((n) => n.y + n.height))
+
+  // Titles/dividers must sit above the highest connector ribbon, not just nodes.
+  for (const c of graph.connectors) {
+    if (!c.power) continue
+    const half = c.strokeWidth / 2
+    for (let i = 1; i < c.points.length; i += 2) {
+      contentTop = Math.min(contentTop, c.points[i] - half)
+    }
+  }
+
+  const titleY = contentTop - LEVEL_TITLE_GAP
+
+  const dividers = []
+  for (let i = 0; i < bands.length - 1; i++) {
+    const x = (bands[i].maxX + bands[i + 1].minX) / 2
+    dividers.push({
+      id: `level-divider-${bands[i].id}-${bands[i + 1].id}`,
+      config: {
+        points: [x, titleY, x, maxY],
+        stroke: '#94a3b8',
+        strokeWidth: 1,
+        opacity: 0.75,
+        listening: false
+      }
+    })
+  }
+
+  const titles = bands.map((band) => {
+    const bandWidth = Math.max(40, band.maxX - band.minX)
+    const labelWidth = Math.max(bandWidth, band.label.length * 7.5)
+    const centerX = (band.minX + band.maxX) / 2
+    return {
+      id: `level-title-${band.id}`,
+      config: {
+        x: centerX - labelWidth / 2,
+        y: titleY,
+        width: labelWidth,
+        text: band.label,
+        fontSize: 13,
+        fontFamily: 'Arial',
+        fill: '#64748b',
+        align: 'center',
+        listening: false
+      }
+    }
+  })
+
+  return { dividers, titles, titleY }
+})
+
+const levelBandDividers = computed(() => levelBandLayout.value?.dividers ?? [])
+const levelBandTitles = computed(() => levelBandLayout.value?.titles ?? [])
 
 function buildNodeLabelConfig(square: NodeDrawer) {
   const padX = Math.min(4, Math.max(1, square.width * 0.05))

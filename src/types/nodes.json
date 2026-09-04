@@ -1,4 +1,21 @@
 {
+  "levelBands": [
+    {
+      "id": "extraction",
+      "label": "Energy Extraction & Conversion",
+      "levels": ["extraction", "conversion"]
+    },
+    {
+      "id": "primary",
+      "label": "Primary, Secondary & Transport",
+      "levels": ["primary"]
+    },
+    {
+      "id": "tertiary",
+      "label": "Tertiary",
+      "levels": ["tertiary"]
+    }
+  ],
   "nodes": [
     {
       "id": "petroleum",

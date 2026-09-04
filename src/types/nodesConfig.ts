@@ -74,6 +74,20 @@ export class NodeConfig {
 
 export interface NodesConfig {
   nodes: NodeConfig[]
+  /** Visual column groups with separator titles (between dump and heat excluded). */
+  levelBands: LevelBandConfig[]
+}
+
+export interface LevelBandConfig {
+  id: string
+  label: string
+  levels: NodeLevel[]
+}
+
+export interface LevelBandConfigJson {
+  id: string
+  label: string
+  levels: NodeLevel[]
 }
 
 /** Nested addon definition embedded under a sum node in JSON. */
@@ -164,5 +178,6 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
 }
 
 export const nodesConfig: NodesConfig = {
-  nodes: expandNodesFromJson(nodesJson.nodes as NodeConfigJson[])
+  nodes: expandNodesFromJson(nodesJson.nodes as NodeConfigJson[]),
+  levelBands: (nodesJson as { levelBands?: LevelBandConfigJson[] }).levelBands ?? []
 }
