@@ -128,14 +128,18 @@ export class EnergyGraphDrawer {
             `[LOSSES][${level}][${level}]:[${node.id}]→[${level}] Adding losses ${node.losses}`
           )
 
-          // Add output for current level
+          // Add output for current level — any flow that leaves via a vertical
+          // exit lane on this column's right edge (upper bus, lower bus).
           for (const [targetNodeId, value] of Object.entries(node.outputMap)) {
             if (!value) continue
             const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
             if (!targetNode) continue
+            if (this.addonToSum.get(node.id) === targetNode) continue
             const relation = this.levelComparer(node, targetNode)
 
-            if (relation.interLevel === 'above-next') {
+            if (
+              ['above-next', 'same', 'previous', 'before-previous'].includes(relation.interLevel)
+            ) {
               verticalUsage[level] = verticalUsage[level] ? verticalUsage[level] + value : value
               console.log(
                 `[OUTPUT][${level}][${level}]:[${node.id}]→[${targetNodeId}] Adding output ${value}`
@@ -353,7 +357,31 @@ export class EnergyGraphDrawer {
 
   generateFlowConnectors() {
     let xSourceOffsetMap: Partial<Record<NodeLevel, number>> = {}
+    // Approach lanes immediately left of each target column (above/below entry only).
     const xTargetOffsetMap: Partial<Record<NodeLevel, number>> = {}
+    const approachReservedWidth: Partial<Record<NodeLevel, number>> = {}
+    // Middle verticals pack left of the approach corridor (per target level).
+    const middleLaneOffset: Partial<Record<NodeLevel, number>> = {}
+
+    for (const level of NodeLevels) {
+      approachReservedWidth[level] = 0
+      middleLaneOffset[level] = 0
+    }
+
+    // Width of above/below inbound ribbons — reserved so middle lanes stay clear.
+    for (const node of this.energyNodes) {
+      for (const [targetId, power] of Object.entries(node.outputMap)) {
+        if (!power) continue
+        const target = this.energyNodes.find((n) => n.id === targetId)
+        if (!target) continue
+        if (this.addonToSum.get(node.id) === target) continue
+        const rel = this.levelComparer(node, target).interLevel
+        if (['same', 'previous', 'before-previous', 'above-next'].includes(rel)) {
+          approachReservedWidth[target.level.id] =
+            (approachReservedWidth[target.level.id] ?? 0) + power * BASE_NODE_HEIGHT
+        }
+      }
+    }
 
     // Place all heat dumps first so their lanes are a contiguous block per visual column.
     const dumpReservedWidth: Partial<Record<NodeLevel, number>> = {}
@@ -407,6 +435,8 @@ export class EnergyGraphDrawer {
       downLaneOffsets[level] = dumpReservedWidth[level] ?? 0
     }
 
+    type PendingEdge = { source: EnergyNode; target: EnergyNode; power: number }
+
     for (const i of iterations) {
       function r<T>(arr: Array<T>, rev: boolean) {
         return rev ? arr.reverse() : arr
@@ -420,6 +450,8 @@ export class EnergyGraphDrawer {
       } else {
         xSourceOffsetMap = downLaneOffsets
       }
+
+      const pending: PendingEdge[] = []
 
       for (const level of NodeLevels) {
         for (const node of r(
@@ -435,10 +467,6 @@ export class EnergyGraphDrawer {
           })
 
           if (i.connectorType === 'middle') {
-            // Vertical-first nesting: the connector that travels farther vertically
-            // must turn on the inner lane. Upward → highest target first; downward →
-            // lowest first. Otherwise the outer vertical cuts the inner horizontal
-            // (e.g. Electricity→Mining over Electricity→Electric transport).
             const sourceMidY = node.y + node.height / 2
             outputs = outputs.sort((a, b) => {
               const ta = this.energyNodes.find((n) => n.id === a[0])!
@@ -456,18 +484,49 @@ export class EnergyGraphDrawer {
 
           for (const [targetNodeId, power] of outputs) {
             const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)!
-            this.connectors.push(
-              this.createConnector(
-                node,
-                targetNode,
-                power,
-                xSourceOffsetMap,
-                xTargetOffsetMap,
-                i.connectorType
-              )
-            )
+            pending.push({ source: node, target: targetNode, power })
           }
         }
+      }
+
+      // Above/below: assign approach lanes by entry Y so inbound verticals nest
+      // instead of crossing (inner = closer to the node face).
+      if (i.connectorType === 'above' || i.connectorType === 'below') {
+        const entryY = (e: PendingEdge) =>
+          e.target.y +
+          this.calculateYOffset(e.target, e.source.id, true) +
+          (e.power * BASE_NODE_HEIGHT) / 2
+        if (i.connectorType === 'above') {
+          // From upper bus dropping down: higher entries first → inner lanes.
+          pending.sort((a, b) => entryY(a) - entryY(b))
+        } else {
+          // From lower bus rising up: lower entries first → inner lanes.
+          pending.sort((a, b) => entryY(b) - entryY(a))
+        }
+      }
+
+      // Middle: pack verticals by entry Y against the approach corridor.
+      if (i.connectorType === 'middle') {
+        const entryY = (e: PendingEdge) =>
+          e.target.y +
+          this.calculateYOffset(e.target, e.source.id, true) +
+          (e.power * BASE_NODE_HEIGHT) / 2
+        pending.sort((a, b) => entryY(a) - entryY(b))
+      }
+
+      for (const edge of pending) {
+        this.connectors.push(
+          this.createConnector(
+            edge.source,
+            edge.target,
+            edge.power,
+            xSourceOffsetMap,
+            xTargetOffsetMap,
+            i.connectorType,
+            approachReservedWidth,
+            middleLaneOffset
+          )
+        )
       }
     }
   }
@@ -502,7 +561,9 @@ export class EnergyGraphDrawer {
     power: number,
     xSourceOffsetMap: Partial<Record<NodeLevel, number>>,
     xTargetOffsetMap: Partial<Record<NodeLevel, number>>,
-    connectorType: ConnectorType
+    connectorType: ConnectorType,
+    approachReservedWidth: Partial<Record<NodeLevel, number>>,
+    middleLaneOffset: Partial<Record<NodeLevel, number>>
   ): Connector {
     const strokeWidth = power * BASE_NODE_HEIGHT
 
@@ -512,7 +573,6 @@ export class EnergyGraphDrawer {
 
     const sourceYOffset = this.calculateYOffset(source, target.id, false)
     const targetYOffset = this.calculateYOffset(target, source.id, true)
-    const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
 
     const sourceLaneLevel = this.visualSourceLevel(source)
     if (!xSourceOffsetMap[sourceLaneLevel]) xSourceOffsetMap[sourceLaneLevel] = 0
@@ -533,25 +593,33 @@ export class EnergyGraphDrawer {
       if (!needsVertical) {
         points = [sourceX, sourceY, targetX, targetY]
       } else {
-        xTargetOffsetMap[target.level.id]! = targetXOffset
         xSourceOffsetMap[sourceLaneLevel]! += strokeWidth + 8
-        // Stay in the source→target gap; never run past the destination.
-        const laneX = Math.min(sourceX + sourceXOffset, targetX - 10)
-        const approachX = Math.max(laneX, Math.min(targetX - 10, targetX - targetXOffset + strokeWidth / 2 - 10))
-        points = [sourceX, sourceY, laneX, sourceY, laneX, targetY, approachX, targetY, targetX, targetY]
+        // Pack exclusively from the approach corridor leftward (entry-Y order),
+        // so middle verticals never share an X with above/below approaches.
+        const reserved = approachReservedWidth[target.level.id] ?? 0
+        middleLaneOffset[target.level.id] =
+          (middleLaneOffset[target.level.id] ?? 0) + strokeWidth + 8
+        const laneX = Math.max(
+          sourceX + 10,
+          targetX - reserved - 10 - middleLaneOffset[target.level.id]! + strokeWidth / 2
+        )
+        points = [sourceX, sourceY, laneX, sourceY, laneX, targetY, targetX, targetY]
       }
     } else {
+      const targetXOffset = (xTargetOffsetMap[target.level.id]! ?? 0) + strokeWidth
       xTargetOffsetMap[target.level.id]! = targetXOffset
       xSourceOffsetMap[sourceLaneLevel]! += strokeWidth
 
       const yAutobahn = this.calculateAutobahnY(connectorType, strokeWidth)
+      // Approach verticals nest from the target face by entry-Y emission order.
       const horizontalX = targetX - targetXOffset + strokeWidth / 2 - 10
+      const exitX = sourceX + sourceXOffset
       points = [
         sourceX,
         sourceY,
-        sourceX + sourceXOffset,
+        exitX,
         sourceY,
-        sourceX + sourceXOffset,
+        exitX,
         yAutobahn,
         horizontalX,
         yAutobahn,
