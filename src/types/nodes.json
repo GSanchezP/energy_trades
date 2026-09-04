@@ -90,32 +90,6 @@
       }
     },
     {
-      "id": "heavy_transport",
-      "label": "Heavy\nTransp",
-      "level": "primary",
-      "color": "#3d7a08ff",
-      "addons": {
-        "heavy_thermal_transport": {
-          "weight": 0.5,
-          "label": "H Thermal",
-          "factors": {
-            "wellBeing": 0.05,
-            "fuels": 3,
-            "mining": 0.15
-          }
-        },
-        "heavy_electric_transport": {
-          "weight": null,
-          "label": "H Electric",
-          "factors": {
-            "wellBeing": 0.05,
-            "electricity": 4,
-            "mining": 1.5
-          }
-        }
-      }
-    },
-    {
       "id": "transport",
       "label": "Transp",
       "level": "primary",
@@ -137,6 +111,32 @@
             "wellBeing": 0.05,
             "electricity": 1.3,
             "mining": 0.45
+          }
+        }
+      }
+    },
+    {
+      "id": "heavy_transport",
+      "label": "Heavy\nTransp",
+      "level": "primary",
+      "color": "#3d7a08ff",
+      "addons": {
+        "heavy_thermal_transport": {
+          "weight": 0.5,
+          "label": "H Thermal",
+          "factors": {
+            "wellBeing": 0.05,
+            "fuels": 3,
+            "mining": 0.15
+          }
+        },
+        "heavy_electric_transport": {
+          "weight": null,
+          "label": "H Electric",
+          "factors": {
+            "wellBeing": 0.05,
+            "electricity": 4,
+            "mining": 1.5
           }
         }
       }
