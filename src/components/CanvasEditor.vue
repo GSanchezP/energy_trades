@@ -1,20 +1,32 @@
 <template>
   <div class="canvas-container">
     <header class="summary-header">
-      <div class="header-solver">
-        <button class="header-results-button" @click="handleResultsClick" title="Compute results">
-          <i class="mdi mdi-cpu-64-bit button-icon"></i>
-        </button>
-        <span
-          class="header-status"
-          :class="`header-status--${solverStatus.kind}`"
-          :title="solverStatus.label"
-          role="status"
-          :aria-label="solverStatus.label"
+      <button
+        class="header-status"
+        :class="`header-status--${solverStatus.kind}`"
+        :title="solverStatus.label"
+        :aria-label="solverStatus.label"
+        @click="handleResultsClick"
+      >
+        <i class="mdi" :class="solverStatus.icon"></i>
+      </button>
+      <label class="header-objective" :class="{ 'header-objective--disabled': isSolving }">
+        <span class="summary-label">Solve for</span>
+        <select
+          class="header-objective-select"
+          v-model="solverObjective"
+          :disabled="isSolving"
+          aria-label="Solve for"
         >
-          <i class="mdi" :class="solverStatus.icon"></i>
-        </span>
-      </div>
+          <option
+            v-for="option in solverObjectiveOptions"
+            :key="option.value"
+            :value="option.value"
+          >
+            {{ option.label }}
+          </option>
+        </select>
+      </label>
       <div class="summary-center">
         <div class="summary-metric summary-co2">
           <span class="summary-label">CO₂</span>
@@ -28,27 +40,6 @@
           <span class="summary-label">Leisure</span>
           <span class="summary-value">{{ formatSummary(summaryTotals.leisure) }}</span>
         </div>
-        <fieldset class="summary-objective" :disabled="isSolving">
-          <legend class="summary-label">Solve for</legend>
-          <label class="objective-option">
-            <input
-              type="radio"
-              name="solver-objective"
-              value="maximize_leisure"
-              v-model="solverObjective"
-            />
-            Maximize Leisure
-          </label>
-          <label class="objective-option">
-            <input
-              type="radio"
-              name="solver-objective"
-              value="minimize_co2"
-              v-model="solverObjective"
-            />
-            Minimize CO₂
-          </label>
-        </fieldset>
       </div>
     </header>
 
@@ -193,6 +184,10 @@ const SUMMARY_HEADER_HEIGHT = 56
 
 const energyGraph = ref<EnergyGraphDrawer | undefined>(undefined)
 const solverObjective = ref<SolverObjective>('maximize_leisure')
+const solverObjectiveOptions: { value: SolverObjective; label: string }[] = [
+  { value: 'maximize_leisure', label: 'Maximize Leisure' },
+  { value: 'minimize_co2', label: 'Minimize CO₂' }
+]
 const isSolving = ref(false)
 const stageRef = ref<any>(null)
 
@@ -740,42 +735,54 @@ const closeResultsModal = () => {
   border-right: none;
 }
 
-.summary-objective {
+.header-objective {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 16px;
-  margin: 0;
-  padding: 0 20px;
-  border: none;
-  border-left: 1px solid #1e293b;
-  min-width: 280px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  flex-shrink: 0;
+  padding: 0 16px;
+  border-right: 1px solid #1e293b;
 }
 
-.summary-objective legend {
-  float: left;
-  margin-right: 12px;
-  padding: 0;
+.header-objective--disabled {
+  opacity: 0.6;
 }
 
-.objective-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.header-objective-select {
+  appearance: none;
+  background: #1e293b
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%94a3b8' d='M3 4.5L6 8l3-3.5'/%3E%3C/svg%3E")
+    no-repeat right 8px center;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 4px 28px 4px 10px;
   font-size: 13px;
   font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  min-width: 160px;
+}
+
+.header-objective-select:hover:not(:disabled) {
+  border-color: #475569;
+  background-color: #243044;
+}
+
+.header-objective-select:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+.header-objective-select:disabled {
+  cursor: not-allowed;
+}
+
+.header-objective-select option {
+  background: #0f172a;
   color: #e2e8f0;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.objective-option input {
-  accent-color: #38bdf8;
-  cursor: pointer;
-}
-
-.summary-objective:disabled {
-  opacity: 0.6;
 }
 
 .factor-warning {
@@ -825,45 +832,26 @@ const closeResultsModal = () => {
   color: #e879f9;
 }
 
-.header-solver {
-  display: flex;
-  align-items: stretch;
-  flex-shrink: 0;
-  border-right: 1px solid #1e293b;
-}
-
-.header-results-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: #e2e8f0;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.header-results-button:hover {
-  background: #1e293b;
-  color: #ffffff;
-}
-
-.header-results-button .button-icon {
-  font-size: 22px;
-  line-height: 1;
-}
-
 .header-status {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  border-left: 1px solid #1e293b;
-  font-size: 20px;
+  flex-shrink: 0;
+  width: 56px;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-right: 1px solid #1e293b;
+  background: transparent;
+  font-size: 22px;
   line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.header-status:hover {
+  background: #1e293b;
 }
 
 .header-status--success {

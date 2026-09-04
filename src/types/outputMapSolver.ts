@@ -255,31 +255,29 @@ export function getSolverStatusInfo(result: Result | null | undefined): SolverSt
   }
 
   switch (result.result.status) {
-    case 1:
+    case glpk.GLP_OPT:
       return { kind: 'success', label: 'Optimal solution found', icon: 'mdi-check-circle' }
-    case 2:
-      return { kind: 'warning', label: 'Feasible solution found', icon: 'mdi-alert' }
-    case 3:
-    case 4:
-    case 9:
-    case 11:
-    case 14:
-      return { kind: 'error', label: 'Infeasible problem', icon: 'mdi-close-circle' }
-    case 5:
-    case 12:
-    case 15:
+    case glpk.GLP_FEAS:
+      return { kind: 'warning', label: 'Feasible, but not proven optimal', icon: 'mdi-alert' }
+    case glpk.GLP_INFEAS:
+      return { kind: 'error', label: 'Solution is infeasible', icon: 'mdi-close-circle' }
+    case glpk.GLP_NOFEAS:
+      return { kind: 'error', label: 'No feasible solution exists', icon: 'mdi-close-circle' }
+    case glpk.GLP_UNBND:
       return { kind: 'warning', label: 'Unbounded problem', icon: 'mdi-alert' }
-    case 7:
-    case 8:
-      return { kind: 'warning', label: 'Solver limit exceeded', icon: 'mdi-clock-alert' }
-    case 10:
-      return { kind: 'warning', label: 'Numerical instability', icon: 'mdi-alert' }
-    case 6:
-    case 13:
-    case 16:
+    case glpk.GLP_UNDEF:
+      return { kind: 'unknown', label: 'Solution is undefined', icon: 'mdi-help-circle' }
     default:
-      return { kind: 'unknown', label: 'Undefined solver status', icon: 'mdi-help-circle' }
+      return { kind: 'unknown', label: 'Unknown solver status', icon: 'mdi-help-circle' }
   }
+}
+
+const STATUS_EMOJI: Record<SolverStatusKind, string> = {
+  success: '✅',
+  warning: '⚠️',
+  error: '❌',
+  pending: '⏳',
+  unknown: '❓'
 }
 
 export function formatSolverResult(
@@ -296,77 +294,9 @@ export function formatSolverResult(
   // Solver Status
   lines.push('\n🎯 SOLVER STATUS:')
   const status = result.result.status
-  let statusText = 'Unknown'
-  let statusEmoji = '❓'
+  const statusInfo = getSolverStatusInfo(result)
 
-  switch (status) {
-    case 1:
-      statusText = 'Optimal solution found'
-      statusEmoji = '✅'
-      break
-    case 2:
-      statusText = 'Feasible solution found'
-      statusEmoji = '⚠️'
-      break
-    case 3:
-      statusText = 'Infeasible problem'
-      statusEmoji = '❌'
-      break
-    case 4:
-      statusText = 'No feasible solution exists'
-      statusEmoji = '❌'
-      break
-    case 5:
-      statusText = 'Unbounded problem'
-      statusEmoji = '⚠️'
-      break
-    case 6:
-      statusText = 'Undefined solution'
-      statusEmoji = '❓'
-      break
-    case 7:
-      statusText = 'Iteration limit exceeded'
-      statusEmoji = '⏰'
-      break
-    case 8:
-      statusText = 'Time limit exceeded'
-      statusEmoji = '⏰'
-      break
-    case 9:
-      statusText = 'No primal feasible solution'
-      statusEmoji = '❌'
-      break
-    case 10:
-      statusText = 'Numerical instability'
-      statusEmoji = '⚠️'
-      break
-    case 11:
-      statusText = 'Primal infeasible'
-      statusEmoji = '❌'
-      break
-    case 12:
-      statusText = 'Primal unbounded'
-      statusEmoji = '⚠️'
-      break
-    case 13:
-      statusText = 'Primal undefined'
-      statusEmoji = '❓'
-      break
-    case 14:
-      statusText = 'Dual infeasible'
-      statusEmoji = '❌'
-      break
-    case 15:
-      statusText = 'Dual unbounded'
-      statusEmoji = '⚠️'
-      break
-    case 16:
-      statusText = 'Dual undefined'
-      statusEmoji = '❓'
-      break
-  }
-
-  lines.push(`   ${statusEmoji} Status Code: ${status} - ${statusText}`)
+  lines.push(`   ${STATUS_EMOJI[statusInfo.kind]} Status Code: ${status} - ${statusInfo.label}`)
 
   // Objective Value (Z value)
   lines.push('\n🎯 OBJECTIVE VALUE (Z):')
@@ -377,7 +307,11 @@ export function formatSolverResult(
     lines.push(`   • Z Value: ${zValue.toFixed(6)}`)
     lines.push(`   • Meaning: ${objectiveLabel}`)
     lines.push(
-      `   • Interpretation: ${status === 1 || status === 2 ? '✅ Feasible solution' : '❌ Check status'}`
+      `   • Interpretation: ${
+        statusInfo.kind === 'success' || status === glpk.GLP_FEAS
+          ? '✅ Feasible solution'
+          : '❌ Check status'
+      }`
     )
     if (objectiveMode === 'maximize_leisure' && zValue > 0) {
       lines.push(`   • Efficiency: ${(zValue * 100).toFixed(2)}% of maximum possible leisure`)
