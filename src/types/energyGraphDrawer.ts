@@ -10,6 +10,9 @@ import { NodeLevel, NodeLevels } from './nodesConfig'
 
 type ConnectorType = 'above' | 'below' | 'middle'
 
+/** Clearance between adjacent middle (next-column) verticals. */
+const MIDDLE_LANE_GAP = 8
+
 export class EnergyGraphDrawer {
   private NODES_VERTICAL_SPACING: number
 
@@ -266,6 +269,21 @@ export class EnergyGraphDrawer {
     return node.level.id
   }
 
+  /** Clearance the middle verticals entering `level` add to the column gap. */
+  private middleLaneGap(level: NodeLevel): number {
+    let lanes = 0
+    for (const node of this.energyNodes) {
+      for (const [targetId, power] of Object.entries(node.outputMap)) {
+        if (!power) continue
+        const target = this.energyNodes.find((n) => n.id === targetId)
+        if (!target || target.level.id !== level) continue
+        if (this.addonToSum.get(node.id) === target) continue
+        if (this.levelComparer(node, target).interLevel === 'next') lanes++
+      }
+    }
+    return lanes * MIDDLE_LANE_GAP
+  }
+
   private gapAfterNode(node: EnergyNode, nextNode?: EnergyNode) {
     if (!nextNode) return this.NODES_VERTICAL_SPACING
     // Addon siblings of a sum sit flush (no vertical gap).
@@ -299,7 +317,7 @@ export class EnergyGraphDrawer {
 
       if (nodeLevelValue(level)) {
         const prevVerticalUsage = verticalUsageByLevel[prevLevel(level)]
-        xOffset += (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT + 30
+        xOffset += (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT + 30 + this.middleLaneGap(level)
       }
 
       const previousLevel = nodeLevelValue(level) > 0 ? prevLevel(level) : undefined
@@ -466,19 +484,7 @@ export class EnergyGraphDrawer {
             return i.levelComparer.includes(this.levelComparer(node, targetNode).interLevel)
           })
 
-          if (i.connectorType === 'middle') {
-            const sourceMidY = node.y + node.height / 2
-            outputs = outputs.sort((a, b) => {
-              const ta = this.energyNodes.find((n) => n.id === a[0])!
-              const tb = this.energyNodes.find((n) => n.id === b[0])!
-              const aY = ta.y + ta.height / 2
-              const bY = tb.y + tb.height / 2
-              const aUp = aY < sourceMidY
-              const bUp = bY < sourceMidY
-              if (aUp !== bUp) return aUp ? -1 : 1
-              return aUp ? aY - bY : bY - aY
-            })
-          } else {
+          if (i.connectorType !== 'middle') {
             outputs = r(outputs, i.reverse)
           }
 
@@ -505,13 +511,24 @@ export class EnergyGraphDrawer {
         }
       }
 
-      // Middle: pack verticals by entry Y against the approach corridor.
+      // Middle: lanes are packed from the target face outwards, so the first
+      // edge emitted turns last. An edge must turn before every edge it would
+      // otherwise cut across: among rising flows the lowest entry turns last,
+      // among falling flows the highest entry turns last.
       if (i.connectorType === 'middle') {
         const entryY = (e: PendingEdge) =>
           e.target.y +
           this.calculateYOffset(e.target, e.source.id, true) +
           (e.power * BASE_NODE_HEIGHT) / 2
-        pending.sort((a, b) => entryY(a) - entryY(b))
+        const exitY = (e: PendingEdge) =>
+          e.source.y +
+          this.calculateYOffset(e.source, e.target.id, false) +
+          (e.power * BASE_NODE_HEIGHT) / 2
+        const rises = (e: PendingEdge) => entryY(e) < exitY(e)
+        pending.sort((a, b) => {
+          if (rises(a) !== rises(b)) return rises(a) ? 1 : -1
+          return rises(a) ? entryY(b) - entryY(a) : entryY(a) - entryY(b)
+        })
       }
 
       for (const edge of pending) {
@@ -593,12 +610,12 @@ export class EnergyGraphDrawer {
       if (!needsVertical) {
         points = [sourceX, sourceY, targetX, targetY]
       } else {
-        xSourceOffsetMap[sourceLaneLevel]! += strokeWidth + 8
+        xSourceOffsetMap[sourceLaneLevel]! += strokeWidth + MIDDLE_LANE_GAP
         // Pack exclusively from the approach corridor leftward (entry-Y order),
         // so middle verticals never share an X with above/below approaches.
         const reserved = approachReservedWidth[target.level.id] ?? 0
         middleLaneOffset[target.level.id] =
-          (middleLaneOffset[target.level.id] ?? 0) + strokeWidth + 8
+          (middleLaneOffset[target.level.id] ?? 0) + strokeWidth + MIDDLE_LANE_GAP
         const laneX = Math.max(
           sourceX + 10,
           targetX - reserved - 10 - middleLaneOffset[target.level.id]! + strokeWidth / 2
