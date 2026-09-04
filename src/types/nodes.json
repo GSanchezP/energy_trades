@@ -50,7 +50,7 @@
       "color": "#0d92a3ff",
       "addons": {
         "thermal_electricity": {
-          "weight": 0.4,
+          "weight": null,
           "label": "Thermal",
           "factors": {
             "wellBeing": 0.05,
@@ -63,7 +63,7 @@
           "label": "Renewable",
           "factors": {
             "wellBeing": 0.1,
-            "mining": 0.1,
+            "mining": 0.3,
             "sun": 1
           }
         }
@@ -86,8 +86,8 @@
       "level": "primary",
       "color": "#b0b00aff",
       "factors": {
-        "wellBeing": 0.15,
-        "heavy_transport": 0.3,
+        "wellBeing": 0.1,
+        "heavy_transport": 0.8,
         "mining": 0.1
       }
     },
@@ -98,7 +98,7 @@
       "color": "#58b00aff",
       "addons": {
         "thermal_transport": {
-          "weight": 0.5,
+          "weight": null,
           "label": "Thermal",
           "factors": {
             "wellBeing": 0.05,
@@ -124,7 +124,7 @@
       "color": "#3d7a08ff",
       "addons": {
         "heavy_thermal_transport": {
-          "weight": 0.5,
+          "weight": null,
           "label": "H Thermal",
           "factors": {
             "wellBeing": 0.05,
@@ -150,7 +150,7 @@
       "color": "#d97706ff",
       "addons": {
         "thermal_heating": {
-          "weight": 0.5,
+          "weight": null,
           "label": "Thermal",
           "factors": {
             "fuels": 3.333,

@@ -101,6 +101,29 @@ function isAddonConfig(value: unknown): value is AddonConfigJson {
   return typeof value === 'object' && value !== null && 'weight' in value && 'label' in value
 }
 
+/** Non-extraction nodes with factors must sum those factors to ≥ 1. */
+export function assertFactorSumsAtLeastOne(nodes: NodeConfig[]) {
+  const failures: string[] = []
+
+  for (const node of nodes) {
+    if (node.level === 'extraction') continue
+
+    const factorValues = Object.values(node.factors)
+    if (factorValues.length === 0) continue
+
+    const sum = factorValues.reduce((acc, v) => acc + v, 0)
+    if (sum < 1 - 1e-9) {
+      failures.push(`"${node.id}" (factors sum to ${sum.toFixed(4)}, need ≥ 1)`)
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `Invalid factor totals — each non-extraction factor node must sum to at least 1:\n- ${failures.join('\n- ')}`
+    )
+  }
+}
+
 /** Expand sum nodes so each nested addon becomes its own NodeConfig. */
 export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
   const result: NodeConfig[] = []
@@ -131,6 +154,7 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
     )
   }
 
+  assertFactorSumsAtLeastOne(result)
   return result
 }
 
