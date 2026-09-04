@@ -68,17 +68,65 @@ export interface NodesConfig {
   nodes: NodeConfig[]
 }
 
+/** Nested addon definition embedded under a sum node in JSON. */
+export interface AddonConfigJson {
+  weight: number | null
+  label: string
+  factors?: Partial<Record<NodeType, number>>
+}
+
 export interface NodeConfigJson {
   id: NodeType
   label: string
   level: NodeLevel
   color: string
   factors?: Partial<Record<NodeType, number>>
-  addons?: Partial<Record<NodeType, number | null>>
+  /** Nested addon objects, or legacy flat weight map. */
+  addons?: Partial<Record<NodeType, AddonConfigJson | number | null>>
+}
+
+function isAddonConfig(value: unknown): value is AddonConfigJson {
+  return typeof value === 'object' && value !== null && 'weight' in value && 'label' in value
+}
+
+/** Expand sum nodes so each nested addon becomes its own NodeConfig. */
+export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
+  const result: NodeConfig[] = []
+
+  for (const n of jsonNodes) {
+    if (!n.addons || Object.keys(n.addons).length === 0) {
+      result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors))
+      continue
+    }
+
+    const weightMap: Partial<Record<NodeType, number | null>> = {}
+    let hasNested = false
+
+    for (const [addonId, addon] of Object.entries(n.addons)) {
+      const id = addonId as NodeType
+      if (isAddonConfig(addon)) {
+        hasNested = true
+        weightMap[id] = addon.weight
+        // Addon nodes inherit the sum node's level and color.
+        result.push(new NodeConfig(id, addon.label, n.level, n.color, addon.factors))
+      } else {
+        // Legacy flat weight map: { thermal_transport: 0.5, ... }
+        weightMap[id] = addon as number | null
+      }
+    }
+
+    if (!hasNested) {
+      // Flat addons only — addon nodes are declared separately in JSON.
+      result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors, weightMap))
+      continue
+    }
+
+    result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors, weightMap))
+  }
+
+  return result
 }
 
 export const nodesConfig: NodesConfig = {
-  nodes: (nodesJson.nodes as NodeConfigJson[]).map(
-    (n) => new NodeConfig(n.id, n.label, n.level, n.color, n.factors, n.addons)
-  )
+  nodes: expandNodesFromJson(nodesJson.nodes as NodeConfigJson[])
 }

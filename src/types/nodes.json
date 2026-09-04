@@ -36,34 +36,28 @@
       }
     },
     {
-      "id": "thermal_electricity",
-      "label": "Thermal",
-      "level": "conversion",
-      "color": "#0d92a3ff",
-      "factors": {
-        "wellBeing": 0.05,
-        "coal": 2.5,
-        "mining": 0.1
-      }
-    },
-    {
-      "id": "renewable_electricity",
-      "label": "Renewable",
-      "level": "conversion",
-      "color": "#0d92a3ff",
-      "factors": {
-        "wellBeing": 0.1,
-        "mining": 0.1
-      }
-    },
-    {
       "id": "electricity",
       "label": "Elec",
       "level": "conversion",
       "color": "#0d92a3ff",
       "addons": {
-        "thermal_electricity": 0.4,
-        "renewable_electricity": null
+        "thermal_electricity": {
+          "weight": 0.4,
+          "label": "Thermal",
+          "factors": {
+            "wellBeing": 0.05,
+            "coal": 2.5,
+            "mining": 0.1
+          }
+        },
+        "renewable_electricity": {
+          "weight": null,
+          "label": "Renewable",
+          "factors": {
+            "wellBeing": 0.1,
+            "mining": 0.1
+          }
+        }
       }
     },
     {
@@ -89,55 +83,29 @@
       }
     },
     {
-      "id": "thermal_transport",
-      "label": "Thermal",
-      "level": "primary",
-      "color": "#58b00aff",
-      "factors": {
-        "wellBeing": 0.05,
-        "fuels": 3,
-        "mining": 0.15
-      }
-    },
-    {
-      "id": "electric_transport",
-      "label": "Electric",
-      "level": "primary",
-      "color": "#58b00aff",
-      "factors": {
-        "wellBeing": 0.05,
-        "electricity": 1.3,
-        "mining": 0.45
-      }
-    },
-    {
       "id": "transport",
       "label": "Transp",
       "level": "primary",
       "color": "#58b00aff",
       "addons": {
-        "thermal_transport": 0.5,
-        "electric_transport": null
-      }
-    },
-    {
-      "id": "thermal_heating",
-      "label": "Thermal",
-      "level": "primary",
-      "color": "#d97706ff",
-      "factors": {
-        "fuels": 3.333,
-        "mining": 0.15
-      }
-    },
-    {
-      "id": "electric_heating",
-      "label": "Electric",
-      "level": "primary",
-      "color": "#d97706ff",
-      "factors": {
-        "electricity": 1,
-        "mining": 0.15
+        "thermal_transport": {
+          "weight": 0.5,
+          "label": "Thermal",
+          "factors": {
+            "wellBeing": 0.05,
+            "fuels": 3,
+            "mining": 0.15
+          }
+        },
+        "electric_transport": {
+          "weight": null,
+          "label": "Electric",
+          "factors": {
+            "wellBeing": 0.05,
+            "electricity": 1.3,
+            "mining": 0.45
+          }
+        }
       }
     },
     {
@@ -146,8 +114,22 @@
       "level": "primary",
       "color": "#d97706ff",
       "addons": {
-        "thermal_heating": 0.5,
-        "electric_heating": null
+        "thermal_heating": {
+          "weight": 0.5,
+          "label": "Thermal",
+          "factors": {
+            "fuels": 3.333,
+            "mining": 0.15
+          }
+        },
+        "electric_heating": {
+          "weight": null,
+          "label": "Electric",
+          "factors": {
+            "electricity": 1,
+            "mining": 0.15
+          }
+        }
       }
     },
     {
