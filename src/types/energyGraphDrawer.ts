@@ -10,9 +10,6 @@ import { NodeLevel, NodeLevels } from './nodesConfig'
 
 type ConnectorType = 'above' | 'below' | 'middle'
 
-/** Clearance between adjacent middle (next-column) verticals. */
-const MIDDLE_LANE_GAP = 8
-
 export class EnergyGraphDrawer {
   private NODES_VERTICAL_SPACING: number
 
@@ -269,21 +266,6 @@ export class EnergyGraphDrawer {
     return node.level.id
   }
 
-  /** Clearance the middle verticals entering `level` add to the column gap. */
-  private middleLaneGap(level: NodeLevel): number {
-    let lanes = 0
-    for (const node of this.energyNodes) {
-      for (const [targetId, power] of Object.entries(node.outputMap)) {
-        if (!power) continue
-        const target = this.energyNodes.find((n) => n.id === targetId)
-        if (!target || target.level.id !== level) continue
-        if (this.addonToSum.get(node.id) === target) continue
-        if (this.levelComparer(node, target).interLevel === 'next') lanes++
-      }
-    }
-    return lanes * MIDDLE_LANE_GAP
-  }
-
   private gapAfterNode(node: EnergyNode, nextNode?: EnergyNode) {
     if (!nextNode) return this.NODES_VERTICAL_SPACING
     // Addon siblings of a sum sit flush (no vertical gap).
@@ -317,7 +299,7 @@ export class EnergyGraphDrawer {
 
       if (nodeLevelValue(level)) {
         const prevVerticalUsage = verticalUsageByLevel[prevLevel(level)]
-        xOffset += (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT + 30 + this.middleLaneGap(level)
+        xOffset += (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT + 30
       }
 
       const previousLevel = nodeLevelValue(level) > 0 ? prevLevel(level) : undefined
@@ -610,12 +592,12 @@ export class EnergyGraphDrawer {
       if (!needsVertical) {
         points = [sourceX, sourceY, targetX, targetY]
       } else {
-        xSourceOffsetMap[sourceLaneLevel]! += strokeWidth + MIDDLE_LANE_GAP
+        xSourceOffsetMap[sourceLaneLevel]! += strokeWidth
         // Pack exclusively from the approach corridor leftward (entry-Y order),
         // so middle verticals never share an X with above/below approaches.
         const reserved = approachReservedWidth[target.level.id] ?? 0
         middleLaneOffset[target.level.id] =
-          (middleLaneOffset[target.level.id] ?? 0) + strokeWidth + MIDDLE_LANE_GAP
+          (middleLaneOffset[target.level.id] ?? 0) + strokeWidth
         const laneX = Math.max(
           sourceX + 10,
           targetX - reserved - 10 - middleLaneOffset[target.level.id]! + strokeWidth / 2
