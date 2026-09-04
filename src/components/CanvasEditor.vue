@@ -467,6 +467,62 @@ const nodes = computed(() => {
 /** Visual bands from nodes.json (`levelBands`). */
 const LEVEL_TITLE_GAP = 36
 
+/** Vertical segment kinds in a column corridor (see EnergyGraphDrawer.createConnector). */
+function classifyCorridorVertical(
+  pointCount: number,
+  segmentIndex: number
+): 'forward' | 'backward' | null {
+  // dump: 3 points → one exit vertical
+  if (pointCount === 3) return 'forward'
+  // bus: 6 points → seg 1 exit (forward), seg 3 approach (backward)
+  if (pointCount === 6) {
+    if (segmentIndex === 1) return 'forward'
+    if (segmentIndex === 3) return 'backward'
+    return null
+  }
+  // middle with a vertical: 4 points → packs from the approach side
+  if (pointCount === 4) return 'backward'
+  return null
+}
+
+/**
+ * X of the empty strip between forward exit/dump verticals and backward
+ * approach/middle verticals in the corridor between two column faces.
+ */
+function corridorGapMidX(
+  connectors: { points: number[]; strokeWidth: number; power: number }[],
+  leftFace: number,
+  rightFace: number
+): number {
+  let forwardMax = leftFace
+  let backwardMin = rightFace
+
+  for (const c of connectors) {
+    if (!c.power) continue
+    const half = c.strokeWidth / 2
+    const p = c.points
+    const nPts = p.length / 2
+
+    for (let k = 0; k < nPts - 1; k++) {
+      const x0 = p[2 * k]
+      const y0 = p[2 * k + 1]
+      const x1 = p[2 * k + 2]
+      const y1 = p[2 * k + 3]
+      const vertical = Math.abs(x0 - x1) < 0.5 && Math.abs(y0 - y1) > 0.5
+      if (!vertical) continue
+      if (x0 <= leftFace + 0.5 || x0 >= rightFace - 0.5) continue
+
+      const kind = classifyCorridorVertical(nPts, k)
+      if (kind === 'forward') forwardMax = Math.max(forwardMax, x0 + half)
+      if (kind === 'backward') backwardMin = Math.min(backwardMin, x0 - half)
+    }
+  }
+
+  if (backwardMin > forwardMax) return (forwardMax + backwardMin) / 2
+  // Fallback when a corridor has no clear forward/backward split.
+  return (leftFace + rightFace) / 2
+}
+
 const levelBandLayout = computed(() => {
   const graph = energyGraph.value
   if (!graph) return null
@@ -501,25 +557,30 @@ const levelBandLayout = computed(() => {
 
   const titleY = contentTop - LEVEL_TITLE_GAP
 
-  const dividers = []
+  const dividerXs: number[] = []
   for (let i = 0; i < bands.length - 1; i++) {
-    const x = (bands[i].maxX + bands[i + 1].minX) / 2
-    dividers.push({
-      id: `level-divider-${bands[i].id}-${bands[i + 1].id}`,
-      config: {
-        points: [x, titleY, x, maxY],
-        stroke: '#94a3b8',
-        strokeWidth: 1,
-        opacity: 0.75,
-        listening: false
-      }
-    })
+    dividerXs.push(
+      corridorGapMidX(graph.connectors, bands[i].maxX, bands[i + 1].minX)
+    )
   }
 
-  const titles = bands.map((band) => {
-    const bandWidth = Math.max(40, band.maxX - band.minX)
-    const labelWidth = Math.max(bandWidth, band.label.length * 7.5)
-    const centerX = (band.minX + band.maxX) / 2
+  const dividers = dividerXs.map((x, i) => ({
+    id: `level-divider-${bands[i].id}-${bands[i + 1].id}`,
+    config: {
+      points: [x, titleY, x, maxY],
+      stroke: '#94a3b8',
+      strokeWidth: 1,
+      opacity: 0.75,
+      listening: false
+    }
+  }))
+
+  const titles = bands.map((band, i) => {
+    const left = i === 0 ? band.minX : dividerXs[i - 1]
+    const right = i === dividerXs.length ? band.maxX : dividerXs[i]
+    const span = Math.max(40, right - left)
+    const labelWidth = Math.max(span, band.label.length * 7.5)
+    const centerX = (left + right) / 2
     return {
       id: `level-title-${band.id}`,
       config: {
