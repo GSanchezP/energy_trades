@@ -189,7 +189,6 @@ import generateEnergyGraph, { type SolverObjective } from '../types/energyGraphG
 import { getStoredSolverResult, formatSolverResult, getSolverStatusInfo } from '../types/outputMapSolver'
 import type { EnergyNode } from '../types/energyNode'
 import { NodeType, nodesConfig, NodeConfig, getFactorSumFailures } from '../types/nodesConfig'
-import type { NodeDrawer } from '../types/nodeDrawer'
 
 const FPS_INTERVAL_IN_MS = 16
 const SUMMARY_HEADER_HEIGHT = 56
@@ -543,7 +542,14 @@ const levelBandLayout = computed(() => {
 const levelBandDividers = computed(() => levelBandLayout.value?.dividers ?? [])
 const levelBandTitles = computed(() => levelBandLayout.value?.titles ?? [])
 
-function buildNodeLabelConfig(square: NodeDrawer) {
+function buildNodeLabelConfig(square: {
+  id: string
+  label: string
+  x: number
+  y: number
+  width: number
+  height: number
+}) {
   const padX = Math.min(4, Math.max(1, square.width * 0.05))
   const padY = Math.min(2, Math.max(0.5, square.height * 0.05))
   const label = square.label

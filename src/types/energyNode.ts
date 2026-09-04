@@ -2,7 +2,6 @@ import { BASE_NODE_HEIGHT, NodeDrawer } from './nodeDrawer'
 import { NodeLevel, NodeType, NodeWeights } from './nodesConfig'
 
 export class EnergyNode extends NodeDrawer {
-  private _label: string
   private _eroiFactors: NodeWeights // Amount of energy to produce 1 watt
   private _eroiAddons: Partial<Record<NodeType, number | null>>
   private _inputMap: NodeWeights
@@ -25,10 +24,16 @@ export class EnergyNode extends NodeDrawer {
   ) {
     const inputPower = Object.values(inputMap).reduce((acc, curr) => acc + curr)
     const outputPower = Object.values(outputMap).reduce((acc, curr) => acc + curr)
-    super(nodeType, nodeLevel, nodeLevelPosition, color, {
-      height: BASE_NODE_HEIGHT * Math.max(inputPower, outputPower)
-    })
-    this._label = label
+    super(
+      nodeType,
+      nodeLevel,
+      nodeLevelPosition,
+      color,
+      {
+        height: BASE_NODE_HEIGHT * Math.max(inputPower, outputPower)
+      },
+      label
+    )
     this._eroiFactors = eroiFactors
     this._eroiAddons = eroiAddons
     this._inputMap = inputMap
@@ -46,10 +51,6 @@ export class EnergyNode extends NodeDrawer {
 
   get addonIds(): NodeType[] {
     return Object.keys(this._eroiAddons) as NodeType[]
-  }
-
-  get label() {
-    return this._label
   }
 
   get inputPower() {
