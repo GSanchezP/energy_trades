@@ -40,6 +40,18 @@
           <span class="summary-label">Leisure</span>
           <span class="summary-value">{{ formatSummary(summaryTotals.leisure) }}</span>
         </div>
+        <div class="summary-metric summary-eroi12">
+          <span class="summary-label">EROI 12</span>
+          <span class="summary-value">{{ formatSummary(bandErois.eroi12) }}</span>
+        </div>
+        <div class="summary-metric summary-eroi123">
+          <span class="summary-label">EROI 123</span>
+          <span class="summary-value">{{ formatSummary(bandErois.eroi123) }}</span>
+        </div>
+        <div class="summary-metric summary-eroi23">
+          <span class="summary-label">EROI 23</span>
+          <span class="summary-value">{{ formatSummary(bandErois.eroi23) }}</span>
+        </div>
       </div>
     </header>
 
@@ -473,6 +485,67 @@ const nodes = computed(() => {
 const LEVEL_TITLE_GAP = 48
 const LEVEL_TITLE_FONT_SIZE = 20
 
+/** Map each energy node id → 0-based levelBand index (heat/dump excluded). */
+function nodeBandIndexById(
+  graph: EnergyGraphDrawer
+): Map<string, number> {
+  const map = new Map<string, number>()
+  nodesConfig.levelBands.forEach((band, bandIndex) => {
+    for (const node of graph.energyNodes) {
+      if (band.levels.includes(node.level.id)) map.set(node.id, bandIndex)
+    }
+  })
+  return map
+}
+
+/**
+ * Useful (non-heat) power crossing between levelBands.
+ * `flows[i][j]` = total outputMap power from nodes in band i+1 to nodes in band j+1.
+ * Same-band and heat dumps are excluded; not part of the GLPK model.
+ */
+function computeInterBandUsefulFlows(graph: EnergyGraphDrawer): number[][] {
+  const bandCount = nodesConfig.levelBands.length
+  const flows = Array.from({ length: bandCount }, () => Array(bandCount).fill(0))
+  const bandOf = nodeBandIndexById(graph)
+
+  for (const source of graph.energyNodes) {
+    const from = bandOf.get(source.id)
+    if (from === undefined) continue
+
+    for (const [targetId, power] of Object.entries(source.outputMap)) {
+      if (!power) continue
+      if (targetId === 'heat') continue
+      const to = bandOf.get(targetId)
+      if (to === undefined || to === from) continue
+      flows[from][to] += power
+    }
+  }
+
+  return flows
+}
+
+/** EROI metrics from inter-band useful flows (t_ij). */
+function computeBandErois(flows: number[][]) {
+  const t12 = flows[0]?.[1] ?? 0
+  const t13 = flows[0]?.[2] ?? 0
+  const t21 = flows[1]?.[0] ?? 0
+  const t23 = flows[1]?.[2] ?? 0
+  const t31 = flows[2]?.[0] ?? 0
+  const t32 = flows[2]?.[1] ?? 0
+  const out1 = t12 + t13
+  const backTo1 = t21 + t31
+  const into3 = t13 + t23
+  const outOf3 = t31 + t32
+  return {
+    /** (t12 + t13) / t21 */
+    eroi12: t21 > 0 ? out1 / t21 : Number.POSITIVE_INFINITY,
+    /** (t12 + t13) / (t21 + t31) */
+    eroi123: backTo1 > 0 ? out1 / backTo1 : Number.POSITIVE_INFINITY,
+    /** (t13 + t23) / (t31 + t32) */
+    eroi23: outOf3 > 0 ? into3 / outOf3 : Number.POSITIVE_INFINITY
+  }
+}
+
 /** Vertical segment kinds in a column corridor (see EnergyGraphDrawer.createConnector). */
 function classifyCorridorVertical(
   pointCount: number,
@@ -693,6 +766,7 @@ const stageConfig = computed(() => ({
 function formatSummary(value: number): string {
   if (!Number.isFinite(value)) return '—'
   if (value === 0) return '0'
+  if (value > 1e6) return '∞'
   if (value < 0.001) return value.toExponential(2)
   return value.toFixed(3)
 }
@@ -706,6 +780,12 @@ const summaryTotals = computed(() => {
     wellBeing: vars?.['T:wellBeing'] ?? 0,
     leisure: vars?.['T:leisure'] ?? 0
   }
+})
+
+const bandErois = computed(() => {
+  const graph = energyGraph.value
+  if (!graph) return { eroi12: Number.NaN, eroi123: Number.NaN, eroi23: Number.NaN }
+  return computeBandErois(computeInterBandUsefulFlows(graph))
 })
 
 /** Recompute when the graph regenerates (config/slider edits rebuild nodesConfig entries). */
@@ -1001,6 +1081,18 @@ const closeResultsModal = () => {
 
 .summary-leisure .summary-value {
   color: #e879f9;
+}
+
+.summary-eroi12 .summary-value {
+  color: #38bdf8;
+}
+
+.summary-eroi123 .summary-value {
+  color: #818cf8;
+}
+
+.summary-eroi23 .summary-value {
+  color: #2dd4bf;
 }
 
 .header-status {
