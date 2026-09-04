@@ -102,7 +102,7 @@ function isAddonConfig(value: unknown): value is AddonConfigJson {
 }
 
 /** Non-extraction nodes with factors must sum those factors to ≥ 1. */
-export function assertFactorSumsAtLeastOne(nodes: NodeConfig[]) {
+export function getFactorSumFailures(nodes: NodeConfig[]): string[] {
   const failures: string[] = []
 
   for (const node of nodes) {
@@ -117,6 +117,12 @@ export function assertFactorSumsAtLeastOne(nodes: NodeConfig[]) {
     }
   }
 
+  return failures
+}
+
+/** @throws if any non-extraction factor node sums to less than 1. */
+export function assertFactorSumsAtLeastOne(nodes: NodeConfig[]) {
+  const failures = getFactorSumFailures(nodes)
   if (failures.length > 0) {
     throw new Error(
       `Invalid factor totals — each non-extraction factor node must sum to at least 1:\n- ${failures.join('\n- ')}`
@@ -154,7 +160,6 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
     )
   }
 
-  assertFactorSumsAtLeastOne(result)
   return result
 }
 

@@ -36,6 +36,14 @@
       </fieldset>
     </header>
 
+    <div v-if="factorSumWarnings.length" class="factor-warning" role="alert">
+      <strong>Factor warning:</strong>
+      each non-extraction factor node must sum to at least 1.
+      <ul>
+        <li v-for="msg in factorSumWarnings" :key="msg">{{ msg }}</li>
+      </ul>
+    </div>
+
     <div class="canvas-body">
       <div class="canvas-wrapper">
         <!-- Control Buttons -->
@@ -171,7 +179,7 @@ import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph, { type SolverObjective } from '../types/energyGraphGenerator'
 import { getStoredSolverResult, formatSolverResult } from '../types/outputMapSolver'
 import type { EnergyNode } from '../types/energyNode'
-import { NodeType, nodesConfig, NodeConfig } from '../types/nodesConfig'
+import { NodeType, nodesConfig, NodeConfig, getFactorSumFailures } from '../types/nodesConfig'
 import type { NodeDrawer } from '../types/nodeDrawer'
 
 const FPS_INTERVAL_IN_MS = 16
@@ -520,7 +528,10 @@ const closeInfoPanel = () => {
 // Calculate canvas dimensions - full width when panel is hidden, reduced when visible
 const stageConfig = computed(() => ({
   width: isInfoPanelVisible.value ? windowWidth.value - 350 : windowWidth.value,
-  height: windowHeight.value - SUMMARY_HEADER_HEIGHT
+  height:
+    windowHeight.value -
+    SUMMARY_HEADER_HEIGHT -
+    (factorSumWarnings.value.length > 0 ? 72 : 0)
 }))
 
 function formatSummary(value: number): string {
@@ -539,6 +550,12 @@ const summaryTotals = computed(() => {
     wellBeing: vars?.['T:wellBeing'] ?? 0,
     leisure: vars?.['T:leisure'] ?? 0
   }
+})
+
+/** Recompute when the graph regenerates (config/slider edits rebuild nodesConfig entries). */
+const factorSumWarnings = computed(() => {
+  void energyGraph.value
+  return getFactorSumFailures(nodesConfig.nodes)
 })
 
 const handleWheel = (e: any) => {
@@ -754,6 +771,26 @@ const closeResultsModal = () => {
 
 .summary-objective:disabled {
   opacity: 0.6;
+}
+
+.factor-warning {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 10px 16px;
+  background: #fef3c7;
+  border-bottom: 1px solid #f59e0b;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.factor-warning ul {
+  margin: 6px 0 0 0;
+  padding-left: 18px;
+}
+
+.factor-warning li {
+  margin: 2px 0;
 }
 
 .summary-label {

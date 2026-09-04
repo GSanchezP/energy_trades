@@ -5,8 +5,7 @@ import {
   NodeTypes,
   NodeWeights,
   NodesConfig,
-  nodesConfig,
-  assertFactorSumsAtLeastOne
+  nodesConfig
 } from './nodesConfig'
 
 import { EnergyGraphDrawer } from './energyGraphDrawer'
@@ -86,9 +85,6 @@ function inputMapFromOutputMap(outputMap: { [key: string]: Partial<NodeWeights> 
 export async function generateEnergyGraph(
   objective: SolverObjective = 'maximize_leisure'
 ): Promise<EnergyGraphDrawer> {
-  // Re-check after runtime factor edits (sliders).
-  assertFactorSumsAtLeastOne(nodesConfig.nodes)
-
   const outputMap: { [key: string]: NodeWeights } = await outputMapSolver(nodesConfig, objective)
   const inputMap: { [key: string]: NodeWeights } = inputMapFromOutputMap(outputMap)
 
