@@ -470,7 +470,8 @@ const nodes = computed(() => {
 })
 
 /** Visual bands from nodes.json (`levelBands`). */
-const LEVEL_TITLE_GAP = 36
+const LEVEL_TITLE_GAP = 48
+const LEVEL_TITLE_FONT_SIZE = 20
 
 /** Vertical segment kinds in a column corridor (see EnergyGraphDrawer.createConnector). */
 function classifyCorridorVertical(
@@ -584,7 +585,7 @@ const levelBandLayout = computed(() => {
     const left = i === 0 ? band.minX : dividerXs[i - 1]
     const right = i === dividerXs.length ? band.maxX : dividerXs[i]
     const span = Math.max(40, right - left)
-    const labelWidth = Math.max(span, band.label.length * 7.5)
+    const labelWidth = Math.max(span, band.label.length * LEVEL_TITLE_FONT_SIZE * 0.58)
     const centerX = (left + right) / 2
     return {
       id: `level-title-${band.id}`,
@@ -593,7 +594,7 @@ const levelBandLayout = computed(() => {
         y: titleY,
         width: labelWidth,
         text: band.label,
-        fontSize: 13,
+        fontSize: LEVEL_TITLE_FONT_SIZE,
         fontFamily: 'Arial',
         fill: '#64748b',
         align: 'center',
