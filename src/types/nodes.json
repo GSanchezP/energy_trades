@@ -68,7 +68,7 @@
       "factors": {
         "wellBeing": 0.1,
         "electricity": 1,
-        "transport": 0.3
+        "heavy_transport": 0.3
       }
     },
     {
@@ -78,8 +78,34 @@
       "color": "#b0b00aff",
       "factors": {
         "wellBeing": 0.15,
-        "fuels": 2.5,
-        "mining": 0.4
+        "heavy_transport": 0.3,
+        "mining": 0.1
+      }
+    },
+    {
+      "id": "heavy_transport",
+      "label": "Heavy\nTransp",
+      "level": "primary",
+      "color": "#3d7a08ff",
+      "addons": {
+        "heavy_thermal_transport": {
+          "weight": 0.5,
+          "label": "H Thermal",
+          "factors": {
+            "wellBeing": 0.05,
+            "fuels": 3,
+            "mining": 0.15
+          }
+        },
+        "heavy_electric_transport": {
+          "weight": null,
+          "label": "H Electric",
+          "factors": {
+            "wellBeing": 0.05,
+            "electricity": 4,
+            "mining": 1.5
+          }
+        }
       }
     },
     {
