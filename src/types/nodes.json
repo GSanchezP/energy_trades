@@ -25,6 +25,12 @@
       }
     },
     {
+      "id": "sun",
+      "label": "Sun",
+      "level": "extraction",
+      "color": "#eab308ff"
+    },
+    {
       "id": "fuels",
       "label": "Fuel \nConversion",
       "level": "conversion",
@@ -55,7 +61,8 @@
           "label": "Renewable",
           "factors": {
             "wellBeing": 0.1,
-            "mining": 0.1
+            "mining": 0.1,
+            "sun": 1
           }
         }
       }

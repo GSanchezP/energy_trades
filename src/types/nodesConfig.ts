@@ -3,6 +3,7 @@ import nodesJson from './nodes.json'
 export const NodeTypes = [
   'petroleum',
   'coal',
+  'sun',
   'mining',
   'fuels',
   'thermal_electricity',
