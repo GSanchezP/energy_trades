@@ -2,17 +2,17 @@
   "levelBands": [
     {
       "id": "extraction",
-      "label": "Energy Extraction & Conversion",
+      "label": "1. Energy Extraction & Conversion",
       "levels": ["extraction", "conversion"]
     },
     {
       "id": "primary",
-      "label": "Primary, Secondary & Transport",
+      "label": "2. Primary, Secondary & Transport Services",
       "levels": ["primary"]
     },
     {
       "id": "tertiary",
-      "label": "Tertiary",
+      "label": "3. Tertiary Services",
       "levels": ["tertiary"]
     }
   ],
