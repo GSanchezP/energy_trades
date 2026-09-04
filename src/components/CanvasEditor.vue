@@ -301,7 +301,8 @@ const handleSliderChange = async (event: Event) => {
         nodeConfig.level,
         nodeConfig.color,
         nodeConfig.factors,
-        newAddons
+        newAddons,
+        nodeConfig.minOutput
       )
     }
   } else {
@@ -320,7 +321,8 @@ const handleSliderChange = async (event: Event) => {
         nodeConfig.level,
         nodeConfig.color,
         newFactors,
-        nodeConfig.addons
+        nodeConfig.addons,
+        nodeConfig.minOutput
       )
     }
   }
@@ -367,7 +369,8 @@ const setAddonToNull = async () => {
       nodeConfig.level,
       nodeConfig.color,
       nodeConfig.factors,
-      newAddons
+      newAddons,
+      nodeConfig.minOutput
     )
   }
 

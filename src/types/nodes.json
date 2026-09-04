@@ -170,6 +170,7 @@
       "label": "Basic Needs",
       "level": "tertiary",
       "color": "#1fbb65ff",
+      "minOutput": 0.2,
       "factors": {
         "heating": 0.25,
         "electricity": 0.2,

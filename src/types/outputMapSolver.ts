@@ -65,8 +65,8 @@ export async function outputMapSolver(config: NodesConfig) {
 
   const constraints: Constraint[] = []
 
-  const bound = (name: string) => {
-    return { name: `${name}`, type: glpk.GLP_DB, lb: 0, ub: 1 }
+  const bound = (name: string, lb = 0, ub = 1) => {
+    return { name: `${name}`, type: glpk.GLP_DB, lb, ub }
   }
 
   const maxOneConstraint = (varName: string) => {
@@ -74,6 +74,14 @@ export async function outputMapSolver(config: NodesConfig) {
       name: varName + '_le_1',
       vars: [{ name: varName, coef: 1 }],
       bnds: { type: glpk.GLP_UP, ub: 1, lb: 0 }
+    }
+  }
+
+  const minOutputConstraint = (varName: string, min: number) => {
+    return {
+      name: varName + '_ge_min',
+      vars: [{ name: varName, coef: 1 }],
+      bnds: { type: glpk.GLP_LO, lb: min, ub: 0 }
     }
   }
 
@@ -112,10 +120,14 @@ export async function outputMapSolver(config: NodesConfig) {
     }
   }
 
-  // Max Output Constraint
+  // Max Output Constraint (+ optional bare-minimum net output)
   for (const node of config.nodes) {
-    bounds.push(bound(node.netOutputVar))
+    const min = node.minOutput ?? 0
+    bounds.push(bound(node.netOutputVar, min, 1))
     constraints.push(maxOneConstraint(node.netOutputVar))
+    if (min > 0) {
+      constraints.push(minOutputConstraint(node.netOutputVar, min))
+    }
   }
 
   // TRE Constraints

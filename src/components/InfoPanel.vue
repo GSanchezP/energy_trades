@@ -42,6 +42,25 @@
               </div>
             </div>
 
+            <div class="metrics-grid node-totals">
+              <div class="metric-card">
+                <div class="metric-label">Total Input</div>
+                <div class="metric-value">{{ formatNumber(node.inputPower) }}</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Total Output</div>
+                <div class="metric-value">{{ formatNumber(node.outputPower) }}</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Losses (Heat)</div>
+                <div class="metric-value">{{ formatNumber(node.losses) }}</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">EROI</div>
+                <div class="metric-value">{{ formatNumber(node.eroi) }}</div>
+              </div>
+            </div>
+
             <!-- Input Requirements Table -->
             <div class="table-section">
               <h3>📥 Input Requirements</h3>
@@ -349,6 +368,12 @@ const getNonZeroOutputs = (node: EnergyNode): NodeType[] => {
   grid-template-columns: 2fr 1fr 1fr;
   gap: 16px;
   margin-top: 16px;
+}
+
+.metrics-grid.node-totals {
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: 0;
+  margin-bottom: 24px;
 }
 
 .metric-card {

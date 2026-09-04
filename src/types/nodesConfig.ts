@@ -44,7 +44,9 @@ export class NodeConfig {
     readonly level: NodeLevel,
     readonly color: string,
     readonly _factors?: Partial<Record<NodeType, number>>,
-    readonly _addons?: Partial<Record<NodeType, number | null>>
+    readonly _addons?: Partial<Record<NodeType, number | null>>,
+    /** Bare-minimum net output required for feasibility (optional). */
+    readonly minOutput?: number
   ) {}
 
   get netOutputVar() {
@@ -87,6 +89,8 @@ export interface NodeConfigJson {
   factors?: Partial<Record<NodeType, number>>
   /** Nested addon objects, or legacy flat weight map. */
   addons?: Partial<Record<NodeType, AddonConfigJson | number | null>>
+  /** Bare-minimum net output required for feasibility. */
+  minOutput?: number
 }
 
 function isAddonConfig(value: unknown): value is AddonConfigJson {
@@ -99,7 +103,7 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
 
   for (const n of jsonNodes) {
     if (!n.addons || Object.keys(n.addons).length === 0) {
-      result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors))
+      result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors, undefined, n.minOutput))
       continue
     }
 
@@ -119,13 +123,7 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
       }
     }
 
-    if (!hasNested) {
-      // Flat addons only — addon nodes are declared separately in JSON.
-      result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors, weightMap))
-      continue
-    }
-
-    result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors, weightMap))
+    result.push(new NodeConfig(n.id, n.label, n.level, n.color, n.factors, weightMap, n.minOutput))
   }
 
   return result
