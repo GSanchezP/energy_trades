@@ -169,7 +169,7 @@
     },
     {
       "id": "wellBeing",
-      "label": "Basic Needs",
+      "label": "Basic Needs\n(Human labor)",
       "level": "tertiary",
       "color": "#1fbb65ff",
       "minOutput": 0.2,

@@ -3,6 +3,7 @@ import {
   BASE_NODE_HEIGHT,
   BASE_NODE_WIDTH,
   NodeDrawer,
+  nextLevel,
   nodeLevelValue,
   prevLevel
 } from './nodeDrawer'
@@ -32,14 +33,16 @@ export class EnergyGraphDrawer {
     this.energyNodes = nodes
     this.applySumNodeGeometry()
 
-    const verticalUsageByLevel = this.calculateVerticalUsage()
-
     this.upBahnCurrentUsage = 0
     this.UPPER_AUTOBAHN_BASE = -this.NODES_VERTICAL_SPACING
     const belowBahnHeight = this.calculateLowBahnUsage() * BASE_NODE_HEIGHT
     this.lowBahnCurrentUsage = 0
 
-    const maxNodeBottom = this.computeNodePositions(verticalUsageByLevel)
+    // Vertical packing doesn't depend on the corridor widths, so lay the
+    // columns out once to learn the Y positions, then again once the exact
+    // corridor width of each gap can be measured.
+    this.computeNodePositions({})
+    const maxNodeBottom = this.computeNodePositions(this.computeGapWidths())
 
     // Stack below-autobahn lanes just under the tallest column, then the heat dump.
     this.LOW_AUTOBAHN_BASE = maxNodeBottom + this.NODES_VERTICAL_SPACING + belowBahnHeight
@@ -107,108 +110,79 @@ export class EnergyGraphDrawer {
     return lowerTotalUsage
   }
 
-  calculateVerticalUsage() {
-    const calculate = () => {
-      const verticalUsage: Partial<Record<NodeLevel, number>> = {}
-      const verticalUsageDebug: Partial<
-        Record<
-          NodeLevel,
-          { input: Partial<Record<NodeLevel, number>>; output: Partial<Record<NodeLevel, number>> }
-        >
-      > = {}
-      for (const level of NodeLevels) {
-        const nodes = this.energyNodes.filter((n) => n.level.id === level)
+  /**
+   * Exact pixel width of the connector corridor drawn to the right of each
+   * column. Heat dumps and bus exit lanes pack from the source edge, inbound
+   * bus approaches pack from the target edge, and next-column verticals fill
+   * the space between them, so the corridor is the sum of those bands.
+   * Requires node Y positions, which decide whether a next-column link is a
+   * straight hop or needs a vertical lane.
+   */
+  private computeGapWidths(): Partial<Record<NodeLevel, number>> {
+    const widths: Partial<Record<NodeLevel, number>> = {}
 
-        for (const node of nodes) {
-          // Add losses
-          verticalUsage[level]! = verticalUsage[level]
-            ? verticalUsage[level] + node.losses
-            : node.losses
-          console.log(
-            `[LOSSES][${level}][${level}]:[${node.id}]→[${level}] Adding losses ${node.losses}`
-          )
+    for (const level of NodeLevels) {
+      const next = nextLevel(level)
+      let dumps = 0
+      let upExits = 0
+      let downExits = 0
+      let middles = 0
+      let approaches = 0
 
-          // Add output for current level — any flow that leaves via a vertical
-          // exit lane on this column's right edge (upper bus, lower bus).
-          for (const [targetNodeId, value] of Object.entries(node.outputMap)) {
-            if (!value) continue
-            const targetNode = this.energyNodes.find((n) => n.id === targetNodeId)
-            if (!targetNode) continue
-            if (this.addonToSum.get(node.id) === targetNode) continue
-            const relation = this.levelComparer(node, targetNode)
-
-            if (
-              ['above-next', 'same', 'previous', 'before-previous'].includes(relation.interLevel)
-            ) {
-              verticalUsage[level] = verticalUsage[level] ? verticalUsage[level] + value : value
-              console.log(
-                `[OUTPUT][${level}][${level}]:[${node.id}]→[${targetNodeId}] Adding output ${value}`
-              )
-              if (!verticalUsageDebug[level]) verticalUsageDebug[level] = { input: {}, output: {} }
-              verticalUsageDebug![level]!['output']![targetNodeId as NodeLevel]! = value
-            }
-          }
-
-          // Add input for previous levels
-          const prevLevel = NodeLevels[nodeLevelValue(level) - 1]
-          for (const [sourceNodeId, value] of Object.entries(node.inputMap)) {
-            if (!value) continue
-            const sourceNode = this.energyNodes.find((n) => n.id === sourceNodeId)
-            if (!sourceNode) continue
-            const relation = this.levelComparer(sourceNode, node)
-
-            if (relation.interLevel === 'next' && relation.intraLevel === 'same') {
-              if (
-                Object.entries(sourceNode.outputMap).filter((e) => !!e[1])[0][0] === node.id &&
-                Object.entries(node.inputMap).filter((e) => !!e[1])[0][0] === sourceNode.id
-              ) {
-                console.log(
-                  `[INPUT][${level}][${prevLevel}]:[${sourceNodeId}]→[${node.id}] Next output at same levels, skipping.`
-                )
-                continue
-              }
-            }
-
-            if (
-              ['before-previous', 'previous', 'same', 'above-next'].includes(relation.interLevel) ||
-              relation.interLevel === 'next'
-            ) {
-              verticalUsage[prevLevel] = verticalUsage[prevLevel]
-                ? verticalUsage[prevLevel] + value
-                : value
-              console.log(
-                `[INPUT][${level}][${prevLevel}]:[${sourceNodeId}]→[${node.id}] Adding input ${value}. Relation: ${relation.interLevel}, ${relation.intraLevel}`
-              )
-              if (!verticalUsageDebug[prevLevel])
-                verticalUsageDebug[prevLevel] = { input: {}, output: {} }
-              verticalUsageDebug![prevLevel]!['input']![sourceNodeId as NodeLevel]! = value
-            }
-          }
+      for (const node of this.energyNodes) {
+        if (this.addonToSum.has(node.id)) continue
+        if (this.visualSourceLevel(node) !== level) continue
+        if (node.isSumNode) {
+          const group = this.getSumGroups().find((g) => g.sum === node)
+          for (const addon of group?.addons ?? []) dumps += addon.losses * BASE_NODE_HEIGHT
+        } else {
+          dumps += node.losses * BASE_NODE_HEIGHT
         }
       }
 
-      console.log(verticalUsageDebug)
+      for (const node of this.energyNodes) {
+        for (const [targetId, power] of Object.entries(node.outputMap)) {
+          if (!power) continue
+          const target = this.energyNodes.find((n) => n.id === targetId)
+          if (!target) continue
+          // Addons feed their sum internally; no lane is drawn for that.
+          if (this.addonToSum.get(node.id) === target) continue
 
-      return verticalUsage
+          const width = power * BASE_NODE_HEIGHT
+          const relation = this.levelComparer(node, target).interLevel
+
+          if (relation === 'next') {
+            if (target.level.id === next && this.middleNeedsVertical(node, target)) {
+              middles += width
+            }
+            continue
+          }
+
+          // Bus-routed links take an exit lane in the source column's corridor.
+          // Upper and lower bus exits reuse the same lane pool, so they only
+          // need room for whichever side is wider.
+          if (this.visualSourceLevel(node) === level) {
+            if (relation === 'above-next') downExits += width
+            else upExits += width
+          }
+          // ...and an approach lane in the corridor before the target column.
+          if (target.level.id === next) approaches += width
+        }
+      }
+
+      // 10px lead-in for exits, 10px between the middle and approach bands,
+      // and 10px before the target face.
+      widths[level] = dumps + Math.max(upExits, downExits) + middles + approaches + 30
     }
 
-    const lowUsage = calculate()
-    console.log(`Vertical low usages:`)
-    console.log(lowUsage)
+    return widths
+  }
 
-    const verticalUsage: Record<NodeLevel, number> = {
-      dump: 0,
-      extraction: 0,
-      conversion: 0,
-      primary: 0,
-      tertiary: 0
-    }
-
-    for (const level of NodeLevels) {
-      verticalUsage[level] = Math.max(lowUsage[level] ?? 0)
-    }
-
-    return verticalUsage
+  /** A next-column link only needs a vertical lane when its ends misalign. */
+  private middleNeedsVertical(source: EnergyNode, target: EnergyNode): boolean {
+    const sourceY = source.y + this.calculateYOffset(source, target.id, false)
+    const targetY = target.y + this.calculateYOffset(target, source.id, true)
+    return Math.abs(sourceY - targetY) > 1
   }
 
   addDumpNode(): NodeDrawer {
@@ -289,7 +263,7 @@ export class EnergyGraphDrawer {
     }
   }
 
-  computeNodePositions(verticalUsageByLevel: Record<NodeLevel, number>) {
+  computeNodePositions(gapWidths: Partial<Record<NodeLevel, number>>) {
     let maxNodeBottom = 0
     let xOffset = 0
     for (const level of NodeLevels) {
@@ -298,8 +272,7 @@ export class EnergyGraphDrawer {
       const regularNodes = nodesInLevel.filter((n) => !n.isSumNode)
 
       if (nodeLevelValue(level)) {
-        const prevVerticalUsage = verticalUsageByLevel[prevLevel(level)]
-        xOffset += (prevVerticalUsage ?? 0) * BASE_NODE_HEIGHT + 30
+        xOffset += gapWidths[prevLevel(level)] ?? 0
       }
 
       const previousLevel = nodeLevelValue(level) > 0 ? prevLevel(level) : undefined
@@ -588,8 +561,7 @@ export class EnergyGraphDrawer {
       // Aligned next-column links (Coal→Thermal, Petroleum→Fuel) should cross
       // the gap directly. Consuming the shared lane pool makes the next
       // connector overshoot past the target and fold back.
-      const needsVertical = Math.abs(sourceY - targetY) > 1
-      if (!needsVertical) {
+      if (!this.middleNeedsVertical(source, target)) {
         points = [sourceX, sourceY, targetX, targetY]
       } else {
         xSourceOffsetMap[sourceLaneLevel]! += strokeWidth
