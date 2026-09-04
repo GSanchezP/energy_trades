@@ -10,7 +10,7 @@ import {
 
 import { EnergyGraphDrawer } from './energyGraphDrawer'
 import { EnergyNode } from './energyNode'
-import { outputMapSolver } from './outputMapSolver'
+import { outputMapSolver, type SolverObjective } from './outputMapSolver'
 
 export function generateNodes(
   config: NodesConfig,
@@ -82,9 +82,10 @@ function inputMapFromOutputMap(outputMap: { [key: string]: Partial<NodeWeights> 
   return inputMap
 }
 
-export async function generateEnergyGraph(): Promise<EnergyGraphDrawer> {
-  // Load nodes from YAML configuration asynchronously
-  const outputMap: { [key: string]: NodeWeights } = await outputMapSolver(nodesConfig)
+export async function generateEnergyGraph(
+  objective: SolverObjective = 'maximize_leisure'
+): Promise<EnergyGraphDrawer> {
+  const outputMap: { [key: string]: NodeWeights } = await outputMapSolver(nodesConfig, objective)
   const inputMap: { [key: string]: NodeWeights } = inputMapFromOutputMap(outputMap)
 
   const energyGraph = new EnergyGraphDrawer(generateNodes(nodesConfig, outputMap, inputMap))
@@ -93,3 +94,4 @@ export async function generateEnergyGraph(): Promise<EnergyGraphDrawer> {
 }
 
 export default generateEnergyGraph
+export type { SolverObjective }

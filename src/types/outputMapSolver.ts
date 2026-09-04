@@ -60,7 +60,12 @@ export function getStoredSolverResult(): Result | null {
   return storedSolverResult
 }
 
-export async function outputMapSolver(config: NodesConfig) {
+export type SolverObjective = 'maximize_leisure' | 'minimize_co2'
+
+export async function outputMapSolver(
+  config: NodesConfig,
+  objectiveMode: SolverObjective = 'maximize_leisure'
+) {
   const bounds: Bound[] = []
 
   const constraints: Constraint[] = []
@@ -190,11 +195,18 @@ export async function outputMapSolver(config: NodesConfig) {
     })
   }
 
-  const objective = {
-    direction: glpk.GLP_MAX,
-    name: 'maximize_leisure',
-    vars: [{ name: 'T:leisure', coef: 1 }]
-  }
+  const objective =
+    objectiveMode === 'minimize_co2'
+      ? {
+          direction: glpk.GLP_MIN,
+          name: 'minimize_co2',
+          vars: [{ name: CO2_VAR, coef: 1 }]
+        }
+      : {
+          direction: glpk.GLP_MAX,
+          name: 'maximize_leisure',
+          vars: [{ name: 'T:leisure', coef: 1 }]
+        }
 
   const lp = {
     name: 'EnergyFlowOptimization2',
@@ -209,7 +221,7 @@ export async function outputMapSolver(config: NodesConfig) {
   storedSolverResult = result
 
   // Convert result to readable format
-  const readableResult = formatSolverResult(result)
+  const readableResult = formatSolverResult(result, objectiveMode)
   console.log(readableResult)
 
   const outputMap: {
@@ -227,7 +239,10 @@ export async function outputMapSolver(config: NodesConfig) {
   return output
 }
 
-export function formatSolverResult(result: Result): string {
+export function formatSolverResult(
+  result: Result,
+  objectiveMode: SolverObjective = 'maximize_leisure'
+): string {
   const lines: string[] = []
 
   // Header
@@ -313,13 +328,15 @@ export function formatSolverResult(result: Result): string {
   // Objective Value (Z value)
   lines.push('\n🎯 OBJECTIVE VALUE (Z):')
   const zValue = result.result?.z
+  const objectiveLabel =
+    objectiveMode === 'minimize_co2' ? 'Minimum achievable CO₂' : 'Maximum achievable Leisure output'
   if (zValue !== undefined) {
     lines.push(`   • Z Value: ${zValue.toFixed(6)}`)
-    lines.push(`   • Meaning: Maximum achievable Leisure output`)
+    lines.push(`   • Meaning: ${objectiveLabel}`)
     lines.push(
-      `   • Interpretation: ${zValue > 0 ? '✅ Feasible solution' : '❌ No feasible solution'}`
+      `   • Interpretation: ${status === 1 || status === 2 ? '✅ Feasible solution' : '❌ Check status'}`
     )
-    if (zValue > 0) {
+    if (objectiveMode === 'maximize_leisure' && zValue > 0) {
       lines.push(`   • Efficiency: ${(zValue * 100).toFixed(2)}% of maximum possible leisure`)
     }
   } else {

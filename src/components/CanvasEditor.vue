@@ -13,6 +13,27 @@
         <span class="summary-label">Leisure</span>
         <span class="summary-value">{{ formatSummary(summaryTotals.leisure) }}</span>
       </div>
+      <fieldset class="summary-objective" :disabled="isSolving">
+        <legend class="summary-label">Solve for</legend>
+        <label class="objective-option">
+          <input
+            type="radio"
+            name="solver-objective"
+            value="maximize_leisure"
+            v-model="solverObjective"
+          />
+          Maximize Leisure
+        </label>
+        <label class="objective-option">
+          <input
+            type="radio"
+            name="solver-objective"
+            value="minimize_co2"
+            v-model="solverObjective"
+          />
+          Minimize CO₂
+        </label>
+      </fieldset>
     </header>
 
     <div class="canvas-body">
@@ -144,10 +165,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { Connector, EnergyGraphDrawer } from '../types/energyGraphDrawer'
 import InfoPanel from './InfoPanel.vue'
-import generateEnergyGraph from '../types/energyGraphGenerator'
+import generateEnergyGraph, { type SolverObjective } from '../types/energyGraphGenerator'
 import { getStoredSolverResult, formatSolverResult } from '../types/outputMapSolver'
 import type { EnergyNode } from '../types/energyNode'
 import { NodeType, nodesConfig, NodeConfig } from '../types/nodesConfig'
@@ -157,6 +178,8 @@ const FPS_INTERVAL_IN_MS = 16
 const SUMMARY_HEADER_HEIGHT = 56
 
 const energyGraph = ref<EnergyGraphDrawer | undefined>(undefined)
+const solverObjective = ref<SolverObjective>('maximize_leisure')
+const isSolving = ref(false)
 const stageRef = ref<any>(null)
 
 const selectedSquareIds = ref<Set<string>>(new Set())
@@ -231,14 +254,23 @@ const handleResize = () => {
 }
 
 const regenerateGraph = async () => {
-  energyGraph.value = await generateEnergyGraph()
-  // Clear selection after regeneration
-  selectedSquareIds.value.clear()
-  selectedConnectorId.value = null
-  await nextTick()
-  // Konva stage may need a paint before getNode()/size are ready.
-  requestAnimationFrame(() => fitGraphToView())
+  isSolving.value = true
+  try {
+    energyGraph.value = await generateEnergyGraph(solverObjective.value)
+    // Clear selection after regeneration
+    selectedSquareIds.value.clear()
+    selectedConnectorId.value = null
+    await nextTick()
+    // Konva stage may need a paint before getNode()/size are ready.
+    requestAnimationFrame(() => fitGraphToView())
+  } finally {
+    isSolving.value = false
+  }
 }
+
+watch(solverObjective, async () => {
+  await regenerateGraph()
+})
 
 onMounted(async () => {
   await regenerateGraph()
@@ -636,7 +668,7 @@ const handleResultsClick = () => {
 
   const result = getStoredSolverResult()
   if (result) {
-    solverResultText.value = formatSolverResult(result)
+    solverResultText.value = formatSolverResult(result, solverObjective.value)
   } else {
     solverResultText.value = 'Solver result not available. Please wait for the graph to load.'
   }
@@ -672,7 +704,7 @@ const closeResultsModal = () => {
 
 .summary-metric {
   flex: 1;
-  max-width: 280px;
+  max-width: 220px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -684,6 +716,44 @@ const closeResultsModal = () => {
 
 .summary-metric:last-child {
   border-right: none;
+}
+
+.summary-objective {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 0 20px;
+  border: none;
+  border-left: 1px solid #1e293b;
+  min-width: 280px;
+}
+
+.summary-objective legend {
+  float: left;
+  margin-right: 12px;
+  padding: 0;
+}
+
+.objective-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.objective-option input {
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.summary-objective:disabled {
+  opacity: 0.6;
 }
 
 .summary-label {
