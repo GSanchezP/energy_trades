@@ -69,7 +69,7 @@
     },
     {
       "id": "mining",
-      "label": "Mining &\nManufacturing",
+      "label": "Mining &\nManufacturing\n(Industrial\nOutput)",
       "level": "primary",
       "color": "#856350ff",
       "factors": {

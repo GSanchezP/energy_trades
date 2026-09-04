@@ -615,38 +615,48 @@ export class EnergyGraphDrawer {
     const group = this.getSumGroups().find((g) => g.sum === sum)
     if (!group) return []
 
-    const connectors: Connector[] = []
-    let offset = startOffset
     // Same rule as createDumpConnector: losses sit below useful output on the
     // node's right edge. Split that loss band into one segment per addon.
     let yCursor = sum.y + sum.outputPower * BASE_NODE_HEIGHT
 
-    // Preserve vertical order of addons as laid out.
+    // Top→bottom attachment order on the sum's right edge.
     const addons = [...group.addons].sort((a, b) => a.y - b.y)
+    const segments: { id: string; strokeWidth: number; sourceY: number; power: number }[] = []
 
     for (const addon of addons) {
       const strokeWidth = addon.losses * BASE_NODE_HEIGHT
       if (strokeWidth <= 0) continue
-
-      const xOffset = offset + 10 + strokeWidth / 2
-      const sourceX = sum.x + sum.width
-      const sourceY = yCursor + strokeWidth / 2
-
-      connectors.push({
-        id: `${sum.id}-dump-${addon.id}`,
-        from: sum.id,
-        to: 'Dump',
-        points: [sourceX, sourceY, sourceX + xOffset, sourceY, sourceX + xOffset, this.DUMP_NODE_Y],
-        power: addon.losses,
+      segments.push({
+        id: addon.id,
         strokeWidth,
-        color: '#e04c4cff'
+        sourceY: yCursor + strokeWidth / 2,
+        power: addon.losses
       })
-
-      offset += strokeWidth
       yCursor += strokeWidth
     }
 
-    return connectors
+    // Going down: lower exits need inner lanes, upper exits outer — otherwise
+    // the upper vertical cuts through the lower horizontal.
+    let offset = startOffset
+    const laneXOffsets = new Array<number>(segments.length)
+    for (let i = segments.length - 1; i >= 0; i--) {
+      laneXOffsets[i] = offset + 10 + segments[i].strokeWidth / 2
+      offset += segments[i].strokeWidth
+    }
+
+    const sourceX = sum.x + sum.width
+    return segments.map((seg, i) => {
+      const laneX = sourceX + laneXOffsets[i]
+      return {
+        id: `${sum.id}-dump-${seg.id}`,
+        from: sum.id,
+        to: 'Dump',
+        points: [sourceX, seg.sourceY, laneX, seg.sourceY, laneX, this.DUMP_NODE_Y],
+        power: seg.power,
+        strokeWidth: seg.strokeWidth,
+        color: '#e04c4cff'
+      }
+    })
   }
 
   private posComparer(source: number, target: number): LevelComparerResult {
