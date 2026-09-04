@@ -239,6 +239,49 @@ export async function outputMapSolver(
   return output
 }
 
+export type SolverStatusKind = 'success' | 'warning' | 'error' | 'pending' | 'unknown'
+
+export type SolverStatusInfo = {
+  kind: SolverStatusKind
+  label: string
+  /** Material Design Icons class without the `mdi ` prefix, e.g. `mdi-check-circle`. */
+  icon: string
+}
+
+/** Map GLPK result status to a compact UI badge. */
+export function getSolverStatusInfo(result: Result | null | undefined): SolverStatusInfo {
+  if (!result) {
+    return { kind: 'pending', label: 'No solver result yet', icon: 'mdi-timer-sand' }
+  }
+
+  switch (result.result.status) {
+    case 1:
+      return { kind: 'success', label: 'Optimal solution found', icon: 'mdi-check-circle' }
+    case 2:
+      return { kind: 'warning', label: 'Feasible solution found', icon: 'mdi-alert' }
+    case 3:
+    case 4:
+    case 9:
+    case 11:
+    case 14:
+      return { kind: 'error', label: 'Infeasible problem', icon: 'mdi-close-circle' }
+    case 5:
+    case 12:
+    case 15:
+      return { kind: 'warning', label: 'Unbounded problem', icon: 'mdi-alert' }
+    case 7:
+    case 8:
+      return { kind: 'warning', label: 'Solver limit exceeded', icon: 'mdi-clock-alert' }
+    case 10:
+      return { kind: 'warning', label: 'Numerical instability', icon: 'mdi-alert' }
+    case 6:
+    case 13:
+    case 16:
+    default:
+      return { kind: 'unknown', label: 'Undefined solver status', icon: 'mdi-help-circle' }
+  }
+}
+
 export function formatSolverResult(
   result: Result,
   objectiveMode: SolverObjective = 'maximize_leisure'

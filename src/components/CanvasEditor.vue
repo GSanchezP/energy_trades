@@ -1,42 +1,55 @@
 <template>
   <div class="canvas-container">
     <header class="summary-header">
-      <div class="summary-metric summary-co2">
-        <span class="summary-label">CO₂</span>
-        <span class="summary-value">{{ formatSummary(summaryTotals.co2) }}</span>
+      <div class="header-solver">
+        <button class="header-results-button" @click="handleResultsClick" title="Compute results">
+          <i class="mdi mdi-cpu-64-bit button-icon"></i>
+        </button>
+        <span
+          class="header-status"
+          :class="`header-status--${solverStatus.kind}`"
+          :title="solverStatus.label"
+          role="status"
+          :aria-label="solverStatus.label"
+        >
+          <i class="mdi" :class="solverStatus.icon"></i>
+        </span>
       </div>
-      <div class="summary-metric summary-needs">
-        <span class="summary-label">Basic Needs</span>
-        <span class="summary-value">{{ formatSummary(summaryTotals.wellBeing) }}</span>
+      <div class="summary-center">
+        <div class="summary-metric summary-co2">
+          <span class="summary-label">CO₂</span>
+          <span class="summary-value">{{ formatSummary(summaryTotals.co2) }}</span>
+        </div>
+        <div class="summary-metric summary-needs">
+          <span class="summary-label">Basic Needs</span>
+          <span class="summary-value">{{ formatSummary(summaryTotals.wellBeing) }}</span>
+        </div>
+        <div class="summary-metric summary-leisure">
+          <span class="summary-label">Leisure</span>
+          <span class="summary-value">{{ formatSummary(summaryTotals.leisure) }}</span>
+        </div>
+        <fieldset class="summary-objective" :disabled="isSolving">
+          <legend class="summary-label">Solve for</legend>
+          <label class="objective-option">
+            <input
+              type="radio"
+              name="solver-objective"
+              value="maximize_leisure"
+              v-model="solverObjective"
+            />
+            Maximize Leisure
+          </label>
+          <label class="objective-option">
+            <input
+              type="radio"
+              name="solver-objective"
+              value="minimize_co2"
+              v-model="solverObjective"
+            />
+            Minimize CO₂
+          </label>
+        </fieldset>
       </div>
-      <div class="summary-metric summary-leisure">
-        <span class="summary-label">Leisure</span>
-        <span class="summary-value">{{ formatSummary(summaryTotals.leisure) }}</span>
-      </div>
-      <fieldset class="summary-objective" :disabled="isSolving">
-        <legend class="summary-label">Solve for</legend>
-        <label class="objective-option">
-          <input
-            type="radio"
-            name="solver-objective"
-            value="maximize_leisure"
-            v-model="solverObjective"
-          />
-          Maximize Leisure
-        </label>
-        <label class="objective-option">
-          <input
-            type="radio"
-            name="solver-objective"
-            value="minimize_co2"
-            v-model="solverObjective"
-          />
-          Minimize CO₂
-        </label>
-      </fieldset>
-      <button class="header-results-button" @click="handleResultsClick" title="Compute results">
-        <i class="mdi mdi-cpu-64-bit button-icon"></i>
-      </button>
     </header>
 
     <div v-if="factorSumWarnings.length" class="factor-warning" role="alert">
@@ -170,7 +183,7 @@ import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { Connector, EnergyGraphDrawer } from '../types/energyGraphDrawer'
 import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph, { type SolverObjective } from '../types/energyGraphGenerator'
-import { getStoredSolverResult, formatSolverResult } from '../types/outputMapSolver'
+import { getStoredSolverResult, formatSolverResult, getSolverStatusInfo } from '../types/outputMapSolver'
 import type { EnergyNode } from '../types/energyNode'
 import { NodeType, nodesConfig, NodeConfig, getFactorSumFailures } from '../types/nodesConfig'
 import type { NodeDrawer } from '../types/nodeDrawer'
@@ -537,6 +550,16 @@ const factorSumWarnings = computed(() => {
   return getFactorSumFailures(nodesConfig.nodes)
 })
 
+const solverStatus = computed(() => {
+  // Re-read after each solve (graph rebuild stores a new result).
+  void energyGraph.value
+  void isSolving.value
+  if (isSolving.value) {
+    return { kind: 'pending' as const, label: 'Solving…', icon: 'mdi-loading mdi-spin' }
+  }
+  return getSolverStatusInfo(getStoredSolverResult())
+})
+
 const handleWheel = (e: any) => {
   e.evt.preventDefault()
 
@@ -686,11 +709,19 @@ const closeResultsModal = () => {
   flex-shrink: 0;
   display: flex;
   align-items: stretch;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0;
   background: #0f172a;
   border-bottom: 1px solid #1e293b;
   z-index: 20;
+}
+
+.summary-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
 }
 
 .summary-metric {
@@ -794,16 +825,21 @@ const closeResultsModal = () => {
   color: #e879f9;
 }
 
+.header-solver {
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  border-right: 1px solid #1e293b;
+}
+
 .header-results-button {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 56px;
-  flex-shrink: 0;
   margin: 0;
   padding: 0;
   border: none;
-  border-left: 1px solid #1e293b;
   background: transparent;
   color: #e2e8f0;
   cursor: pointer;
@@ -818,6 +854,36 @@ const closeResultsModal = () => {
 .header-results-button .button-icon {
   font-size: 22px;
   line-height: 1;
+}
+
+.header-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  border-left: 1px solid #1e293b;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.header-status--success {
+  color: #4ade80;
+}
+
+.header-status--warning {
+  color: #fbbf24;
+}
+
+.header-status--error {
+  color: #f87171;
+}
+
+.header-status--pending {
+  color: #94a3b8;
+}
+
+.header-status--unknown {
+  color: #94a3b8;
 }
 
 .canvas-body {
