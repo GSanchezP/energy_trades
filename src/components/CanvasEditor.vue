@@ -57,7 +57,11 @@
                 <div class="politics-addon-top">
                   <span class="politics-addon-label">{{ addon.label }}</span>
                   <span class="politics-addon-value">
-                    {{ addon.isNull ? 'free' : addon.weight!.toFixed(3) }}
+                    {{
+                      addon.isNull
+                        ? 'free'
+                        : politicsSliderDisplay(group.id, addon.id, addon.weight).toFixed(2)
+                    }}
                   </span>
                   <button
                     type="button"
@@ -86,9 +90,10 @@
                   min="0"
                   max="1"
                   step="0.01"
-                  :disabled="addon.isNull || isSolving"
-                  :value="addon.isNull ? 0 : addon.weight ?? 0"
-                  @input="(e) => handlePoliticsSlider(group.id, addon.id, e)"
+                  :disabled="addon.isNull || policyChart?.running"
+                  :value="politicsSliderDisplay(group.id, addon.id, addon.isNull ? 0 : addon.weight)"
+                  @input="(e) => onPoliticsSliderInput(group.id, addon.id, e)"
+                  @change="(e) => onPoliticsSliderCommit(group.id, addon.id, e)"
                 />
               </div>
             </div>
@@ -485,18 +490,20 @@ const handleResize = () => {
   nextTick(() => fitGraphToView())
 }
 
-const regenerateGraph = async () => {
-  isSolving.value = true
+const regenerateGraph = async (options?: { quiet?: boolean; preserveView?: boolean }) => {
+  if (!options?.quiet) isSolving.value = true
   try {
     energyGraph.value = await generateEnergyGraph(solverObjective.value)
-    // Clear selection after regeneration
-    selectedSquareIds.value.clear()
-    selectedConnectorId.value = null
+    if (!options?.quiet) {
+      selectedSquareIds.value.clear()
+      selectedConnectorId.value = null
+    }
     await nextTick()
-    // Konva stage may need a paint before getNode()/size are ready.
-    requestAnimationFrame(() => fitGraphToView())
+    if (!options?.preserveView) {
+      requestAnimationFrame(() => fitGraphToView())
+    }
   } finally {
-    isSolving.value = false
+    if (!options?.quiet) isSolving.value = false
   }
 }
 
@@ -669,10 +676,18 @@ const sumNodePolicies = computed(() => {
     }))
 })
 
-async function setAddonWeight(sumId: string, addonId: NodeType, value: number | null) {
+async function setAddonWeight(
+  sumId: string,
+  addonId: NodeType,
+  value: number | null,
+  options?: { quiet?: boolean; preserveView?: boolean }
+) {
   applyAddonWeightConfig(sumId, addonId, value)
   politicsTick.value++
-  await regenerateGraph()
+  await regenerateGraph({
+    quiet: options?.quiet,
+    preserveView: options?.preserveView ?? options?.quiet
+  })
 }
 
 function applyAddonWeightConfig(sumId: string, addonId: NodeType, value: number | null) {
@@ -845,14 +860,70 @@ async function runPolicySensitivity(sumId: string, addonId: NodeType, addonLabel
   }
 }
 
+/** Local slider drafts so the thumb tracks the mouse while solves catch up. */
+const politicsSliderDrafts = ref<Record<string, number>>({})
 let politicsSliderTimeout: ReturnType<typeof setTimeout> | null = null
+let politicsSliderSeq = 0
 
-function handlePoliticsSlider(sumId: string, addonId: NodeType, event: Event) {
-  const value = parseFloat((event.target as HTMLInputElement).value) || 0
+function politicsSliderKey(sumId: string, addonId: NodeType) {
+  return `${sumId}:${addonId}`
+}
+
+function roundPolicyWeight(value: number) {
+  return Math.round(value * 100) / 100
+}
+
+function politicsSliderDisplay(sumId: string, addonId: NodeType, weight: number | null | undefined) {
+  const key = politicsSliderKey(sumId, addonId)
+  if (Object.prototype.hasOwnProperty.call(politicsSliderDrafts.value, key)) {
+    return politicsSliderDrafts.value[key]
+  }
+  return weight ?? 0
+}
+
+function schedulePoliticsSliderSolve(sumId: string, addonId: NodeType, value: number) {
+  const key = politicsSliderKey(sumId, addonId)
   if (politicsSliderTimeout) clearTimeout(politicsSliderTimeout)
+  const seq = ++politicsSliderSeq
   politicsSliderTimeout = setTimeout(async () => {
-    await setAddonWeight(sumId, addonId, value)
-  }, 50)
+    politicsSliderTimeout = null
+    await setAddonWeight(sumId, addonId, value, { quiet: true, preserveView: true })
+    // Drop draft only if the user hasn't moved further.
+    if (seq === politicsSliderSeq && politicsSliderDrafts.value[key] === value) {
+      const next = { ...politicsSliderDrafts.value }
+      delete next[key]
+      politicsSliderDrafts.value = next
+    }
+  }, 40)
+}
+
+function onPoliticsSliderInput(sumId: string, addonId: NodeType, event: Event) {
+  const value = roundPolicyWeight(parseFloat((event.target as HTMLInputElement).value) || 0)
+  politicsSliderDrafts.value = {
+    ...politicsSliderDrafts.value,
+    [politicsSliderKey(sumId, addonId)]: value
+  }
+  schedulePoliticsSliderSolve(sumId, addonId, value)
+}
+
+async function onPoliticsSliderCommit(sumId: string, addonId: NodeType, event: Event) {
+  const key = politicsSliderKey(sumId, addonId)
+  const value = roundPolicyWeight(parseFloat((event.target as HTMLInputElement).value) || 0)
+  politicsSliderDrafts.value = {
+    ...politicsSliderDrafts.value,
+    [key]: value
+  }
+  if (politicsSliderTimeout) {
+    clearTimeout(politicsSliderTimeout)
+    politicsSliderTimeout = null
+  }
+  const seq = ++politicsSliderSeq
+  await setAddonWeight(sumId, addonId, value, { quiet: true, preserveView: true })
+  if (seq === politicsSliderSeq) {
+    const next = { ...politicsSliderDrafts.value }
+    delete next[key]
+    politicsSliderDrafts.value = next
+  }
 }
 
 onUnmounted(() => {
