@@ -64,9 +64,20 @@
                     class="politics-lock"
                     :title="addon.isNull ? 'Unlocked (free / null) — click to lock' : 'Locked — click to unlock'"
                     :aria-label="addon.isNull ? 'Unlock weight' : 'Lock weight'"
+                    :disabled="isSolving || policyChart?.running"
                     @click="toggleAddonLock(group.id, addon.id)"
                   >
                     <i class="mdi" :class="addon.isNull ? 'mdi-lock-open-variant' : 'mdi-lock'"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="politics-chart"
+                    title="Sweep this policy 0→1 and plot the solve-for objective"
+                    aria-label="Plot policy sensitivity"
+                    :disabled="isSolving || policyChart?.running"
+                    @click="runPolicySensitivity(group.id, addon.id, addon.label)"
+                  >
+                    <i class="mdi mdi-chart-line"></i>
                   </button>
                 </div>
                 <input
@@ -254,6 +265,100 @@
         </div>
       </div>
     </div>
+
+    <!-- Policy sensitivity chart -->
+    <div v-if="policyChart" class="modal-overlay" @click="closePolicyChart">
+      <div class="modal-content policy-chart-modal" @click.stop>
+        <div class="modal-header">
+          <h2>
+            {{ policyChart.yLabel }} vs {{ policyChart.xLabel }}
+            <span v-if="policyChart.running" class="policy-chart-status">Computing…</span>
+          </h2>
+          <button class="modal-close" @click="closePolicyChart" :disabled="policyChart.running">
+            <i class="mdi mdi-close"></i>
+          </button>
+        </div>
+        <div class="modal-body policy-chart-body">
+          <svg
+            class="policy-chart-svg"
+            :viewBox="`0 0 ${policyChartSvg.width} ${policyChartSvg.height}`"
+            role="img"
+            :aria-label="`${policyChart.yLabel} against ${policyChart.xLabel}`"
+          >
+            <rect
+              :x="policyChartSvg.pad.l"
+              :y="policyChartSvg.pad.t"
+              :width="policyChartSvg.plotW"
+              :height="policyChartSvg.plotH"
+              class="policy-chart-plot-bg"
+            />
+            <g v-for="(tick, i) in policyChartSvg.yTicks" :key="'y' + i">
+              <line
+                :x1="policyChartSvg.pad.l"
+                :x2="policyChartSvg.pad.l + policyChartSvg.plotW"
+                :y1="tick.y"
+                :y2="tick.y"
+                class="policy-chart-grid"
+              />
+              <text :x="policyChartSvg.pad.l - 8" :y="tick.y + 4" class="policy-chart-axis-label" text-anchor="end">
+                {{ tick.label }}
+              </text>
+            </g>
+            <g v-for="(tick, i) in policyChartSvg.xTicks" :key="'x' + i">
+              <line
+                :x1="tick.x"
+                :x2="tick.x"
+                :y1="policyChartSvg.pad.t"
+                :y2="policyChartSvg.pad.t + policyChartSvg.plotH"
+                class="policy-chart-grid"
+              />
+              <text
+                :x="tick.x"
+                :y="policyChartSvg.pad.t + policyChartSvg.plotH + 18"
+                class="policy-chart-axis-label"
+                text-anchor="middle"
+              >
+                {{ tick.label }}
+              </text>
+            </g>
+            <polyline
+              v-if="policyChartSvg.polyline"
+              :points="policyChartSvg.polyline"
+              class="policy-chart-line"
+              fill="none"
+            />
+            <circle
+              v-for="(p, i) in policyChartSvg.points"
+              :key="'p' + i"
+              :cx="p.cx"
+              :cy="p.cy"
+              r="3.5"
+              class="policy-chart-dot"
+            />
+            <text
+              :x="policyChartSvg.pad.l + policyChartSvg.plotW / 2"
+              :y="policyChartSvg.height - 10"
+              class="policy-chart-axis-title"
+              text-anchor="middle"
+            >
+              {{ policyChart.xLabel }} (weight)
+            </text>
+            <text
+              :x="16"
+              :y="policyChartSvg.pad.t + policyChartSvg.plotH / 2"
+              class="policy-chart-axis-title"
+              text-anchor="middle"
+              :transform="`rotate(-90 16 ${policyChartSvg.pad.t + policyChartSvg.plotH / 2})`"
+            >
+              {{ policyChart.yLabel }}
+            </text>
+          </svg>
+          <p v-if="!policyChart.points.length && policyChart.running" class="loading">
+            Sweeping policy weight 0 → 1…
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -262,7 +367,7 @@ import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { Connector, EnergyGraphDrawer } from '../types/energyGraphDrawer'
 import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph, { type SolverObjective } from '../types/energyGraphGenerator'
-import { getStoredSolverResult, formatSolverResult, getSolverStatusInfo } from '../types/outputMapSolver'
+import { getStoredSolverResult, formatSolverResult, getSolverStatusInfo, outputMapSolver } from '../types/outputMapSolver'
 import type { EnergyNode } from '../types/energyNode'
 import { NodeType, nodesConfig, NodeConfig, getFactorSumFailures } from '../types/nodesConfig'
 
@@ -546,6 +651,12 @@ const sumNodePolicies = computed(() => {
 })
 
 async function setAddonWeight(sumId: string, addonId: NodeType, value: number | null) {
+  applyAddonWeightConfig(sumId, addonId, value)
+  politicsTick.value++
+  await regenerateGraph()
+}
+
+function applyAddonWeightConfig(sumId: string, addonId: NodeType, value: number | null) {
   const nodeConfig = nodesConfig.nodes.find((n) => n.id === sumId)
   if (!nodeConfig) return
 
@@ -565,8 +676,6 @@ async function setAddonWeight(sumId: string, addonId: NodeType, value: number | 
     nodeConfig.endUse,
     nodeConfig.residualOf
   )
-  politicsTick.value++
-  await regenerateGraph()
 }
 
 async function toggleAddonLock(sumId: string, addonId: NodeType) {
@@ -578,6 +687,114 @@ async function toggleAddonLock(sumId: string, addonId: NodeType) {
     await setAddonWeight(sumId, addonId, 0.5)
   } else {
     await setAddonWeight(sumId, addonId, null)
+  }
+}
+
+type PolicyChartState = {
+  running: boolean
+  xLabel: string
+  yLabel: string
+  points: { x: number; y: number }[]
+}
+
+const policyChart = ref<PolicyChartState | null>(null)
+
+function closePolicyChart() {
+  if (policyChart.value?.running) return
+  policyChart.value = null
+}
+
+const policyChartSvg = computed(() => {
+  const width = 720
+  const height = 420
+  const pad = { t: 24, r: 24, b: 56, l: 64 }
+  const plotW = width - pad.l - pad.r
+  const plotH = height - pad.t - pad.b
+  const pts = policyChart.value?.points ?? []
+  const ys = pts.map((p) => p.y).filter((y) => Number.isFinite(y))
+  const yMin = ys.length ? Math.min(...ys) : 0
+  const yMax = ys.length ? Math.max(...ys) : 1
+  const yPad = yMax === yMin ? Math.max(0.05, Math.abs(yMax) * 0.1 || 0.05) : (yMax - yMin) * 0.08
+  const y0 = yMin - yPad
+  const y1 = yMax + yPad
+
+  const xTo = (x: number) => pad.l + (x / 1) * plotW
+  const yTo = (y: number) => pad.t + plotH - ((y - y0) / (y1 - y0 || 1)) * plotH
+
+  const mapped = pts
+    .filter((p) => Number.isFinite(p.y))
+    .map((p) => ({ cx: xTo(p.x), cy: yTo(p.y), x: p.x, y: p.y }))
+
+  const xTicks = [0, 0.25, 0.5, 0.75, 1].map((x) => ({
+    x: xTo(x),
+    label: x.toFixed(2)
+  }))
+  const yTicks = Array.from({ length: 5 }, (_, i) => {
+    const t = y0 + ((y1 - y0) * i) / 4
+    return { y: yTo(t), label: formatSummary(t) }
+  })
+
+  return {
+    width,
+    height,
+    pad,
+    plotW,
+    plotH,
+    points: mapped,
+    polyline: mapped.map((p) => `${p.cx},${p.cy}`).join(' '),
+    xTicks,
+    yTicks
+  }
+})
+
+async function runPolicySensitivity(sumId: string, addonId: NodeType, addonLabel: string) {
+  if (policyChart.value?.running || isSolving.value) return
+
+  const sum = nodesConfig.nodes.find((n) => n.id === sumId)
+  if (!sum) return
+
+  const previous =
+    sum.addons[addonId] === undefined ? null : (sum.addons[addonId] as number | null)
+  const yLabel =
+    solverObjectiveOptions.find((o) => o.value === solverObjective.value)?.label ??
+    solverObjective.value
+
+  policyChart.value = {
+    running: true,
+    xLabel: addonLabel,
+    yLabel,
+    points: []
+  }
+  isSolving.value = true
+
+  try {
+    for (let i = 0; i <= 20; i++) {
+      const weight = Math.round(i * 0.05 * 100) / 100
+      applyAddonWeightConfig(sumId, addonId, weight)
+      await outputMapSolver(nodesConfig, solverObjective.value)
+      const z = getStoredSolverResult()?.result?.z
+      policyChart.value.points.push({
+        x: weight,
+        y: typeof z === 'number' && Number.isFinite(z) ? z : Number.NaN
+      })
+      // Refresh chart progressively.
+      policyChart.value = {
+        ...policyChart.value,
+        points: [...policyChart.value.points]
+      }
+      await nextTick()
+    }
+  } finally {
+    applyAddonWeightConfig(sumId, addonId, previous)
+    politicsTick.value++
+    try {
+      await regenerateGraph()
+    } finally {
+      isSolving.value = false
+      if (policyChart.value) {
+        policyChart.value = { ...policyChart.value, running: false }
+      }
+    }
   }
 }
 
@@ -1282,6 +1499,30 @@ const closeResultsModal = () => {
   color: #94a3b8;
 }
 
+.politics-chart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 4px;
+  background: #1e293b;
+  color: #38bdf8;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.politics-chart:hover:not(:disabled) {
+  background: #243044;
+}
+
+.politics-chart:disabled,
+.politics-lock:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .politics-slider {
   width: 100%;
   accent-color: #38bdf8;
@@ -1662,6 +1903,63 @@ const closeResultsModal = () => {
 .modal-close:hover {
   background: #f3f4f6;
   color: #1f2937;
+}
+
+.policy-chart-modal {
+  max-width: 820px;
+}
+
+.policy-chart-status {
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.policy-chart-body {
+  padding: 12px 20px 24px;
+}
+
+.policy-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.policy-chart-plot-bg {
+  fill: #ffffff;
+}
+
+.policy-chart-grid {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.policy-chart-line {
+  stroke: #0284c7;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.policy-chart-dot {
+  fill: #0284c7;
+}
+
+.policy-chart-axis-label {
+  fill: #64748b;
+  font-size: 11px;
+  font-family: Arial, sans-serif;
+}
+
+.policy-chart-axis-title {
+  fill: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: Arial, sans-serif;
 }
 
 .modal-body {

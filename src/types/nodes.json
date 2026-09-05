@@ -185,12 +185,10 @@
       }
     },
     {
-      "id": "basicNeeds",
-      "label": "Basic\nNeeds\n(Health,\nEducation,\netc.)",
+      "id": "humanLabor",
+      "label": "Human\nLabor",
       "level": "tertiary",
       "color": "#1a9a4eff",
-      "minOutput": 0.1,
-      "endUse": true,
       "factors": {
         "heating": 0.25,
         "electricity": 0.1,
@@ -200,15 +198,18 @@
       }
     },
     {
-      "id": "humanLabor",
-      "label": "Human\nLabor",
+      "id": "basicNeeds",
+      "label": "Basic\nNeeds\n(Health,\nEducation,\netc.)",
       "level": "tertiary",
       "color": "#1a9a4eff",
+      "minOutput": 0.1,
+      "endUse": true,
       "factors": {
         "heating": 0.25,
-        "electricity": 0.1,
+        "electricity": 0.2,
         "mining": 0.05,
-        "transport": 0.3,
+        "humanLabor": 0.2,
+        "transport": 0.1,
         "food": 0.4
       }
     },
@@ -222,9 +223,9 @@
         "heating": 0.15,
         "electricity": 0.2,
         "mining": 0.2,
-        "transport": 0.4,
+        "transport": 0.2,
         "humanLabor": 0.6,
-        "food": 0.4
+        "food": 0.2
       }
     },
     {
