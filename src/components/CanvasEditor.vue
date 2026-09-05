@@ -27,6 +27,63 @@
           </option>
         </select>
       </label>
+      <div class="header-politics-wrap">
+        <button
+          class="header-politics"
+          type="button"
+          title="Policy: sum-node mix weights"
+          aria-label="Policy: sum-node mix weights"
+          :aria-expanded="showPoliticsPanel"
+          @click="showPoliticsPanel = !showPoliticsPanel"
+        >
+          <i class="mdi mdi-bank"></i>
+        </button>
+        <div v-if="showPoliticsPanel" class="politics-panel" @click.stop>
+          <div class="politics-panel-header">
+            <span>Policy mixes</span>
+            <button type="button" class="politics-close" @click="showPoliticsPanel = false">
+              <i class="mdi mdi-close"></i>
+            </button>
+          </div>
+          <div class="politics-panel-body">
+            <div v-for="group in sumNodePolicies" :key="group.id" class="politics-group">
+              <div class="politics-group-title">{{ group.label }}</div>
+              <div
+                v-for="addon in group.addons"
+                :key="addon.id"
+                class="politics-addon"
+                :class="{ 'politics-addon--free': addon.isNull }"
+              >
+                <div class="politics-addon-top">
+                  <span class="politics-addon-label">{{ addon.label }}</span>
+                  <span class="politics-addon-value">
+                    {{ addon.isNull ? 'free' : addon.weight!.toFixed(3) }}
+                  </span>
+                  <button
+                    type="button"
+                    class="politics-lock"
+                    :title="addon.isNull ? 'Unlocked (free / null) — click to lock' : 'Locked — click to unlock'"
+                    :aria-label="addon.isNull ? 'Unlock weight' : 'Lock weight'"
+                    @click="toggleAddonLock(group.id, addon.id)"
+                  >
+                    <i class="mdi" :class="addon.isNull ? 'mdi-lock-open-variant' : 'mdi-lock'"></i>
+                  </button>
+                </div>
+                <input
+                  class="politics-slider"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  :disabled="addon.isNull || isSolving"
+                  :value="addon.isNull ? 0 : addon.weight ?? 0"
+                  @input="(e) => handlePoliticsSlider(group.id, addon.id, e)"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="summary-center">
         <div class="summary-metric summary-co2">
           <span class="summary-label">CO₂</span>
@@ -34,7 +91,7 @@
         </div>
         <div class="summary-metric summary-needs">
           <span class="summary-label">Basic Needs</span>
-          <span class="summary-value">{{ formatSummary(summaryTotals.wellBeing) }}</span>
+          <span class="summary-value">{{ formatSummary(summaryTotals.basicNeeds) }}</span>
         </div>
         <div class="summary-metric summary-leisure">
           <span class="summary-label">Leisure</span>
@@ -215,6 +272,9 @@ const solverObjectiveOptions: { value: SolverObjective; label: string }[] = [
 ]
 const isSolving = ref(false)
 const stageRef = ref<any>(null)
+const showPoliticsPanel = ref(false)
+/** Bumped when addon weights change so the politics panel refreshes. */
+const politicsTick = ref(0)
 
 const selectedSquareIds = ref<Set<string>>(new Set())
 const selectedConnectorId = ref<string | null>(null)
@@ -396,7 +456,8 @@ const handleSliderChange = async (event: Event) => {
         nodeConfig.factors,
         newAddons,
         nodeConfig.minOutput,
-        nodeConfig.co2
+        nodeConfig.co2,
+        nodeConfig.endUse
       )
     }
   } else {
@@ -417,7 +478,8 @@ const handleSliderChange = async (event: Event) => {
         newFactors,
         nodeConfig.addons,
         nodeConfig.minOutput,
-        nodeConfig.co2
+        nodeConfig.co2,
+        nodeConfig.endUse
       )
     }
   }
@@ -448,29 +510,77 @@ const handleSliderChange = async (event: Event) => {
 
 const setAddonToNull = async () => {
   if (!sliderState.value || !sliderState.value.isAddon) return
-
   const { node, nodeType } = sliderState.value
-  const nodeConfig = nodesConfig.nodes.find((n) => n.id === node.id)
+  await setAddonWeight(node.id, nodeType, null)
+}
+
+function cleanLabel(label: string): string {
+  return label.replace(/\s*\n\s*/g, ' ').trim()
+}
+
+const sumNodePolicies = computed(() => {
+  void energyGraph.value
+  void politicsTick.value
+  return nodesConfig.nodes
+    .filter((n) => Object.keys(n.addons).length > 0)
+    .map((sum) => ({
+      id: sum.id,
+      label: cleanLabel(sum.label),
+      addons: Object.entries(sum.addons).map(([addonId, weight]) => {
+        const addonNode = nodesConfig.nodes.find((n) => n.id === addonId)
+        return {
+          id: addonId as NodeType,
+          label: cleanLabel(addonNode?.label ?? addonId),
+          weight: weight ?? null,
+          isNull: weight === null || weight === undefined
+        }
+      })
+    }))
+})
+
+async function setAddonWeight(sumId: string, addonId: NodeType, value: number | null) {
+  const nodeConfig = nodesConfig.nodes.find((n) => n.id === sumId)
   if (!nodeConfig) return
 
-  const newAddons = { ...nodeConfig.addons }
-  newAddons[nodeType] = null
+  const newAddons = { ...nodeConfig.addons, [addonId]: value }
+  const index = nodesConfig.nodes.findIndex((n) => n.id === sumId)
+  if (index === -1) return
 
-  const index = nodesConfig.nodes.findIndex((n) => n.id === node.id)
-  if (index !== -1) {
-    nodesConfig.nodes[index] = new NodeConfig(
-      nodeConfig.id,
-      nodeConfig.label,
-      nodeConfig.level,
-      nodeConfig.color,
-      nodeConfig.factors,
-      newAddons,
-      nodeConfig.minOutput,
-      nodeConfig.co2
-    )
-  }
-
+  nodesConfig.nodes[index] = new NodeConfig(
+    nodeConfig.id,
+    nodeConfig.label,
+    nodeConfig.level,
+    nodeConfig.color,
+    nodeConfig.factors,
+    newAddons,
+    nodeConfig.minOutput,
+    nodeConfig.co2,
+    nodeConfig.endUse
+  )
+  politicsTick.value++
   await regenerateGraph()
+}
+
+async function toggleAddonLock(sumId: string, addonId: NodeType) {
+  const sum = nodesConfig.nodes.find((n) => n.id === sumId)
+  if (!sum) return
+  const current = sum.addons[addonId]
+  if (current === null || current === undefined) {
+    // Lock at a neutral share; user can fine-tune with the slider.
+    await setAddonWeight(sumId, addonId, 0.5)
+  } else {
+    await setAddonWeight(sumId, addonId, null)
+  }
+}
+
+let politicsSliderTimeout: ReturnType<typeof setTimeout> | null = null
+
+function handlePoliticsSlider(sumId: string, addonId: NodeType, event: Event) {
+  const value = parseFloat((event.target as HTMLInputElement).value) || 0
+  if (politicsSliderTimeout) clearTimeout(politicsSliderTimeout)
+  politicsSliderTimeout = setTimeout(async () => {
+    await setAddonWeight(sumId, addonId, value)
+  }, 50)
 }
 
 onUnmounted(() => {
@@ -777,7 +887,7 @@ const summaryTotals = computed(() => {
   const vars = getStoredSolverResult()?.result?.vars
   return {
     co2: vars?.['T:co2'] ?? 0,
-    wellBeing: vars?.['T:wellBeing'] ?? 0,
+    basicNeeds: vars?.['T:basicNeeds'] ?? 0,
     leisure: vars?.['T:leisure'] ?? 0
   }
 })
@@ -999,6 +1109,167 @@ const closeResultsModal = () => {
 
 .header-objective--disabled {
   opacity: 0.6;
+}
+
+.header-politics-wrap {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  border-right: 1px solid #1e293b;
+}
+
+.header-politics {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.header-politics:hover,
+.header-politics[aria-expanded='true'] {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.politics-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(70vh, 520px);
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.politics-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid #1e293b;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.politics-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.politics-close:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.politics-panel-body {
+  overflow-y: auto;
+  padding: 8px 10px 12px;
+}
+
+.politics-group {
+  padding: 8px 6px 10px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.politics-group:last-child {
+  border-bottom: none;
+}
+
+.politics-group-title {
+  margin-bottom: 8px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.politics-addon {
+  padding: 8px 6px;
+  border-radius: 6px;
+}
+
+.politics-addon--free {
+  opacity: 0.72;
+}
+
+.politics-addon-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.politics-addon-label {
+  flex: 1;
+  min-width: 0;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.politics-addon-value {
+  color: #94a3b8;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.politics-lock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 4px;
+  background: #1e293b;
+  color: #fbbf24;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.politics-lock:hover {
+  background: #243044;
+}
+
+.politics-addon--free .politics-lock {
+  color: #94a3b8;
+}
+
+.politics-slider {
+  width: 100%;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.politics-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .header-objective-select {

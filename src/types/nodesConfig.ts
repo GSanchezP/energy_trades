@@ -19,7 +19,8 @@ export const NodeTypes = [
   'thermal_heating',
   'electric_heating',
   'heating',
-  'wellBeing',
+  'basicNeeds',
+  'humanLabor',
   'leisure',
   'heat'
 ] as const
@@ -48,7 +49,12 @@ export class NodeConfig {
     /** Bare-minimum net output required for feasibility (optional). */
     readonly minOutput?: number,
     /** When true, this node's net output counts toward the CO₂ aggregate. */
-    readonly co2?: boolean
+    readonly co2?: boolean,
+    /**
+     * End-use sink: skip T:node = Σ inbound flows.
+     * Needed when nothing consumes this node (otherwise an empty sum forces T = 0).
+     */
+    readonly endUse?: boolean
   ) {}
 
   get netOutputVar() {
@@ -109,6 +115,11 @@ export interface NodeConfigJson {
   minOutput?: number
   /** When true, this node's net output counts toward the CO₂ aggregate. */
   co2?: boolean
+  /**
+   * End-use sink: do not tie net output to the sum of inbound consumer flows.
+   * Use for nodes nothing else consumes (e.g. leisure, basic needs).
+   */
+  endUse?: boolean
 }
 
 function isAddonConfig(value: unknown): value is AddonConfigJson {
@@ -151,7 +162,17 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
   for (const n of jsonNodes) {
     if (!n.addons || Object.keys(n.addons).length === 0) {
       result.push(
-        new NodeConfig(n.id, n.label, n.level, n.color, n.factors, undefined, n.minOutput, n.co2)
+        new NodeConfig(
+          n.id,
+          n.label,
+          n.level,
+          n.color,
+          n.factors,
+          undefined,
+          n.minOutput,
+          n.co2,
+          n.endUse
+        )
       )
       continue
     }
@@ -170,7 +191,17 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
     }
 
     result.push(
-      new NodeConfig(n.id, n.label, n.level, n.color, n.factors, weightMap, n.minOutput, n.co2)
+      new NodeConfig(
+        n.id,
+        n.label,
+        n.level,
+        n.color,
+        n.factors,
+        weightMap,
+        n.minOutput,
+        n.co2,
+        n.endUse
+      )
     )
   }
 

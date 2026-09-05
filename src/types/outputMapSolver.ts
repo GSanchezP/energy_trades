@@ -164,9 +164,9 @@ export async function outputMapSolver(
     constraints.push(netSumConstraint(node.netOutputVar, sumConstraintsVars))
   }
 
-  // Net output sum constraints
+  // Net output sum constraints (skipped for endUse nodes from nodes.json).
   for (const node of config.nodes) {
-    if (node.id === 'leisure') continue // TODO: Figure out this
+    if (node.endUse) continue
 
     const sumConstraintsVars: string[] = []
     for (const sourceNode of config.nodes) {
