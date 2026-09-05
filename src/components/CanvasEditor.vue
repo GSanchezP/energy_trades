@@ -799,9 +799,19 @@ const levelBandLayout = computed(() => {
 const levelBandDividers = computed(() => levelBandLayout.value?.dividers ?? [])
 const levelBandTitles = computed(() => levelBandLayout.value?.titles ?? [])
 
+function isLightFill(color: string): boolean {
+  const hex = color.replace('#', '').slice(0, 6)
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return false
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  return 0.299 * r + 0.587 * g + 0.114 * b > 180
+}
+
 function buildNodeLabelConfig(square: {
   id: string
   label: string
+  color: string
   x: number
   y: number
   width: number
@@ -822,6 +832,7 @@ function buildNodeLabelConfig(square: {
   const maxFromHeight = textHeight * 0.5
   // Always keep the label inside the node — allow very small type on tiny boxes.
   const fontSize = Math.max(3, Math.min(16, maxFromWidth, maxFromHeight))
+  const light = isLightFill(square.color)
 
   return {
     id: square.id,
@@ -833,7 +844,8 @@ function buildNodeLabelConfig(square: {
       text: label,
       fontSize,
       fontFamily: 'Arial',
-      fill: '#ffffff',
+      fontStyle: light ? 'bold' : 'normal',
+      fill: light ? '#1e293b' : '#ffffff',
       align: 'center',
       verticalAlign: 'middle',
       wrap: 'word',

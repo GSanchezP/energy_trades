@@ -231,7 +231,7 @@
       "id": "freeTime",
       "label": "Free\nTime",
       "level": "tertiary",
-      "color": "#334155ff",
+      "color": "#f9a8d4ff",
       "endUse": true,
       "residualOf": ["basicNeeds", "humanLabor", "leisure"]
     }
