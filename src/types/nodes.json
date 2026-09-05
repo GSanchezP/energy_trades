@@ -76,7 +76,7 @@
           }
         },
         "renewable_electricity": {
-          "weight": 0.4,
+          "weight": null,
           "label": "Renewable",
           "factors": {
             "humanLabor": 0.1,

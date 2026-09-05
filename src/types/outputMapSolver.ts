@@ -60,7 +60,7 @@ export function getStoredSolverResult(): Result | null {
   return storedSolverResult
 }
 
-export type SolverObjective = 'maximize_leisure' | 'minimize_co2'
+export type SolverObjective = 'maximize_leisure' | 'minimize_co2' | 'maximize_free_time'
 
 export async function outputMapSolver(
   config: NodesConfig,
@@ -215,11 +215,17 @@ export async function outputMapSolver(
           name: 'minimize_co2',
           vars: [{ name: CO2_VAR, coef: 1 }]
         }
-      : {
-          direction: glpk.GLP_MAX,
-          name: 'maximize_leisure',
-          vars: [{ name: 'T:leisure', coef: 1 }]
-        }
+      : objectiveMode === 'maximize_free_time'
+        ? {
+            direction: glpk.GLP_MAX,
+            name: 'maximize_free_time',
+            vars: [{ name: 'T:freeTime', coef: 1 }]
+          }
+        : {
+            direction: glpk.GLP_MAX,
+            name: 'maximize_leisure',
+            vars: [{ name: 'T:leisure', coef: 1 }]
+          }
 
   const lp = {
     name: 'EnergyFlowOptimization2',
@@ -315,7 +321,11 @@ export function formatSolverResult(
   lines.push('\n🎯 OBJECTIVE VALUE (Z):')
   const zValue = result.result?.z
   const objectiveLabel =
-    objectiveMode === 'minimize_co2' ? 'Minimum achievable CO₂' : 'Maximum achievable Leisure output'
+    objectiveMode === 'minimize_co2'
+      ? 'Minimum achievable CO₂'
+      : objectiveMode === 'maximize_free_time'
+        ? 'Maximum achievable Free Time'
+        : 'Maximum achievable Leisure output'
   if (zValue !== undefined) {
     lines.push(`   • Z Value: ${zValue.toFixed(6)}`)
     lines.push(`   • Meaning: ${objectiveLabel}`)
@@ -326,8 +336,12 @@ export function formatSolverResult(
           : '❌ Check status'
       }`
     )
-    if (objectiveMode === 'maximize_leisure' && zValue > 0) {
-      lines.push(`   • Efficiency: ${(zValue * 100).toFixed(2)}% of maximum possible leisure`)
+    if (
+      (objectiveMode === 'maximize_leisure' || objectiveMode === 'maximize_free_time') &&
+      zValue > 0
+    ) {
+      const unit = objectiveMode === 'maximize_free_time' ? 'free time' : 'leisure'
+      lines.push(`   • Efficiency: ${(zValue * 100).toFixed(2)}% of maximum possible ${unit}`)
     }
   } else {
     lines.push('   • Z Value: Not available')

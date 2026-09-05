@@ -272,6 +272,7 @@ const energyGraph = ref<EnergyGraphDrawer | undefined>(undefined)
 const solverObjective = ref<SolverObjective>('maximize_leisure')
 const solverObjectiveOptions: { value: SolverObjective; label: string }[] = [
   { value: 'maximize_leisure', label: 'Maximize Leisure' },
+  { value: 'maximize_free_time', label: 'Maximize Free Time' },
   { value: 'minimize_co2', label: 'Minimize CO₂' }
 ]
 const isSolving = ref(false)
