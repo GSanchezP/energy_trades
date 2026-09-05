@@ -154,7 +154,7 @@
           "label": "H Electric",
           "factors": {
             "humanLabor": 0.05,
-            "electricity": 4,
+            "electricity": 1,
             "mining": 1.5
           }
         }
@@ -189,7 +189,7 @@
       "label": "Basic\nNeeds\n(Health,\nEducation,\netc.)",
       "level": "tertiary",
       "color": "#1a9a4eff",
-      "minOutput": 0.2,
+      "minOutput": 0.1,
       "endUse": true,
       "factors": {
         "heating": 0.25,
@@ -214,9 +214,9 @@
     },
     {
       "id": "leisure",
-      "label": "Leisure",
+      "label": "Leisure/War",
       "level": "tertiary",
-      "color": "#b344a6ff",
+      "color": "#d7263dff",
       "endUse": true,
       "factors": {
         "heating": 0.15,
