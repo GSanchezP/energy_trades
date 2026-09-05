@@ -131,6 +131,7 @@ export class EnergyGraphDrawer {
 
       for (const node of this.energyNodes) {
         if (this.addonToSum.has(node.id)) continue
+        if (node.isIsolated) continue
         if (this.visualSourceLevel(node) !== level) continue
         if (node.isSumNode) {
           const group = this.getSumGroups().find((g) => g.sum === node)
@@ -141,6 +142,7 @@ export class EnergyGraphDrawer {
       }
 
       for (const node of this.energyNodes) {
+        if (node.isIsolated) continue
         for (const [targetId, power] of Object.entries(node.outputMap)) {
           if (!power) continue
           const target = this.energyNodes.find((n) => n.id === targetId)
@@ -357,10 +359,11 @@ export class EnergyGraphDrawer {
 
     // Width of above/below inbound ribbons — reserved so middle lanes stay clear.
     for (const node of this.energyNodes) {
+      if (node.isIsolated) continue
       for (const [targetId, power] of Object.entries(node.outputMap)) {
         if (!power) continue
         const target = this.energyNodes.find((n) => n.id === targetId)
-        if (!target) continue
+        if (!target || target.isIsolated) continue
         if (this.addonToSum.get(node.id) === target) continue
         const rel = this.levelComparer(node, target).interLevel
         if (['same', 'previous', 'before-previous', 'above-next'].includes(rel)) {
@@ -378,6 +381,7 @@ export class EnergyGraphDrawer {
     }
     for (const level of [...NodeLevels].reverse()) {
       for (const node of [...this.energyNodes.filter((n) => n.level.id === level)].reverse()) {
+        if (node.isIsolated) continue
         const laneLevel = this.visualSourceLevel(node)
         if (!xSourceOffsetMap[laneLevel]) xSourceOffsetMap[laneLevel] = 0
 
@@ -445,10 +449,11 @@ export class EnergyGraphDrawer {
           this.energyNodes.filter((n) => n.level.id === level),
           i.reverse
         )) {
+          if (node.isIsolated) continue
           let outputs = Object.entries(node.outputMap).filter(([id, power]) => {
             if (!power) return false
             const targetNode = this.energyNodes.find((n) => n.id === id)
-            if (!targetNode) return false
+            if (!targetNode || targetNode.isIsolated) return false
             if (this.addonToSum.get(node.id) === targetNode) return false
             return i.levelComparer.includes(this.levelComparer(node, targetNode).interLevel)
           })

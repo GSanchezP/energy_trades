@@ -166,7 +166,7 @@ export async function outputMapSolver(
 
   // Net output sum constraints (skipped for endUse nodes from nodes.json).
   for (const node of config.nodes) {
-    if (node.endUse) continue
+    if (node.endUse || node.isResidual) continue
 
     const sumConstraintsVars: string[] = []
     for (const sourceNode of config.nodes) {
@@ -178,6 +178,19 @@ export async function outputMapSolver(
       }
     }
     constraints.push(netSumConstraint(node.netOutputVar, sumConstraintsVars))
+  }
+
+  // Residual nodes: T:id = 1 − Σ T:residualOf  (⇔ sum = 1), with T:id ≥ 0 from bounds.
+  for (const node of config.nodes) {
+    if (!node.residualOf?.length) continue
+    constraints.push({
+      name: node.netOutputVar + '_residual',
+      vars: [
+        { name: node.netOutputVar, coef: 1 },
+        ...node.residualOf.map((id) => ({ name: `T:${id}`, coef: 1 }))
+      ],
+      bnds: { type: glpk.GLP_FX, lb: 1, ub: 1 }
+    })
   }
 
   // Unconstrained CO₂ aggregate: T:co2 = Σ T:node for nodes with co2: true

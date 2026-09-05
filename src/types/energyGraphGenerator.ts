@@ -10,7 +10,7 @@ import {
 
 import { EnergyGraphDrawer } from './energyGraphDrawer'
 import { EnergyNode } from './energyNode'
-import { outputMapSolver, type SolverObjective } from './outputMapSolver'
+import { outputMapSolver, getStoredSolverResult, type SolverObjective } from './outputMapSolver'
 
 export function generateNodes(
   config: NodesConfig,
@@ -21,11 +21,16 @@ export function generateNodes(
     NodeLevel,
     number
   >
+  const solvedVars = getStoredSolverResult()?.result?.vars
 
   return config.nodes.map((nodeConfig) => {
     const isSum = Object.keys(nodeConfig.addons).length > 0
     // Sum nodes are laid out beside their addons; keep level positions for regular nodes only.
     const nodeLevelPosition = isSum ? 0 : nodeLevelPositions[nodeConfig.level]++
+    const isResidual = nodeConfig.isResidual
+    const displayPower = isResidual
+      ? (solvedVars?.[nodeConfig.netOutputVar] ?? 0)
+      : undefined
     return new EnergyNode(
       nodeConfig.label,
       nodeConfig.level,
@@ -33,9 +38,10 @@ export function generateNodes(
       nodeConfig.id,
       nonPartialNodeWeights(nodeConfig.factors),
       nodeConfig.addons,
-      inputMaps[nodeConfig.id],
-      outputMaps[nodeConfig.id],
-      nodeConfig.color
+      inputMaps[nodeConfig.id] ?? iNodeWeights(),
+      outputMaps[nodeConfig.id] ?? iNodeWeights(),
+      nodeConfig.color,
+      isResidual ? { isolated: true, displayPower } : undefined
     )
   })
 }

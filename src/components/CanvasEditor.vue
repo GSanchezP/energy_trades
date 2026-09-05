@@ -97,6 +97,10 @@
           <span class="summary-label">Leisure</span>
           <span class="summary-value">{{ formatSummary(summaryTotals.leisure) }}</span>
         </div>
+        <div class="summary-metric summary-freetime">
+          <span class="summary-label">Free Time</span>
+          <span class="summary-value">{{ formatSummary(summaryTotals.freeTime) }}</span>
+        </div>
         <div class="summary-metric summary-eroi12">
           <span class="summary-label">EROI 12</span>
           <span class="summary-value">{{ formatSummary(bandErois.eroi12) }}</span>
@@ -457,7 +461,8 @@ const handleSliderChange = async (event: Event) => {
         newAddons,
         nodeConfig.minOutput,
         nodeConfig.co2,
-        nodeConfig.endUse
+        nodeConfig.endUse,
+        nodeConfig.residualOf
       )
     }
   } else {
@@ -479,7 +484,8 @@ const handleSliderChange = async (event: Event) => {
         nodeConfig.addons,
         nodeConfig.minOutput,
         nodeConfig.co2,
-        nodeConfig.endUse
+        nodeConfig.endUse,
+        nodeConfig.residualOf
       )
     }
   }
@@ -555,7 +561,8 @@ async function setAddonWeight(sumId: string, addonId: NodeType, value: number | 
     newAddons,
     nodeConfig.minOutput,
     nodeConfig.co2,
-    nodeConfig.endUse
+    nodeConfig.endUse,
+    nodeConfig.residualOf
   )
   politicsTick.value++
   await regenerateGraph()
@@ -888,7 +895,8 @@ const summaryTotals = computed(() => {
   return {
     co2: vars?.['T:co2'] ?? 0,
     basicNeeds: vars?.['T:basicNeeds'] ?? 0,
-    leisure: vars?.['T:leisure'] ?? 0
+    leisure: vars?.['T:leisure'] ?? 0,
+    freeTime: vars?.['T:freeTime'] ?? 0
   }
 })
 
@@ -1352,6 +1360,10 @@ const closeResultsModal = () => {
 
 .summary-leisure .summary-value {
   color: #e879f9;
+}
+
+.summary-freetime .summary-value {
+  color: #94a3b8;
 }
 
 .summary-eroi12 .summary-value {

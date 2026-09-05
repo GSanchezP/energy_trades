@@ -226,6 +226,14 @@
         "humanLabor": 0.6,
         "food": 0.4
       }
+    },
+    {
+      "id": "freeTime",
+      "label": "Free\nTime",
+      "level": "tertiary",
+      "color": "#334155ff",
+      "endUse": true,
+      "residualOf": ["basicNeeds", "humanLabor", "leisure"]
     }
   ]
 }

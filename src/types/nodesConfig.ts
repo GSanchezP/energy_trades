@@ -22,6 +22,7 @@ export const NodeTypes = [
   'basicNeeds',
   'humanLabor',
   'leisure',
+  'freeTime',
   'heat'
 ] as const
 
@@ -54,11 +55,21 @@ export class NodeConfig {
      * End-use sink: skip T:node = Σ inbound flows.
      * Needed when nothing consumes this node (otherwise an empty sum forces T = 0).
      */
-    readonly endUse?: boolean
+    readonly endUse?: boolean,
+    /**
+     * Residual / complement node: T:id = 1 − Σ T:residualOf, with T:id ≥ 0.
+     * Drawn with no connectors; sized from its own T value.
+     */
+    readonly residualOf?: NodeType[]
   ) {}
 
   get netOutputVar() {
     return `T:${this.id}`
+  }
+
+  /** True when this node is a time/budget residual with no energy flows. */
+  get isResidual(): boolean {
+    return (this.residualOf?.length ?? 0) > 0
   }
 
   public inputFactorVarName(inputNodeId: NodeType) {
@@ -120,6 +131,10 @@ export interface NodeConfigJson {
    * Use for nodes nothing else consumes (e.g. leisure, basic needs).
    */
   endUse?: boolean
+  /**
+   * Residual node: T = 1 − Σ listed nodes (each ≥ 0). No energy connectors.
+   */
+  residualOf?: NodeType[]
 }
 
 function isAddonConfig(value: unknown): value is AddonConfigJson {
@@ -171,7 +186,8 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
           undefined,
           n.minOutput,
           n.co2,
-          n.endUse
+          n.endUse,
+          n.residualOf
         )
       )
       continue
@@ -200,7 +216,8 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
         weightMap,
         n.minOutput,
         n.co2,
-        n.endUse
+        n.endUse,
+        n.residualOf
       )
     )
   }
