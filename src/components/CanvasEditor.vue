@@ -322,8 +322,9 @@
               </text>
             </g>
             <polyline
-              v-if="policyChartSvg.polyline"
-              :points="policyChartSvg.polyline"
+              v-for="(seg, i) in policyChartSvg.polylines"
+              :key="'seg' + i"
+              :points="seg"
               class="policy-chart-line"
               fill="none"
             />
@@ -335,6 +336,24 @@
               r="3.5"
               class="policy-chart-dot"
             />
+            <g v-for="(miss, i) in policyChartSvg.noSolution" :key="'ns' + i">
+              <line
+                :x1="miss.x"
+                :x2="miss.x"
+                :y1="policyChartSvg.pad.t"
+                :y2="policyChartSvg.pad.t + policyChartSvg.plotH"
+                class="policy-chart-nosol-line"
+              />
+              <text
+                :x="miss.x"
+                :y="miss.labelY"
+                class="policy-chart-nosol-label"
+                text-anchor="middle"
+                :transform="`rotate(-90 ${miss.x} ${miss.labelY})`"
+              >
+                No Solution
+              </text>
+            </g>
             <text
               :x="policyChartSvg.pad.l + policyChartSvg.plotW / 2"
               :y="policyChartSvg.height - 10"
@@ -690,11 +709,15 @@ async function toggleAddonLock(sumId: string, addonId: NodeType) {
   }
 }
 
+type PolicyChartPoint = { x: number; y: number | null }
+
 type PolicyChartState = {
   running: boolean
   xLabel: string
   yLabel: string
-  points: { x: number; y: number }[]
+  /** Fixed Y-axis max: 2 for minimize CO₂, otherwise 1. */
+  yMax: number
+  points: PolicyChartPoint[]
 }
 
 const policyChart = ref<PolicyChartState | null>(null)
@@ -711,19 +734,35 @@ const policyChartSvg = computed(() => {
   const plotW = width - pad.l - pad.r
   const plotH = height - pad.t - pad.b
   const pts = policyChart.value?.points ?? []
-  const ys = pts.map((p) => p.y).filter((y) => Number.isFinite(y))
-  const yMin = ys.length ? Math.min(...ys) : 0
-  const yMax = ys.length ? Math.max(...ys) : 1
-  const yPad = yMax === yMin ? Math.max(0.05, Math.abs(yMax) * 0.1 || 0.05) : (yMax - yMin) * 0.08
-  const y0 = yMin - yPad
-  const y1 = yMax + yPad
+  const y0 = 0
+  const y1 = policyChart.value?.yMax ?? 1
 
   const xTo = (x: number) => pad.l + (x / 1) * plotW
   const yTo = (y: number) => pad.t + plotH - ((y - y0) / (y1 - y0 || 1)) * plotH
 
   const mapped = pts
-    .filter((p) => Number.isFinite(p.y))
+    .filter((p): p is { x: number; y: number } => p.y !== null && Number.isFinite(p.y))
     .map((p) => ({ cx: xTo(p.x), cy: yTo(p.y), x: p.x, y: p.y }))
+
+  // Break the line wherever the solver failed so zeros aren't drawn across gaps.
+  const polylines: string[] = []
+  let segment: string[] = []
+  for (const p of pts) {
+    if (p.y !== null && Number.isFinite(p.y)) {
+      segment.push(`${xTo(p.x)},${yTo(p.y)}`)
+    } else if (segment.length) {
+      polylines.push(segment.join(' '))
+      segment = []
+    }
+  }
+  if (segment.length) polylines.push(segment.join(' '))
+
+  const noSolution = pts
+    .filter((p) => p.y === null)
+    .map((p) => ({
+      x: xTo(p.x),
+      labelY: pad.t + plotH / 2
+    }))
 
   const xTicks = [0, 0.25, 0.5, 0.75, 1].map((x) => ({
     x: xTo(x),
@@ -741,7 +780,8 @@ const policyChartSvg = computed(() => {
     plotW,
     plotH,
     points: mapped,
-    polyline: mapped.map((p) => `${p.cx},${p.cy}`).join(' '),
+    polylines,
+    noSolution,
     xTicks,
     yTicks
   }
@@ -758,11 +798,13 @@ async function runPolicySensitivity(sumId: string, addonId: NodeType, addonLabel
   const yLabel =
     solverObjectiveOptions.find((o) => o.value === solverObjective.value)?.label ??
     solverObjective.value
+  const yMax = solverObjective.value === 'minimize_co2' ? 2 : 1
 
   policyChart.value = {
     running: true,
     xLabel: addonLabel,
     yLabel,
+    yMax,
     points: []
   }
   isSolving.value = true
@@ -772,10 +814,15 @@ async function runPolicySensitivity(sumId: string, addonId: NodeType, addonLabel
       const weight = Math.round(i * 0.05 * 100) / 100
       applyAddonWeightConfig(sumId, addonId, weight)
       await outputMapSolver(nodesConfig, solverObjective.value)
-      const z = getStoredSolverResult()?.result?.z
+      const result = getStoredSolverResult()
+      const statusInfo = getSolverStatusInfo(result)
+      const z = result?.result?.z
+      const solved =
+        statusInfo.kind === 'success' ||
+        (statusInfo.kind === 'warning' && statusInfo.label.startsWith('Feasible'))
       policyChart.value.points.push({
         x: weight,
-        y: typeof z === 'number' && Number.isFinite(z) ? z : Number.NaN
+        y: solved && typeof z === 'number' && Number.isFinite(z) ? z : null
       })
       // Refresh chart progressively.
       policyChart.value = {
@@ -1947,6 +1994,20 @@ const closeResultsModal = () => {
 
 .policy-chart-dot {
   fill: #0284c7;
+}
+
+.policy-chart-nosol-line {
+  stroke: #f87171;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+  opacity: 0.7;
+}
+
+.policy-chart-nosol-label {
+  fill: #b91c1c;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: Arial, sans-serif;
 }
 
 .policy-chart-axis-label {
