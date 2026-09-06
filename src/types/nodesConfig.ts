@@ -39,6 +39,40 @@ export const NodeLevels = [
 ] as const
 export type NodeLevel = (typeof NodeLevels)[number]
 
+/** JSON factor entry: plain number (legacy) or value + citation comment. */
+export type FactorEntryJson = number | { value: number; comment?: string }
+
+export type FactorMapJson = Partial<Record<NodeType, FactorEntryJson>>
+
+export function isFactorEntryObject(
+  value: unknown
+): value is { value: number; comment?: string } {
+  return typeof value === 'object' && value !== null && 'value' in value
+}
+
+/** Normalize JSON factors into numeric weights + optional comments. */
+export function normalizeFactors(factors?: FactorMapJson): {
+  values: Partial<Record<NodeType, number>>
+  comments: Partial<Record<NodeType, string>>
+} {
+  const values: Partial<Record<NodeType, number>> = {}
+  const comments: Partial<Record<NodeType, string>> = {}
+  if (!factors) return { values, comments }
+
+  for (const [key, entry] of Object.entries(factors)) {
+    const id = key as NodeType
+    if (entry === undefined || entry === null) continue
+    if (isFactorEntryObject(entry)) {
+      values[id] = entry.value
+      if (entry.comment) comments[id] = entry.comment
+    } else if (typeof entry === 'number') {
+      values[id] = entry
+    }
+  }
+
+  return { values, comments }
+}
+
 export class NodeConfig {
   constructor(
     readonly id: NodeType,
@@ -60,7 +94,9 @@ export class NodeConfig {
      * Residual / complement node: T:id = 1 − Σ T:residualOf, with T:id ≥ 0.
      * Drawn with no connectors; sized from its own T value.
      */
-    readonly residualOf?: NodeType[]
+    readonly residualOf?: NodeType[],
+    /** Optional citations / notes for each factor value. */
+    readonly _factorComments?: Partial<Record<NodeType, string>>
   ) {}
 
   get netOutputVar() {
@@ -78,6 +114,10 @@ export class NodeConfig {
 
   get factors(): Partial<Record<NodeType, number>> {
     return this._factors ?? {}
+  }
+
+  get factorComments(): Partial<Record<NodeType, string>> {
+    return this._factorComments ?? {}
   }
 
   get addons(): Partial<Record<NodeType, number | null>> {
@@ -111,7 +151,7 @@ export interface LevelBandConfigJson {
 export interface AddonConfigJson {
   weight: number | null
   label: string
-  factors?: Partial<Record<NodeType, number>>
+  factors?: FactorMapJson
 }
 
 export interface NodeConfigJson {
@@ -119,7 +159,7 @@ export interface NodeConfigJson {
   label: string
   level: NodeLevel
   color: string
-  factors?: Partial<Record<NodeType, number>>
+  factors?: FactorMapJson
   /** Nested addon objects, or legacy flat weight map. */
   addons?: Partial<Record<NodeType, AddonConfigJson | number | null>>
   /** Bare-minimum net output required for feasibility. */
@@ -170,6 +210,34 @@ export function assertFactorSumsAtLeastOne(nodes: NodeConfig[]) {
   }
 }
 
+function nodeFromJsonParts(
+  id: NodeType,
+  label: string,
+  level: NodeLevel,
+  color: string,
+  factorsJson: FactorMapJson | undefined,
+  addons: Partial<Record<NodeType, number | null>> | undefined,
+  minOutput?: number,
+  co2?: boolean,
+  endUse?: boolean,
+  residualOf?: NodeType[]
+) {
+  const { values, comments } = normalizeFactors(factorsJson)
+  return new NodeConfig(
+    id,
+    label,
+    level,
+    color,
+    values,
+    addons,
+    minOutput,
+    co2,
+    endUse,
+    residualOf,
+    comments
+  )
+}
+
 /** Expand sum nodes so each nested addon becomes its own NodeConfig. */
 export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
   const result: NodeConfig[] = []
@@ -177,7 +245,7 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
   for (const n of jsonNodes) {
     if (!n.addons || Object.keys(n.addons).length === 0) {
       result.push(
-        new NodeConfig(
+        nodeFromJsonParts(
           n.id,
           n.label,
           n.level,
@@ -200,14 +268,14 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
       if (isAddonConfig(addon)) {
         weightMap[id] = addon.weight
         // Addon nodes inherit the sum node's level and color (not co2/min).
-        result.push(new NodeConfig(id, addon.label, n.level, n.color, addon.factors))
+        result.push(nodeFromJsonParts(id, addon.label, n.level, n.color, addon.factors, undefined))
       } else {
         weightMap[id] = addon as number | null
       }
     }
 
     result.push(
-      new NodeConfig(
+      nodeFromJsonParts(
         n.id,
         n.label,
         n.level,

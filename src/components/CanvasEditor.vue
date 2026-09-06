@@ -594,7 +594,8 @@ const handleSliderChange = async (event: Event) => {
         nodeConfig.minOutput,
         nodeConfig.co2,
         nodeConfig.endUse,
-        nodeConfig.residualOf
+        nodeConfig.residualOf,
+        nodeConfig.factorComments
       )
     }
   } else {
@@ -617,7 +618,8 @@ const handleSliderChange = async (event: Event) => {
         nodeConfig.minOutput,
         nodeConfig.co2,
         nodeConfig.endUse,
-        nodeConfig.residualOf
+        nodeConfig.residualOf,
+        nodeConfig.factorComments
       )
     }
   }
@@ -708,7 +710,8 @@ function applyAddonWeightConfig(sumId: string, addonId: NodeType, value: number 
     nodeConfig.minOutput,
     nodeConfig.co2,
     nodeConfig.endUse,
-    nodeConfig.residualOf
+    nodeConfig.residualOf,
+    nodeConfig.factorComments
   )
 }
 

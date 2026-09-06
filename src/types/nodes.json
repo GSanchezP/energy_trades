@@ -24,10 +24,22 @@
       "color": "#523866ff",
       "co2": true,
       "factors": {
-        "humanLabor": 0.05,
-        "fuels": 0.02,
-        "electricity": 0.02,
-        "mining": 0.02
+        "humanLabor": {
+          "value": 0.04,
+          "comment": "Small labor share of wellhead energy cost; oil & gas EROI literature places most investment in fuels, electricity and materials rather than human work (Sustainability 2022 EROI harmonization; arXiv:2606.02015 on extraction self-use)."
+        },
+        "fuels": {
+          "value": 0.03,
+          "comment": "Direct diesel/fuel for drilling, pumping and gathering; typical extraction self-consumption is a few % of gross output (Nature Energy 2024 useful-stage EROI; IEA energy industry own-use)."
+        },
+        "electricity": {
+          "value": 0.02,
+          "comment": "Grid/field electricity for pumps and compressors treated as external input to oil & gas (arXiv:2606.02015 EXT formulation)."
+        },
+        "mining": {
+          "value": 0.02,
+          "comment": "Embodied materials and equipment intensity at the wellhead; kept low so total TRE ≈0.11 → EROI~9, within harmonized petroleum ranges before refining (Sustainability 2022)."
+        }
       }
     },
     {
@@ -37,10 +49,22 @@
       "color": "#4a341cff",
       "co2": true,
       "factors": {
-        "humanLabor": 0.05,
-        "fuels": 0.02,
-        "electricity": 0.02,
-        "mining": 0.02
+        "humanLabor": {
+          "value": 0.05,
+          "comment": "Underground/surface mining remains relatively labor-intensive vs oil & gas; modest labor TRE share (Sustainability 2022 EROI review)."
+        },
+        "fuels": {
+          "value": 0.03,
+          "comment": "Diesel for haul trucks, dozers and prep plants; mining self-use is a few percent of coal energy content (IEA energy industry own-use; Nature Energy 2024)."
+        },
+        "electricity": {
+          "value": 0.02,
+          "comment": "Mine electricity for ventilation, conveyors and prep; external input analogous to oil & gas EXT accounting (arXiv:2606.02015)."
+        },
+        "mining": {
+          "value": 0.025,
+          "comment": "Steel, explosives and capital goods embodied energy for mine infrastructure; small vs fuel self-use (harmonized fossil EROI literature)."
+        }
       }
     },
     {
@@ -55,9 +79,18 @@
       "level": "conversion",
       "color": "#720c61ff",
       "factors": {
-        "humanLabor": 0.05,
-        "petroleum": 1.2,
-        "electricity": 0.01
+        "humanLabor": {
+          "value": 0.05,
+          "comment": "Refinery staffing is small relative to feedstock energy throughput; residual labor TRE (Argonne/Wang refining studies)."
+        },
+        "petroleum": {
+          "value": 1.11,
+          "comment": "U.S. refining overall energy efficiency ~90–91% → ~1.10–1.11 MJ crude per MJ products (Wang et al. EST 2014; ANL refining efficiency ~90.8%)."
+        },
+        "electricity": {
+          "value": 0.05,
+          "comment": "Purchased/on-site electricity and utilities are a minor but non-zero share of refinery process energy (PRELIM model; Wang et al. EST 2014 product-specific intensities)."
+        }
       }
     },
     {
@@ -70,18 +103,36 @@
           "weight": null,
           "label": "Thermal",
           "factors": {
-            "humanLabor": 0.05,
-            "coal": 2.5,
-            "mining": 0.1
+            "humanLabor": {
+              "value": 0.05,
+              "comment": "Plant O&M labor is small vs fuel heat input for thermal generation."
+            },
+            "coal": {
+              "value": 3.0,
+              "comment": "Existing coal fleet net heat rate ~9–11k Btu/kWh ≈ 31–38% efficiency → coal TRE ≈2.6–3.2; 3.0 ≈ ~33% industry-average heat rate (Power Magazine; ADEQ/EPA ~10,100–10,300 Btu/kWh)."
+            },
+            "mining": {
+              "value": 0.08,
+              "comment": "Ash handling, pollution-control materials and plant capital embodied energy, small vs fuel (LCA of coal power)."
+            }
           }
         },
         "renewable_electricity": {
           "weight": null,
           "label": "Renewable",
           "factors": {
-            "humanLabor": 0.1,
-            "mining": 0.4,
-            "sun": 1
+            "humanLabor": {
+              "value": 0.08,
+              "comment": "Install/O&M labor slightly higher share than thermal fuel plants because fuel TRE is replaced by capital (IEA-PVPS NEA guidelines)."
+            },
+            "mining": {
+              "value": 0.12,
+              "comment": "Embodied materials/BOS; PV meta-analyses imply EROI often ~8–25 → investment ~0.04–0.12 of lifetime output (Ellingson & Apul 2015; IEA-PVPS Task 12)."
+            },
+            "sun": {
+              "value": 1,
+              "comment": "Ambient primary harvest normalized to 1 unit of renewable electricity carrier in this TRE graph (IEA-PVPS net-energy guidelines)."
+            }
           }
         }
       }
@@ -92,9 +143,18 @@
       "level": "primary",
       "color": "#6f5243ff",
       "factors": {
-        "humanLabor": 0.1,
-        "electricity": 1,
-        "heavy_transport": 0.3
+        "humanLabor": {
+          "value": 0.1,
+          "comment": "Industry remains labor-using; ~10% of industrial-output TRE as labor services in this stylized basket."
+        },
+        "electricity": {
+          "value": 1,
+          "comment": "Electricity dominates modern manufacturing and minerals processing energy; set at 1 unit primary electricity per unit industrial output (IEA industry energy balances)."
+        },
+        "heavy_transport": {
+          "value": 0.25,
+          "comment": "Freight of ores, intermediates and finished goods; freight is a meaningful but secondary share of industrial energy (IEA transport + industry balances)."
+        }
       }
     },
     {
@@ -103,9 +163,18 @@
       "level": "primary",
       "color": "#8a8a08ff",
       "factors": {
-        "humanLabor": 0.1,
-        "heavy_transport": 0.8,
-        "mining": 0.1
+        "humanLabor": {
+          "value": 0.15,
+          "comment": "Farm and food-chain labor; on-farm energy is minority of agri-food energy but labor remains essential (IIASA food-chain energy; FAO ~30% of world energy in food system)."
+        },
+        "heavy_transport": {
+          "value": 0.55,
+          "comment": "Transport ~14% of US food-system energy; elevated here because model folds distribution into agriculture node (GRAIN/FAO food-system energy; OECD agro-food chain)."
+        },
+        "mining": {
+          "value": 0.35,
+          "comment": "Fertilizers, machinery and packaging embodied energy; fertilizer alone ~40% of on-farm energy and chemicals/machinery dominate pre-harvest (GRAIN summarizing US food LCA)."
+        }
       }
     },
     {
@@ -118,18 +187,36 @@
           "weight": null,
           "label": "Thermal",
           "factors": {
-            "humanLabor": 0.05,
-            "fuels": 3,
-            "mining": 0.15
+            "humanLabor": {
+              "value": 0.05,
+              "comment": "Driver/crew labor small vs fuel for light-duty thermal transport."
+            },
+            "fuels": {
+              "value": 3.2,
+              "comment": "ICE tank-to-wheel often wastes 64–75% of fuel energy → TRE ~3–4; 3.2 is mid-range (DOE fueleconomy.gov loss shares; NREL EVER study context)."
+            },
+            "mining": {
+              "value": 0.15,
+              "comment": "Vehicle manufacturing embodied energy amortized per unit transport service (vehicle LCA)."
+            }
           }
         },
         "electric_transport": {
           "weight": null,
           "label": "Electric",
           "factors": {
-            "humanLabor": 0.05,
-            "electricity": 1.3,
-            "mining": 0.45
+            "humanLabor": {
+              "value": 0.05,
+              "comment": "Similar crew/operations labor share as thermal LDV service."
+            },
+            "electricity": {
+              "value": 0.75,
+              "comment": "US light-duty EVER ≈4.4 vs gasoline → electricity TRE ≈ thermal_fuels/4.4; with fuels≈3.2 → ≈0.73, set 0.75 with charger margin (NREL/DOE EVER 4.4 report)."
+            },
+            "mining": {
+              "value": 0.4,
+              "comment": "Battery and powertrain manufacturing raise embodied intensity vs ICE (EV LCA literature; Yale Climate Connections WTW caveats)."
+            }
           }
         }
       }
@@ -144,18 +231,36 @@
           "weight": null,
           "label": "H Thermal",
           "factors": {
-            "humanLabor": 0.05,
-            "fuels": 3,
-            "mining": 0.15
+            "humanLabor": {
+              "value": 0.05,
+              "comment": "Crew labor small vs diesel for heavy freight."
+            },
+            "fuels": {
+              "value": 3.2,
+              "comment": "Heavy diesel duty cycles similar TTW inefficiency class to LDV ICE (~3–4 TRE); aligned with thermal_transport (DOE engine efficiency ranges)."
+            },
+            "mining": {
+              "value": 0.2,
+              "comment": "Trucks/rail rolling stock capital intensity slightly above LDV per service unit."
+            }
           }
         },
         "heavy_electric_transport": {
           "weight": null,
           "label": "H Electric",
           "factors": {
-            "humanLabor": 0.05,
-            "electricity": 1,
-            "mining": 1.5
+            "humanLabor": {
+              "value": 0.05,
+              "comment": "Operations labor comparable to heavy thermal freight."
+            },
+            "electricity": {
+              "value": 1,
+              "comment": "Rail/truck electrification is more efficient than diesel but model keeps ≥1 electricity TRE plus high capital; conservative vs LDV EVER (IEA truck/rail electrification)."
+            },
+            "mining": {
+              "value": 1.2,
+              "comment": "Batteries, catenary and heavy EV powertrains: capital embodied energy dominates vs LDV electric (heavy-duty EV LCA)."
+            }
           }
         }
       }
@@ -170,16 +275,28 @@
           "weight": null,
           "label": "Thermal",
           "factors": {
-            "fuels": 3.333,
-            "mining": 0.15
+            "fuels": {
+              "value": 1.15,
+              "comment": "Condensing gas boilers ~90–98% → TRE≈1.02–1.11; 1.15 reflects seasonal and distribution losses on a mostly modern stock (UK BEIS/ASHP vs boiler comparisons; heatpumpswatch efficiency notes)."
+            },
+            "mining": {
+              "value": 0.15,
+              "comment": "Boiler/furnace and distribution hardware embodied energy."
+            }
           }
         },
         "electric_heating": {
           "weight": null,
           "label": "Electric",
           "factors": {
-            "electricity": 1,
-            "mining": 0.15
+            "electricity": {
+              "value": 1,
+              "comment": "Direct electric heating COP≈1. Heat pumps SPF~2.8–3.5 would need ~0.3–0.4 electricity if ambient heat were credited; without ambient node we keep resistive-equivalent 1 (BEIS SPF ~3.2 ASHP; UCL heat-pump LCA)."
+            },
+            "mining": {
+              "value": 0.15,
+              "comment": "Heaters/heat-pump hardware embodied energy; similar order to thermal plant capital in this stylized model."
+            }
           }
         }
       }
@@ -190,11 +307,26 @@
       "level": "tertiary",
       "color": "#1a9a4eff",
       "factors": {
-        "heating": 0.25,
-        "electricity": 0.1,
-        "mining": 0.05,
-        "transport": 0.2,
-        "food": 0.4
+        "heating": {
+          "value": 0.25,
+          "comment": "Space/water heat is often the largest residential energy end-use in temperate climates; ~1/4 of labor-support basket (IEA buildings end-use shares)."
+        },
+        "electricity": {
+          "value": 0.12,
+          "comment": "Appliances, lighting and services for workers; secondary to heat/food in household energy (IEA buildings)."
+        },
+        "mining": {
+          "value": 0.08,
+          "comment": "Goods, tools and housing materials supporting labor capacity (industrial output share of living standards)."
+        },
+        "transport": {
+          "value": 0.2,
+          "comment": "Commuting and work-related mobility; transport is a major household energy use after heating (IEA transport + buildings)."
+        },
+        "food": {
+          "value": 0.35,
+          "comment": "Food system uses ~26–30% of primary energy in rich economies; largest single share of the labor-support basket (FAO/GRAIN; IIASA food-chain energy)."
+        }
       }
     },
     {
@@ -205,12 +337,30 @@
       "minOutput": 0.1,
       "endUse": true,
       "factors": {
-        "heating": 0.25,
-        "electricity": 0.2,
-        "mining": 0.05,
-        "humanLabor": 0.2,
-        "transport": 0.1,
-        "food": 0.4
+        "heating": {
+          "value": 0.2,
+          "comment": "Hospitals, schools and housing heat loads; heating remains a large buildings share (IEA buildings)."
+        },
+        "electricity": {
+          "value": 0.15,
+          "comment": "Electrified services (health IT, lighting, ventilation) raise electricity vs pure household labor basket."
+        },
+        "mining": {
+          "value": 0.05,
+          "comment": "Medical equipment, school materials and infrastructure embodied intensity (small share)."
+        },
+        "humanLabor": {
+          "value": 0.2,
+          "comment": "Care, teaching and public-service labor required to deliver basic needs."
+        },
+        "transport": {
+          "value": 0.08,
+          "comment": "Patient/student/staff mobility and logistics for public services."
+        },
+        "food": {
+          "value": 0.35,
+          "comment": "Nutrition floor of basic needs; aligned with food-system energy weight in living standards (FAO ~30% energy in food system)."
+        }
       }
     },
     {
@@ -220,12 +370,30 @@
       "color": "#d7263dff",
       "endUse": true,
       "factors": {
-        "heating": 0.15,
-        "electricity": 0.2,
-        "mining": 0.2,
-        "transport": 0.2,
-        "humanLabor": 0.6,
-        "food": 0.2
+        "heating": {
+          "value": 0.1,
+          "comment": "Leisure buildings/venues heat; smaller share than labor/basic-needs baskets."
+        },
+        "electricity": {
+          "value": 0.15,
+          "comment": "Entertainment, ICT and venue power."
+        },
+        "mining": {
+          "value": 0.15,
+          "comment": "Durable leisure goods and military capital embodied energy (stylized ‘leisure/war’ sink)."
+        },
+        "transport": {
+          "value": 0.15,
+          "comment": "Recreational and discretionary travel energy."
+        },
+        "humanLabor": {
+          "value": 0.5,
+          "comment": "Leisure services and force structure are labor-heavy relative to energy carriers in this sink."
+        },
+        "food": {
+          "value": 0.15,
+          "comment": "Food associated with leisure/hospitality beyond the basic-needs floor."
+        }
       }
     },
     {
