@@ -129,10 +129,33 @@ export class NodeConfig {
   }
 }
 
+/** Soft target for calibration LP (minimize weighted L1 gap). */
+export interface CalibrationTarget {
+  target: number
+  /** Relative importance in the match_targets objective (default 1). */
+  weight?: number
+  comment?: string
+}
+
+/**
+ * Reality-check targets for the match_targets solver.
+ * - netOutputs: desired T:node levels (e.g. humanLabor ≈ 0.10 of time budget)
+ * - addonShares: desired technology mix of a sum node (e.g. electric_transport ≈ 20%)
+ *
+ * Note: `match_targets` holds factors fixed and fits mixes/T.
+ * Use the Factors panel "Calibrate factors" to actually change TRE coefficients.
+ */
+export interface CalibrationConfig {
+  netOutputs?: Partial<Record<NodeType, CalibrationTarget>>
+  addonShares?: Partial<Record<NodeType, Partial<Record<NodeType, CalibrationTarget>>>>
+}
+
 export interface NodesConfig {
   nodes: NodeConfig[]
   /** Visual column groups with separator titles (between dump and heat excluded). */
   levelBands: LevelBandConfig[]
+  /** Optional soft targets used by the match_targets objective. */
+  calibration?: CalibrationConfig
 }
 
 export interface LevelBandConfig {
@@ -295,5 +318,92 @@ export function expandNodesFromJson(jsonNodes: NodeConfigJson[]): NodeConfig[] {
 
 export const nodesConfig: NodesConfig = {
   nodes: expandNodesFromJson(nodesJson.nodes as NodeConfigJson[]),
-  levelBands: (nodesJson as { levelBands?: LevelBandConfigJson[] }).levelBands ?? []
+  levelBands: (nodesJson as { levelBands?: LevelBandConfigJson[] }).levelBands ?? [],
+  calibration: (nodesJson as { calibration?: CalibrationConfig }).calibration
+}
+
+/** Replace a node entry in the live config (preserves array identity of `nodes`). */
+export function replaceNodeConfig(next: NodeConfig) {
+  const index = nodesConfig.nodes.findIndex((n) => n.id === next.id)
+  if (index === -1) {
+    throw new Error(`Unknown node "${next.id}"`)
+  }
+  nodesConfig.nodes[index] = next
+}
+
+/** Update one TRE factor on a live NodeConfig. */
+export function setNodeFactor(nodeId: NodeType, inputId: NodeType, value: number) {
+  const node = nodesConfig.nodes.find((n) => n.id === nodeId)
+  if (!node) throw new Error(`Unknown node "${nodeId}"`)
+  const factors = { ...node.factors, [inputId]: value }
+  replaceNodeConfig(
+    new NodeConfig(
+      node.id,
+      node.label,
+      node.level,
+      node.color,
+      factors,
+      node.addons,
+      node.minOutput,
+      node.co2,
+      node.endUse,
+      node.residualOf,
+      node.factorComments
+    )
+  )
+}
+
+export type FactorKey = { nodeId: NodeType; inputId: NodeType }
+
+/** Flat list of every configured factor on every node. */
+export function listFactorEntries(): Array<
+  FactorKey & { value: number; comment?: string; level: NodeLevel }
+> {
+  const rows: Array<FactorKey & { value: number; comment?: string; level: NodeLevel }> = []
+  for (const node of nodesConfig.nodes) {
+    for (const [inputId, value] of Object.entries(node.factors)) {
+      if (value === undefined) continue
+      rows.push({
+        nodeId: node.id,
+        inputId: inputId as NodeType,
+        value,
+        comment: node.factorComments[inputId as NodeType],
+        level: node.level
+      })
+    }
+  }
+  return rows
+}
+
+/** Deep-clone current factor values for baseline / restore. */
+export function snapshotFactors(): Record<string, number> {
+  const snap: Record<string, number> = {}
+  for (const row of listFactorEntries()) {
+    snap[`${row.nodeId}|${row.inputId}`] = row.value
+  }
+  return snap
+}
+
+export function restoreFactors(snapshot: Record<string, number>) {
+  for (const [key, value] of Object.entries(snapshot)) {
+    const [nodeId, inputId] = key.split('|') as [NodeType, NodeType]
+    setNodeFactor(nodeId, inputId, value)
+  }
+}
+
+/** Build `{ nodeId: { inputId: { value, comment } } }` for copy/export. */
+export function factorsToJsonShape(): Record<string, FactorMapJson> {
+  const out: Record<string, FactorMapJson> = {}
+  for (const node of nodesConfig.nodes) {
+    const entries = Object.entries(node.factors)
+    if (entries.length === 0) continue
+    const map: FactorMapJson = {}
+    for (const [inputId, value] of entries) {
+      if (value === undefined) continue
+      const comment = node.factorComments[inputId as NodeType]
+      map[inputId as NodeType] = comment ? { value, comment } : { value, comment: '' }
+    }
+    out[node.id] = map
+  }
+  return out
 }

@@ -87,7 +87,14 @@
                         >
                           <i class="mdi mdi-pencil"></i>
                         </button>
-                        <span class="value-display">
+                        <span
+                          class="value-display"
+                          :title="
+                            input.isAddon
+                              ? undefined
+                              : factorComment(node.id, input.nodeType) || undefined
+                          "
+                        >
                           {{
                             input.isAddon
                               ? (node.eroiAddons[input.nodeType] === null
@@ -160,7 +167,7 @@ import { computed } from 'vue'
 import type { EnergyNode } from '../types/energyNode'
 import type { Connector } from '../types/energyGraphDrawer'
 import { NodeDrawer } from '../types/nodeDrawer'
-import { NodeTypes, type NodeType } from '../types/nodesConfig'
+import { NodeTypes, type NodeType, nodesConfig } from '../types/nodesConfig'
 
 const props = defineProps<{
   selectedNodes: any[]
@@ -190,6 +197,10 @@ const formatNumber = (value: number): string => {
   if (value === 0) return '0'
   if (value < 0.001) return value.toExponential(2)
   return value.toFixed(3)
+}
+
+function factorComment(nodeId: string, inputId: NodeType): string {
+  return nodesConfig.nodes.find((n) => n.id === nodeId)?.factorComments[inputId] ?? ''
 }
 
 // Helper function to format percentages

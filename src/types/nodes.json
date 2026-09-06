@@ -1,4 +1,34 @@
 {
+  "calibration": {
+    "netOutputs": {
+      "humanLabor": {
+        "target": 0.1,
+        "weight": 5,
+        "comment": "Societal time in paid/necessary labor ≈10% of the unit time budget (stylized; residual freeTime absorbs the rest with basicNeeds/leisure)."
+      },
+      "basicNeeds": {
+        "target": 0.1,
+        "weight": 5,
+        "comment": "Floor for health/education/etc.; matches minOutput and a ~10% time/energy commitment."
+      }
+    },
+    "addonShares": {
+      "transport": {
+        "electric_transport": {
+          "target": 0.2,
+          "weight": 10,
+          "comment": "Light-duty EV stock share order-of-magnitude (~20% of LDV energy service), not 0/100 corner from free optimization."
+        }
+      },
+      "heavy_transport": {
+        "heavy_electric_transport": {
+          "target": 0.0,
+          "weight": 10,
+          "comment": "Heavy-duty road electrification still near-zero of freight energy service today."
+        }
+      }
+    }
+  },
   "levelBands": [
     {
       "id": "extraction",

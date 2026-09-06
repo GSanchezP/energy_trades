@@ -34,7 +34,7 @@
           title="Policy: sum-node mix weights"
           aria-label="Policy: sum-node mix weights"
           :aria-expanded="showPoliticsPanel"
-          @click="showPoliticsPanel = !showPoliticsPanel"
+          @click="showPoliticsPanel = !showPoliticsPanel; showFactorsPanel = false"
         >
           <i class="mdi mdi-bank"></i>
         </button>
@@ -97,6 +97,88 @@
                 />
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+      <div class="header-politics-wrap">
+        <button
+          class="header-politics"
+          type="button"
+          title="TRE factors ledger & calibration"
+          aria-label="TRE factors ledger and calibration"
+          :aria-expanded="showFactorsPanel"
+          @click="showFactorsPanel = !showFactorsPanel; showPoliticsPanel = false"
+        >
+          <i class="mdi mdi-tune-vertical"></i>
+        </button>
+        <div v-if="showFactorsPanel" class="politics-panel factors-panel" @click.stop>
+          <div class="politics-panel-header">
+            <span>Factors</span>
+            <button type="button" class="politics-close" @click="showFactorsPanel = false">
+              <i class="mdi mdi-close"></i>
+            </button>
+          </div>
+          <div class="factors-panel-actions">
+            <p class="factors-hint">
+              <code>match_targets</code> does <strong>not</strong> change factors — only mixes and
+              T values. Open this panel to inspect every TRE factor. Click
+              <strong>Calibrate factors</strong> to lock reality mix targets in Policy and nudge
+              factor values; changed rows highlight, and <strong>Copy JSON</strong> exports them.
+            </p>
+            <div class="factors-action-row">
+              <button
+                type="button"
+                class="factors-btn"
+                :disabled="isSolving || factorCalibrating"
+                @click="runFactorCalibration"
+              >
+                {{ factorCalibrating ? 'Calibrating…' : 'Calibrate factors' }}
+              </button>
+              <button
+                type="button"
+                class="factors-btn factors-btn--ghost"
+                :disabled="!factorBaseline || isSolving || factorCalibrating"
+                @click="resetFactorsToBaseline"
+              >
+                Reset baseline
+              </button>
+              <button
+                type="button"
+                class="factors-btn factors-btn--ghost"
+                :disabled="isSolving || factorCalibrating"
+                @click="copyFactorsJson"
+              >
+                Copy JSON
+              </button>
+            </div>
+            <p v-if="factorCalibStatus" class="factors-status">{{ factorCalibStatus }}</p>
+          </div>
+          <div class="politics-panel-body factors-table-wrap">
+            <table class="factors-table">
+              <thead>
+                <tr>
+                  <th>Node</th>
+                  <th>Input</th>
+                  <th>Value</th>
+                  <th>Δ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="row in factorLedgerRows"
+                  :key="`${row.nodeId}|${row.inputId}`"
+                  :class="{ 'factors-row--changed': Math.abs(row.delta) > 1e-9 }"
+                  :title="row.comment || undefined"
+                >
+                  <td>{{ row.nodeId }}</td>
+                  <td>{{ row.inputId }}</td>
+                  <td class="factors-num">{{ row.current.toFixed(4) }}</td>
+                  <td class="factors-num">
+                    {{ Math.abs(row.delta) > 1e-9 ? (row.delta >= 0 ? '+' : '') + row.delta.toFixed(4) : '—' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -393,7 +475,20 @@ import InfoPanel from './InfoPanel.vue'
 import generateEnergyGraph, { type SolverObjective } from '../types/energyGraphGenerator'
 import { getStoredSolverResult, formatSolverResult, getSolverStatusInfo, outputMapSolver } from '../types/outputMapSolver'
 import type { EnergyNode } from '../types/energyNode'
-import { NodeType, nodesConfig, NodeConfig, getFactorSumFailures } from '../types/nodesConfig'
+import {
+  NodeType,
+  nodesConfig,
+  NodeConfig,
+  getFactorSumFailures,
+  factorsToJsonShape,
+  snapshotFactors,
+  restoreFactors
+} from '../types/nodesConfig'
+import {
+  calibrateFactorsToTargets,
+  diffAgainstBaseline,
+  type FactorDiff
+} from '../types/factorCalibration'
 
 const SUMMARY_HEADER_HEIGHT = 56
 
@@ -402,13 +497,73 @@ const solverObjective = ref<SolverObjective>('maximize_leisure')
 const solverObjectiveOptions: { value: SolverObjective; label: string }[] = [
   { value: 'maximize_leisure', label: 'Maximize Leisure' },
   { value: 'maximize_free_time', label: 'Maximize Free Time' },
-  { value: 'minimize_co2', label: 'Minimize CO₂' }
+  { value: 'minimize_co2', label: 'Minimize CO₂' },
+  { value: 'match_targets', label: 'Match Reality Targets' }
 ]
 const isSolving = ref(false)
 const stageRef = ref<any>(null)
 const showPoliticsPanel = ref(false)
-/** Bumped when addon weights change so the politics panel refreshes. */
+const showFactorsPanel = ref(false)
+/** Bumped when addon weights / factors change so panels refresh. */
 const politicsTick = ref(0)
+const factorsTick = ref(0)
+
+const factorBaseline = ref<Record<string, number> | null>(snapshotFactors())
+const factorCalibrating = ref(false)
+const factorCalibStatus = ref('')
+
+const factorLedgerRows = computed((): FactorDiff[] => {
+  void factorsTick.value
+  void energyGraph.value
+  const baseline = factorBaseline.value ?? snapshotFactors()
+  return diffAgainstBaseline(baseline)
+})
+
+async function runFactorCalibration() {
+  if (factorCalibrating.value || isSolving.value) return
+  factorCalibrating.value = true
+  factorCalibStatus.value = 'Running outer-loop factor search…'
+  try {
+    if (!factorBaseline.value) {
+      factorBaseline.value = snapshotFactors()
+    }
+    const result = await calibrateFactorsToTargets({
+      innerObjective: 'maximize_free_time',
+      rounds: 5,
+      onProgress: (msg) => {
+        factorCalibStatus.value = msg
+      }
+    })
+    factorsTick.value++
+    politicsTick.value++
+    factorCalibStatus.value = `Done: score ${result.scoreBefore.toFixed(4)} → ${result.scoreAfter.toFixed(4)} (${result.diffs.length} factors changed, ${result.evaluations} solves)${result.shareLocksApplied ? ' · mix targets locked in Policy' : ''}`
+    await regenerateGraph({ quiet: false })
+  } catch (err) {
+    factorCalibStatus.value = err instanceof Error ? err.message : String(err)
+  } finally {
+    factorCalibrating.value = false
+  }
+}
+
+async function resetFactorsToBaseline() {
+  if (!factorBaseline.value) return
+  restoreFactors(factorBaseline.value)
+  factorsTick.value++
+  politicsTick.value++
+  factorCalibStatus.value = 'Restored literature / baseline factors'
+  await regenerateGraph({ quiet: true })
+}
+
+async function copyFactorsJson() {
+  const payload = JSON.stringify(factorsToJsonShape(), null, 2)
+  try {
+    await navigator.clipboard.writeText(payload)
+    factorCalibStatus.value = 'Copied current factors JSON to clipboard'
+  } catch {
+    factorCalibStatus.value = 'Clipboard failed — see console'
+    console.log(payload)
+  }
+}
 
 const selectedSquareIds = ref<Set<string>>(new Set())
 const selectedConnectorId = ref<string | null>(null)
@@ -623,6 +778,8 @@ const handleSliderChange = async (event: Event) => {
       )
     }
   }
+
+  factorsTick.value++
 
   // Update slider state to reflect new value
   if (sliderState.value.node) {
@@ -1514,6 +1671,101 @@ const closeResultsModal = () => {
   border-radius: 8px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
   overflow: hidden;
+}
+
+.factors-panel {
+  width: min(480px, calc(100vw - 24px));
+  max-height: min(80vh, 640px);
+}
+
+.factors-panel-actions {
+  padding: 10px 12px;
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.factors-hint {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.factors-hint code {
+  color: #cbd5e1;
+  font-size: 10px;
+}
+
+.factors-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.factors-btn {
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  background: #2563eb;
+  color: #f8fafc;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.factors-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.factors-btn--ghost {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.factors-status {
+  margin: 0;
+  color: #86efac;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.factors-table-wrap {
+  padding: 0;
+}
+
+.factors-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  color: #cbd5e1;
+}
+
+.factors-table th,
+.factors-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #1e293b;
+}
+
+.factors-table th {
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.factors-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.factors-row--changed {
+  background: rgba(37, 99, 235, 0.18);
+  color: #f8fafc;
 }
 
 .politics-panel-header {

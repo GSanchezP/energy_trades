@@ -60,11 +60,16 @@ export function getStoredSolverResult(): Result | null {
   return storedSolverResult
 }
 
-export type SolverObjective = 'maximize_leisure' | 'minimize_co2' | 'maximize_free_time'
+export type SolverObjective =
+  | 'maximize_leisure'
+  | 'minimize_co2'
+  | 'maximize_free_time'
+  | 'match_targets'
 
 export async function outputMapSolver(
   config: NodesConfig,
-  objectiveMode: SolverObjective = 'maximize_leisure'
+  objectiveMode: SolverObjective = 'maximize_leisure',
+  options?: { quiet?: boolean }
 ) {
   const bounds: Bound[] = []
 
@@ -208,6 +213,71 @@ export async function outputMapSolver(
     })
   }
 
+  /** Soft L1: linearExpr − target = d⁺ − d⁻, minimize weight·(d⁺+d⁻). */
+  const calibrationObjectiveVars: { name: string; coef: number }[] = []
+
+  const addSoftTarget = (
+    id: string,
+    target: number,
+    weight: number,
+    linearVars: { name: string; coef: number }[]
+  ) => {
+    const dPos = `d+:${id}`
+    const dNeg = `d-:${id}`
+    bounds.push({ name: dPos, type: glpk.GLP_LO, lb: 0, ub: 0 })
+    bounds.push({ name: dNeg, type: glpk.GLP_LO, lb: 0, ub: 0 })
+    constraints.push({
+      name: `calib_${id}`,
+      vars: [
+        ...linearVars,
+        { name: dPos, coef: -1 },
+        { name: dNeg, coef: 1 }
+      ],
+      bnds: { type: glpk.GLP_FX, lb: target, ub: target }
+    })
+    const w = weight > 0 ? weight : 1
+    calibrationObjectiveVars.push({ name: dPos, coef: w }, { name: dNeg, coef: w })
+  }
+
+  if (objectiveMode === 'match_targets') {
+    const calib = config.calibration
+    if (!calib) {
+      throw new Error('match_targets requires config.calibration in nodes.json')
+    }
+
+    for (const [nodeId, spec] of Object.entries(calib.netOutputs ?? {})) {
+      if (!spec) continue
+      addSoftTarget(`T:${nodeId}`, spec.target, spec.weight ?? 1, [
+        { name: `T:${nodeId}`, coef: 1 }
+      ])
+    }
+
+    for (const [sumId, shares] of Object.entries(calib.addonShares ?? {})) {
+      if (!shares) continue
+      const sumNode = config.nodes.find((n) => n.id === sumId)
+      if (!sumNode) {
+        throw new Error(`calibration.addonShares references unknown sum node "${sumId}"`)
+      }
+      for (const [addonId, spec] of Object.entries(shares)) {
+        if (!spec) continue
+        if (!(addonId in sumNode.addons)) {
+          throw new Error(
+            `calibration.addonShares.${sumId} references unknown addon "${addonId}"`
+          )
+        }
+        // share ≈ f:addon:sum / T:sum  ⇔  f − target·T = 0 (soft)
+        addSoftTarget(`share:${addonId}:${sumId}`, 0, spec.weight ?? 1, [
+          { name: sumNode.inputFactorVarName(addonId as NodeType), coef: 1 },
+          { name: sumNode.netOutputVar, coef: -spec.target }
+        ])
+      }
+    }
+
+    if (calibrationObjectiveVars.length === 0) {
+      throw new Error('match_targets requires at least one calibration target')
+    }
+  }
+
   const objective =
     objectiveMode === 'minimize_co2'
       ? {
@@ -221,11 +291,17 @@ export async function outputMapSolver(
             name: 'maximize_free_time',
             vars: [{ name: 'T:freeTime', coef: 1 }]
           }
-        : {
-            direction: glpk.GLP_MAX,
-            name: 'maximize_leisure',
-            vars: [{ name: 'T:leisure', coef: 1 }]
-          }
+        : objectiveMode === 'match_targets'
+          ? {
+              direction: glpk.GLP_MIN,
+              name: 'match_targets',
+              vars: calibrationObjectiveVars
+            }
+          : {
+              direction: glpk.GLP_MAX,
+              name: 'maximize_leisure',
+              vars: [{ name: 'T:leisure', coef: 1 }]
+            }
 
   const lp = {
     name: 'EnergyFlowOptimization2',
@@ -240,8 +316,10 @@ export async function outputMapSolver(
   storedSolverResult = result
 
   // Convert result to readable format
-  const readableResult = formatSolverResult(result, objectiveMode)
-  console.log(readableResult)
+  if (!options?.quiet) {
+    const readableResult = formatSolverResult(result, objectiveMode)
+    console.log(readableResult)
+  }
 
   const outputMap: {
     [key: string]: number
@@ -325,7 +403,9 @@ export function formatSolverResult(
       ? 'Minimum achievable CO₂'
       : objectiveMode === 'maximize_free_time'
         ? 'Maximum achievable Free Time'
-        : 'Maximum achievable Leisure output'
+        : objectiveMode === 'match_targets'
+          ? 'Minimum weighted L1 gap to calibration targets'
+          : 'Maximum achievable Leisure output'
   if (zValue !== undefined) {
     lines.push(`   • Z Value: ${zValue.toFixed(6)}`)
     lines.push(`   • Meaning: ${objectiveLabel}`)
@@ -342,6 +422,9 @@ export function formatSolverResult(
     ) {
       const unit = objectiveMode === 'maximize_free_time' ? 'free time' : 'leisure'
       lines.push(`   • Efficiency: ${(zValue * 100).toFixed(2)}% of maximum possible ${unit}`)
+    }
+    if (objectiveMode === 'match_targets') {
+      lines.push(`   • Calibration residual (weighted L1): ${zValue.toFixed(6)}`)
     }
   } else {
     lines.push('   • Z Value: Not available')

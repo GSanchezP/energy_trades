@@ -12,7 +12,8 @@ import { getSolverStatusInfo, getStoredSolverResult } from '../types/outputMapSo
 const objectives: SolverObjective[] = [
   'maximize_leisure',
   'maximize_free_time',
-  'minimize_co2'
+  'minimize_co2',
+  'match_targets'
 ]
 
 assertFactorSumsAtLeastOne(nodesConfig.nodes)
